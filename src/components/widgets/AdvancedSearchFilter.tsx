@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Filter, X, ArrowUpDown, Calendar, Gamepad, Building2, Star, SlidersHorizontal, ChevronDown, ChevronUp } from 'lucide-react';
+import { Search, Filter, X, ArrowUpDown, Calendar, Gamepad, Building2, Star, SlidersHorizontal, ChevronDown, ChevronUp, Grid, LayoutGrid, List as ListIcon } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
@@ -29,6 +29,8 @@ interface AdvancedSearchFilterProps {
   availableDevelopers: string[];
   availablePlatforms: string[];
   totalResults: number;
+  viewMode?: 'grid' | 'cards' | 'list';
+  onViewModeChange?: (mode: 'grid' | 'cards' | 'list') => void;
 }
 
 export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
@@ -40,6 +42,8 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
   availableDevelopers,
   availablePlatforms,
   totalResults,
+  viewMode = 'grid',
+  onViewModeChange,
 }) => {
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [showAdvancedPanel, setShowAdvancedPanel] = useState<boolean>(false);
@@ -63,8 +67,8 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
     filters.theme !== 'all';
 
   return (
-    <div className="glass-panel p-5 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
-      {/* Tier 1: Primary Search & Filter Bar (Always Visible) */}
+    <div className="glass-panel p-4 rounded-2xl border border-slate-800 space-y-4 shadow-xl">
+      {/* Tier 1: Primary Search & Filter Bar (With Embedded View Mode Toggles) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-3 items-center">
         {/* Search Query Input */}
         <div className="lg:col-span-4">
@@ -76,7 +80,7 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
           />
         </div>
 
-        {/* Category Dropdown (Defaults to Main Games) */}
+        {/* Category Dropdown (Defaults strictly to Main Games) */}
         <div className="lg:col-span-2 relative">
           <select
             value={filters.category}
@@ -127,25 +131,52 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
           <Gamepad className="w-3.5 h-3.5 text-slate-500 absolute right-3 top-3 pointer-events-none" />
         </div>
 
-        {/* Advanced Filters Button */}
-        <div className="lg:col-span-2">
+        {/* Advanced Filters Button & View Mode Toggles */}
+        <div className="lg:col-span-2 flex items-center gap-2">
           <button
             type="button"
             onClick={() => setShowAdvancedPanel(prev => !prev)}
-            className={`w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 px-3 rounded-xl border text-xs font-bold transition-all ${
               showAdvancedPanel || hasActiveFilters
                 ? 'bg-indigo-600/20 text-indigo-300 border-indigo-500/50 shadow-md'
                 : 'bg-slate-900 text-slate-400 border-slate-800 hover:bg-slate-800 hover:text-white'
             }`}
           >
-            <SlidersHorizontal className="w-4 h-4 text-indigo-400" />
-            <span>Advanced Filters</span>
+            <SlidersHorizontal className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden sm:inline">Advanced</span>
             {showAdvancedPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
           </button>
+
+          {/* Inline Grid/Cards/List View Mode Toggles (Zero Top Gap) */}
+          {onViewModeChange && (
+            <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800 shrink-0">
+              <button
+                onClick={() => onViewModeChange('grid')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Grid View"
+              >
+                <Grid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => onViewModeChange('cards')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Large Cards View"
+              >
+                <LayoutGrid className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => onViewModeChange('list')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Compact List View"
+              >
+                <ListIcon className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* Interactive 10-Star Rating Bar */}
+      {/* Interactive 10-Star Rating Bar & Sort */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
         <div className="flex items-center gap-2 bg-slate-900 px-3.5 py-1.5 rounded-xl border border-slate-800">
           <span className="text-xs font-semibold text-slate-400">Rating:</span>

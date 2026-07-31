@@ -58,15 +58,31 @@ export function adaptGameDbToGameItem(raw: RawGameDbObject): GameItem {
     bannerUrl = shotUrl.replace('t_thumb', 't_1080p');
   }
 
-  // Format Category Type
+  const nameLower = (raw.name || '').toLowerCase();
+  const isDlcKeyword =
+    nameLower.includes('expansion') ||
+    nameLower.includes('dlc') ||
+    nameLower.includes('race day') ||
+    nameLower.includes('pass') ||
+    nameLower.includes('add-on') ||
+    nameLower.includes('content pack') ||
+    nameLower.includes('year 5');
+
+  const isBundleKeyword =
+    nameLower.includes('bundle') ||
+    nameLower.includes('collection') ||
+    nameLower.includes('saga') ||
+    nameLower.includes('anthology');
+
+  // Format Category Type (with Smart Title Keyword Pattern Matching)
   let category: 'Base Game' | 'DLC / Expansion' | 'Bundle' | 'Remake' | 'Mod' = 'Base Game';
-  if (raw.category === 1 || raw.category === 2 || raw.category === 4) {
+  if (raw.category === 1 || raw.category === 2 || raw.category === 4 || isDlcKeyword) {
     category = 'DLC / Expansion';
-  } else if (raw.category === 3) {
+  } else if (raw.category === 3 || isBundleKeyword) {
     category = 'Bundle';
-  } else if (raw.category === 8 || raw.category === 9) {
+  } else if (raw.category === 8 || raw.category === 9 || nameLower.includes('remake') || nameLower.includes('remaster')) {
     category = 'Remake';
-  } else if (raw.category === 5) {
+  } else if (raw.category === 5 || nameLower.includes('mod')) {
     category = 'Mod';
   }
 

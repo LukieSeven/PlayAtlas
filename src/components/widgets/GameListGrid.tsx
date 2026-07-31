@@ -1,8 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Grid,
-  List as ListIcon,
-  LayoutGrid,
   Star,
   BookmarkPlus,
   RefreshCw,
@@ -28,7 +25,7 @@ interface GameListGridProps {
 
 const initialFilterState: FilterState = {
   searchQuery: '',
-  category: 'Main Games', // Defaults to Main Games
+  category: 'Main Games', // Defaults strictly to Main Games
   genre: 'all',
   platform: 'all',
   minRating: 0,
@@ -52,7 +49,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'cards' | 'list'>('grid');
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
 
-  // Sync internal games state when initialGames prop changes
+  // Permanently lock liveGames to initialGames when provided as props
   useEffect(() => {
     if (initialGames) {
       setLiveGames(initialGames);
@@ -60,7 +57,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
     }
   }, [initialGames]);
 
-  // Fetch live games from GameDB CDN if no initialGames provided
+  // Fetch live games ONLY if no initialGames prop was provided
   useEffect(() => {
     if (!initialGames || initialGames.length === 0) {
       let isMounted = true;
@@ -136,7 +133,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   const filteredGames = useMemo(() => {
     return liveGames
       .filter(game => {
-        // Strict Category Filter (Defaults to Main Games - EXCLUDES DLCs, Expansions, Bundles)
+        // Strict Category Filter (Main Games = Base Game ONLY, EXCLUDES DLCs & Expansions)
         if (filters.category === 'Main Games') {
           if (game.category && game.category !== 'Base Game') return false;
         } else if (filters.category !== 'All' && filters.category !== 'Main Games') {
@@ -188,47 +185,20 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* 2-Tier Advanced Multi-Criteria Search & Filter Bar (With Embedded View Mode Toggles) */}
+      {/* 2-Tier Search & Filter Bar (With Embedded View Mode Toggles) */}
       {showControls && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-end mb-1">
-            {/* View Mode Layout Toggles */}
-            <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
-              <button
-                onClick={() => setViewMode('grid')}
-                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                title="Grid View"
-              >
-                <Grid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('cards')}
-                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                title="Large Cards View"
-              >
-                <LayoutGrid className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setViewMode('list')}
-                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-                title="Compact List View"
-              >
-                <ListIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
-          <AdvancedSearchFilter
-            filters={filters}
-            onFilterChange={setFilters}
-            onResetFilters={() => setFilters(initialFilterState)}
-            availableGenres={availableGenres}
-            availableYears={availableYears}
-            availableDevelopers={availableDevelopers}
-            availablePlatforms={availablePlatforms}
-            totalResults={filteredGames.length}
-          />
-        </div>
+        <AdvancedSearchFilter
+          filters={filters}
+          onFilterChange={setFilters}
+          onResetFilters={() => setFilters(initialFilterState)}
+          availableGenres={availableGenres}
+          availableYears={availableYears}
+          availableDevelopers={availableDevelopers}
+          availablePlatforms={availablePlatforms}
+          totalResults={filteredGames.length}
+          viewMode={viewMode}
+          onViewModeChange={setViewMode}
+        />
       )}
 
       {/* Loading Skeleton */}
