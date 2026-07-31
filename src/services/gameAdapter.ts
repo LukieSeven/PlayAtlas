@@ -109,8 +109,8 @@ export function adaptGameDbToGameItem(raw: RawGameDbObject): GameItem {
     ? raw.platforms.map(p => p.abbreviation || p.name)
     : ['PC', 'PS5', 'Xbox'];
 
-  // Format Release Date
-  let releaseDate = '2026-07-31';
+  // Format Release Date (Default to 2025-01-01, NEVER default to today's date!)
+  let releaseDate = '2025-01-01';
   if (raw.release_dates && raw.release_dates.length > 0) {
     const validDates = raw.release_dates.filter(d => d.date || d.y);
     if (validDates.length > 0) {

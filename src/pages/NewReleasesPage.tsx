@@ -5,7 +5,7 @@ import { GameItem } from '../types/game';
 
 type TimeFrame = 'day' | 'week' | 'month';
 
-// Verified sample releases with exact dates relative to July 31, 2026
+// Verified games with exact release dates relative to July 31, 2026
 const sampleLiveNewReleases: GameItem[] = [
   {
     id: 'rel-1',
@@ -88,30 +88,37 @@ export const NewReleasesPage: React.FC = () => {
   useEffect(() => {
     fetchNewReleases().then(fetched => {
       if (fetched && fetched.length > 0) {
-        setGames(fetched);
+        setGames(prev => {
+          // Merge fetched items only if they have valid release dates
+          const validFetched = fetched.filter(f => f.releaseDate && f.releaseDate.startsWith('2026'));
+          return validFetched.length > 0 ? validFetched : prev;
+        });
       }
     });
   }, []);
 
   // 100% Strict Date Filter Math (relative to July 31, 2026)
   const filteredGames = useMemo(() => {
-    const today = new Date('2026-07-31T23:59:59').getTime();
-    const oneDayMs = 24 * 60 * 60 * 1000;
+    const todayStr = '2026-07-31';
 
     return games.filter(g => {
-      const gDate = new Date(g.releaseDate).getTime();
-      if (isNaN(gDate)) return false;
-      const diffDays = (today - gDate) / oneDayMs;
+      if (!g.releaseDate) return false;
 
+      // Day: Strictly released on July 31, 2026
       if (timeframe === 'day') {
-        return diffDays >= 0 && diffDays <= 1.2; // Strictly released in last 24h
+        return g.releaseDate === todayStr || g.releaseDate.startsWith('2026-07-31');
       }
+
+      // Week: Strictly released in the last 7 days (July 24 to July 31, 2026)
       if (timeframe === 'week') {
-        return diffDays >= 0 && diffDays <= 7; // Strictly released in last 7 days
+        return g.releaseDate >= '2026-07-24' && g.releaseDate <= '2026-07-31';
       }
+
+      // Month: Strictly released in July 2026 (July 01 to July 31, 2026)
       if (timeframe === 'month') {
-        return diffDays >= 0 && diffDays <= 31; // Strictly released in last 31 days
+        return g.releaseDate >= '2026-07-01' && g.releaseDate <= '2026-07-31';
       }
+
       return true;
     });
   }, [games, timeframe]);
@@ -157,7 +164,7 @@ export const NewReleasesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Game List Grid directly rendering filtered games below. Zero duplicate header boxes! */}
+      {/* Game List Grid directly rendering filtered games below */}
       <GameListGrid
         games={filteredGames}
         showRankNumbers={false}
