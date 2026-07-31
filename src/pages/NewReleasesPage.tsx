@@ -5,8 +5,9 @@ import { GameItem } from '../types/game';
 
 type TimeFrame = 'day' | 'week' | 'month';
 
-// Verified games with exact release dates relative to July 31, 2026
+// Strictly segregated games by release date
 const sampleLiveNewReleases: GameItem[] = [
+  // Released TODAY (July 31, 2026)
   {
     id: 'rel-1',
     title: 'Moonlit Blessed',
@@ -31,6 +32,8 @@ const sampleLiveNewReleases: GameItem[] = [
     summary: 'Released TODAY! Educational geography trivia puzzle game.',
     category: 'Base Game',
   },
+
+  // Released THIS WEEK (July 24 to July 30, 2026)
   {
     id: 'rel-3',
     title: 'SnapCat: Mia’s Cozy Adventure',
@@ -55,6 +58,8 @@ const sampleLiveNewReleases: GameItem[] = [
     summary: 'Released THIS WEEK! High tension survival mystery in intense heatwave.',
     category: 'Base Game',
   },
+
+  // Released THIS MONTH (July 1 to July 23, 2026)
   {
     id: 'rel-5',
     title: 'Cities: Skylines - Race Day',
@@ -88,16 +93,15 @@ export const NewReleasesPage: React.FC = () => {
   useEffect(() => {
     fetchNewReleases().then(fetched => {
       if (fetched && fetched.length > 0) {
-        setGames(prev => {
-          // Merge fetched items only if they have valid release dates
-          const validFetched = fetched.filter(f => f.releaseDate && f.releaseDate.startsWith('2026'));
-          return validFetched.length > 0 ? validFetched : prev;
-        });
+        const validFetched = fetched.filter(f => f.releaseDate && f.releaseDate.startsWith('2026-07'));
+        if (validFetched.length > 0) {
+          setGames(validFetched);
+        }
       }
     });
   }, []);
 
-  // 100% Strict Date Filter Math (relative to July 31, 2026)
+  // 100% Strict Date Filter Math
   const filteredGames = useMemo(() => {
     const todayStr = '2026-07-31';
 
@@ -127,7 +131,10 @@ export const NewReleasesPage: React.FC = () => {
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Simple Minimalist Top Bar: Title + Day/Week/Month Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-5 rounded-2xl border border-slate-800">
-        <h1 className="text-3xl font-extrabold text-white tracking-tight">New Releases</h1>
+        <div>
+          <h1 className="text-3xl font-extrabold text-white tracking-tight">New Releases</h1>
+          <span className="text-[10px] font-mono text-indigo-400">Feed Mode: Strictly Filtered By Timeframe</span>
+        </div>
 
         {/* Clean Timeframe Toggle Selector (Defaults strictly to Day) */}
         <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
