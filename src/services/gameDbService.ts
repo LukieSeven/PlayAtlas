@@ -25,13 +25,13 @@ export async function fetchGameDetails(gameId: string): Promise<GameItem | null>
 
 export interface GameDbQueryResult {
   games: GameItem[];
-  asOfDate: string; // Formatting timestamp like "As of July 30, 2026"
+  asOfDate: string;
 }
 
 /**
- * Dynamic GameDB Live Query Service
- * Queries live GameDB CDN over HTTPS. If today has 0 records, automatically queues
- * the most recent available date's records and returns the exact 'As of X date' timestamp.
+ * GameDB Live Query Service
+ * Strictly filters by actual RELEASE DATE (not when the record was created in GameDB).
+ * Games released in older years (e.g., 2023, 2021, 2018) are strictly excluded from New Releases.
  */
 export async function fetchDirectGameDbReleases(timeframe: 'day' | 'week' | 'month'): Promise<GameDbQueryResult> {
   const now = new Date();
@@ -52,21 +52,29 @@ export async function fetchDirectGameDbReleases(timeframe: 'day' | 'week' | 'mon
           discoveredIds.push(...keys);
         }
       } catch (err) {
-        // Ignore network errors on individual bucket requests
+        // Ignore network errors
       }
     })
   );
 
-  // Fetch live GameDB records for all dynamically discovered IDs
+  // Fetch live GameDB records
   const fetchedGames = await Promise.all(discoveredIds.map(id => fetchGameDetails(id)));
-  const validGames = fetchedGames.filter((item): item is GameItem => item !== null && item.releaseDate !== 'Unknown');
 
-  // Sort by release date descending
-  const sorted = validGames.sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+  // Filter out invalid dates, future unreleased dates, or historical old games
+  const validGames = fetchedGames.filter((item): item is GameItem => {
+    if (!item || !item.releaseDate || item.releaseDate === 'Unknown') return false;
+    const year = parseInt(item.releaseDate.split('-')[0], 10);
+    // Strictly require release year to be recent (2025 or 2026)
+    return !isNaN(year) && year >= 2025;
+  });
+
+  // Sort strictly by actual RELEASE DATE descending (newest release date first)
+  const sortedByReleaseDate = validGames.sort(
+    (a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
+  );
 
   if (timeframe === 'day') {
-    // Check for games released today
-    const todayGames = sorted.filter(game => {
+    const todayGames = sortedByReleaseDate.filter(game => {
       const gameTime = new Date(game.releaseDate).getTime();
       const diffDays = (now.getTime() - gameTime) / oneDayMs;
       return game.releaseDate === todayStr || (diffDays >= 0 && diffDays <= 1.0);
@@ -79,38 +87,38 @@ export async function fetchDirectGameDbReleases(timeframe: 'day' | 'week' | 'mon
       };
     }
 
-    // If 0 games today, queue the most recent available date from GameDB's live dataset
-    const recentDate = sorted[0]?.releaseDate || todayStr;
-    const recentGames = sorted.filter(game => game.releaseDate === recentDate || new Date(game.releaseDate) <= now).slice(0, 6);
+    // Queue the most recent actual RELEASE DATE from recent years
+    const mostRecentDate = sortedByReleaseDate[0]?.releaseDate || todayStr;
+    const mostRecentGames = sortedByReleaseDate.filter(game => game.releaseDate === mostRecentDate).slice(0, 6);
 
     return {
-      games: recentGames,
-      asOfDate: `As of ${recentDate}`,
+      games: mostRecentGames.length > 0 ? mostRecentGames : sortedByReleaseDate.slice(0, 4),
+      asOfDate: `Most Recent Release Date: ${mostRecentDate}`,
     };
   }
 
   if (timeframe === 'week') {
-    const weekGames = sorted.filter(game => {
+    const weekGames = sortedByReleaseDate.filter(game => {
       const gameTime = new Date(game.releaseDate).getTime();
       const diffDays = (now.getTime() - gameTime) / oneDayMs;
       return diffDays >= 0 && diffDays <= 7.0;
     });
 
     return {
-      games: weekGames.length > 0 ? weekGames : sorted.slice(0, 8),
+      games: weekGames.length > 0 ? weekGames : sortedByReleaseDate.slice(0, 8),
       asOfDate: `As of Last 7 Days`,
     };
   }
 
   // Month
-  const monthGames = sorted.filter(game => {
+  const monthGames = sortedByReleaseDate.filter(game => {
     const gameTime = new Date(game.releaseDate).getTime();
     const diffDays = (now.getTime() - gameTime) / oneDayMs;
     return diffDays >= 0 && diffDays <= 31.0;
   });
 
   return {
-    games: monthGames.length > 0 ? monthGames : sorted.slice(0, 12),
+    games: monthGames.length > 0 ? monthGames : sortedByReleaseDate.slice(0, 12),
     asOfDate: `As of Last 31 Days`,
   };
 }
