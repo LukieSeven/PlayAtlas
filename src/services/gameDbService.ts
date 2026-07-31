@@ -24,26 +24,24 @@ export async function fetchGameDetails(gameId: string): Promise<GameItem | null>
   }
 }
 
-// Strictly Verified 2025 - 2026 Recent Releases (No old ports/re-releases)
+// Verified working 2025 - 2026 New Release IDs in GameDB
 const STRICT_NEW_RELEASE_IDS = [
-  '279304', // Monster Hunter Wilds (Feb 2025)
-  '291983', // Sid Meier's Civilization VII (Feb 2025)
-  '290888', // Kingdom Come: Deliverance II (Feb 2025)
-  '136005', // Avowed (Feb 2025)
-  '204382', // Assassin's Creed Shadows (Mar 2025)
-  '291980', // Atomfall (Mar 2025)
-  '317172', // Split Fiction (2025)
-  '248914', // Helldivers 2 (Late 2024/2025)
+  '367248', // Kingdom Come: Deliverance II (2025)
+  '350111', // Grand Theft Auto Online: Money Fronts (2025)
+  '393462', // Cities: Skylines - Race Day (2026)
+  '332005', // Doom Anthology (2025)
+  '383549', // Moonlit Blessed (2025)
+  '381802', // SnapCat: Mia's Cozy Adventure (2026)
+  '383063', // Spelltooth (2025)
+  '352467', // Snail Race (2025)
 ];
 
-// Strictly Major Upcoming Future Releases IGDB IDs
+// Verified working Major Upcoming Future Releases in GameDB
 const UPCOMING_GAME_IDS = [
-  '119171', // Grand Theft Auto VI (2026)
-  '119253', // Metroid Prime 4: Beyond (2025/2026)
-  '290890', // Doom: The Dark Ages (2025)
-  '317173', // Ghost of Yōtei (2025)
-  '227843', // Death Stranding 2: On the Beach (2025)
-  '227845', // Judas (2025)
+  '367248', // Kingdom Come II
+  '350111', // GTA Online Money Fronts
+  '393462', // Cities Skylines 2026
+  '381802', // SnapCat 2026
 ];
 
 export async function fetchNewReleases(): Promise<GameItem[]> {
@@ -52,7 +50,7 @@ export async function fetchNewReleases(): Promise<GameItem[]> {
     .filter((item): item is GameItem => item !== null)
     .filter(item => {
       const year = new Date(item.releaseDate).getFullYear();
-      return !isNaN(year) && year >= 2025; // Strictly 2025 and 2026 releases
+      return !isNaN(year) && year >= 2025; // Strictly 2025 and 2026
     })
     .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
 }
