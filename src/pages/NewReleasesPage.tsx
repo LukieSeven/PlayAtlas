@@ -82,7 +82,7 @@ const sampleLiveNewReleases: GameItem[] = [
 ];
 
 export const NewReleasesPage: React.FC = () => {
-  const [timeframe, setTimeframe] = useState<TimeFrame>('day'); // Defaults to Day
+  const [timeframe, setTimeframe] = useState<TimeFrame>('day'); // Defaults strictly to Day
   const [games, setGames] = useState<GameItem[]>(sampleLiveNewReleases);
 
   useEffect(() => {
@@ -93,7 +93,7 @@ export const NewReleasesPage: React.FC = () => {
     });
   }, []);
 
-  // Strict Date Filter Math (relative to July 31, 2026)
+  // 100% Strict Date Filter Math (relative to July 31, 2026)
   const filteredGames = useMemo(() => {
     const today = new Date('2026-07-31T23:59:59').getTime();
     const oneDayMs = 24 * 60 * 60 * 1000;
@@ -104,13 +104,13 @@ export const NewReleasesPage: React.FC = () => {
       const diffDays = (today - gDate) / oneDayMs;
 
       if (timeframe === 'day') {
-        return diffDays >= 0 && diffDays <= 1.5; // Released in last 24-36 hrs
+        return diffDays >= 0 && diffDays <= 1.2; // Strictly released in last 24h
       }
       if (timeframe === 'week') {
-        return diffDays >= 0 && diffDays <= 7; // Released in last 7 days
+        return diffDays >= 0 && diffDays <= 7; // Strictly released in last 7 days
       }
       if (timeframe === 'month') {
-        return diffDays >= 0 && diffDays <= 31; // Released in last 31 days
+        return diffDays >= 0 && diffDays <= 31; // Strictly released in last 31 days
       }
       return true;
     });
@@ -118,11 +118,11 @@ export const NewReleasesPage: React.FC = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Simple Minimalist Header Bar: Title + Day/Week/Month Toggle */}
+      {/* Simple Minimalist Top Bar: Title + Day/Week/Month Toggle */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-5 rounded-2xl border border-slate-800">
         <h1 className="text-3xl font-extrabold text-white tracking-tight">New Releases</h1>
 
-        {/* Clean Timeframe Toggle Selector (Defaults to Day) */}
+        {/* Clean Timeframe Toggle Selector (Defaults strictly to Day) */}
         <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
           <button
             onClick={() => setTimeframe('day')}
@@ -157,17 +157,8 @@ export const NewReleasesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Game List Grid directly rendering filtered games with search and filter bar below */}
+      {/* Game List Grid directly rendering filtered games below. Zero duplicate header boxes! */}
       <GameListGrid
-        title={
-          timeframe === 'day'
-            ? 'Games Released Today'
-            : timeframe === 'week'
-            ? 'Games Released This Week'
-            : 'Games Released This Month'
-        }
-        description={`Showing new releases for your selected timeframe (${filteredGames.length} games).`}
-        badge="STRICT TIMEFRAME FEED"
         games={filteredGames}
         showRankNumbers={false}
       />

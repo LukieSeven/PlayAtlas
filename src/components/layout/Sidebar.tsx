@@ -9,7 +9,6 @@ import {
   Plus,
   Trash2,
   Bookmark,
-  Compass,
   Trophy,
   Layers,
   Gamepad2
@@ -40,17 +39,19 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="hidden lg:flex flex-col border-r border-slate-800/80 glass-panel w-64 md:w-72 h-screen sticky top-0 left-0 shrink-0 z-30 justify-between">
-      {/* Top Brand Header */}
+      {/* Top Official Brand Header */}
       <div className="p-4 border-b border-slate-800/80">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
-            <Compass className="w-5 h-5" />
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl overflow-hidden border border-indigo-500/30 shadow-lg shadow-indigo-500/20 shrink-0">
+            <img src="./logo.jpg" alt="Play Atlas Logo" className="w-full h-full object-cover" />
           </div>
           <div className="flex flex-col">
             <span className="font-extrabold text-lg tracking-wider text-white leading-none">
               PLAY<span className="text-indigo-400">ATLAS</span>
             </span>
-            <span className="text-[10px] text-slate-400 font-mono tracking-tight mt-0.5">GAME DISCOVERY & LISTS</span>
+            <span className="text-[9px] font-bold text-slate-400 font-mono tracking-tighter mt-1 uppercase">
+              DISCOVER • ORGANIZE • RANK • SHARE
+            </span>
           </div>
         </div>
       </div>

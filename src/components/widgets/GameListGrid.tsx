@@ -4,13 +4,10 @@ import {
   List as ListIcon,
   LayoutGrid,
   Star,
-  Share2,
-  Calendar,
   BookmarkPlus,
   RefreshCw,
   Search,
-  Loader2,
-  Globe
+  Loader2
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -46,13 +43,9 @@ const initialFilterState: FilterState = {
 };
 
 export const GameListGrid: React.FC<GameListGridProps> = ({
-  title = 'Top 10 Game of the Year (GOTY 2026)',
-  description = 'Live game metadata fetched from GameDB CDN.',
-  badge = 'LIVE GAMEDB FEED',
   games: initialGames,
   showControls = true,
   showRankNumbers = false, // Unranked discovery cards by default
-  onShareClick,
 }) => {
   const [liveGames, setLiveGames] = useState<GameItem[]>(initialGames || []);
   const [loading, setLoading] = useState<boolean>(!initialGames || initialGames.length === 0);
@@ -139,13 +132,13 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
     return Array.from(platSet).sort();
   }, [liveGames]);
 
-  // Multi-criteria filtering logic
+  // Multi-criteria filtering logic (100% Strict Zero Leak)
   const filteredGames = useMemo(() => {
     return liveGames
       .filter(game => {
-        // Category Filter (Defaults to Main Games)
-        if (filters.category === 'Main Games' && game.category && game.category !== 'Base Game') {
-          return false;
+        // Strict Category Filter (Defaults to Main Games - EXCLUDES DLCs, Expansions, Bundles)
+        if (filters.category === 'Main Games') {
+          if (game.category && game.category !== 'Base Game') return false;
         } else if (filters.category !== 'All' && filters.category !== 'Main Games') {
           if (game.category !== filters.category) return false;
         }
@@ -194,74 +187,55 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header Bar */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 glass-panel p-5 rounded-2xl border border-slate-800">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Badge variant="indigo">{badge}</Badge>
-            <span className="text-xs text-slate-400 font-mono flex items-center gap-1">
-              <Globe className="w-3 h-3 text-cyan-400" />
-              {loading ? 'Fetching GameDB...' : `${filteredGames.length} Games Shown`}
-            </span>
-          </div>
-          <h3 className="text-2xl font-bold text-white tracking-tight">{title}</h3>
-          <p className="text-sm text-slate-400 mt-0.5">{description}</p>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {/* Layout View Mode Toggles */}
-          <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-              title="Grid View"
-            >
-              <Grid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('cards')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-              title="Large Cards View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
-              title="Compact List View"
-            >
-              <ListIcon className="w-4 h-4" />
-            </button>
-          </div>
-
-          {onShareClick && (
-            <Button variant="outline" size="sm" icon={<Share2 className="w-3.5 h-3.5" />} onClick={onShareClick}>
-              Share List
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Advanced Multi-Criteria Search & Filter Bar */}
+    <div className="space-y-4">
+      {/* 2-Tier Advanced Multi-Criteria Search & Filter Bar (With Embedded View Mode Toggles) */}
       {showControls && (
-        <AdvancedSearchFilter
-          filters={filters}
-          onFilterChange={setFilters}
-          onResetFilters={() => setFilters(initialFilterState)}
-          availableGenres={availableGenres}
-          availableYears={availableYears}
-          availableDevelopers={availableDevelopers}
-          availablePlatforms={availablePlatforms}
-          totalResults={filteredGames.length}
-        />
+        <div className="space-y-3">
+          <div className="flex items-center justify-end mb-1">
+            {/* View Mode Layout Toggles */}
+            <div className="flex items-center bg-slate-900 p-1 rounded-xl border border-slate-800">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Grid View"
+              >
+                <Grid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('cards')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'cards' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Large Cards View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-slate-200'}`}
+                title="Compact List View"
+              >
+                <ListIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+
+          <AdvancedSearchFilter
+            filters={filters}
+            onFilterChange={setFilters}
+            onResetFilters={() => setFilters(initialFilterState)}
+            availableGenres={availableGenres}
+            availableYears={availableYears}
+            availableDevelopers={availableDevelopers}
+            availablePlatforms={availablePlatforms}
+            totalResults={filteredGames.length}
+          />
+        </div>
       )}
 
       {/* Loading Skeleton */}
       {loading && (
         <div className="flex flex-col items-center justify-center p-12 glass-panel rounded-2xl border border-slate-800 space-y-3">
           <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-          <span className="text-xs font-mono text-slate-400">Fetching live game metadata from GameDB CDN...</span>
+          <span className="text-xs font-mono text-slate-400">Fetching game metadata from GameDB CDN...</span>
         </div>
       )}
 
@@ -294,7 +268,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
 
-                  {/* Optional Rank Badge (Only shown if explicitly enabled) */}
+                  {/* Rank Badge ONLY shown if explicitly enabled */}
                   {showRankNumbers && (
                     <div className="absolute top-2 left-2 w-7 h-7 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-center font-mono text-xs font-bold text-amber-400">
                       #{index + 1}
@@ -372,8 +346,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
                   <p className="text-xs text-slate-300 mt-2 leading-relaxed">{game.summary}</p>
                 </div>
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-xs text-slate-400 flex items-center gap-1">
-                    <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                  <span className="text-xs text-slate-400 flex items-center gap-1 font-mono">
                     {game.releaseDate}
                   </span>
                   <Button variant="ghost" size="sm">Details</Button>
