@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { AppLayout } from './components/layout/AppLayout';
@@ -16,7 +16,7 @@ export const App: React.FC = () => {
   return (
     <ThemeProvider>
       <SidebarProvider>
-        <BrowserRouter>
+        <HashRouter>
           <Routes>
             <Route path="/" element={<AppLayout />}>
               <Route index element={<HomePage />} />
@@ -30,7 +30,7 @@ export const App: React.FC = () => {
               <Route path="*" element={<Navigate to="/404" replace />} />
             </Route>
           </Routes>
-        </BrowserRouter>
+        </HashRouter>
       </SidebarProvider>
     </ThemeProvider>
   );
