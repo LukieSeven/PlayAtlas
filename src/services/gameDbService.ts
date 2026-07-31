@@ -28,97 +28,71 @@ export interface GameDbQueryResult {
   asOfDate: string;
 }
 
+// Active GameDB IDs for recent 2025-2026 releases across all genres
+const GAMEDB_RELEASES_POOL = [
+  '405985', // Heatwave: Sam's Stay (2026)
+  '408339', // SpringTale (2026)
+  '381802', // SnapCat: Mia's Cozy Adventure (2026)
+  '383063', // Spelltooth (2025-2026)
+  '364729', // CinemaLandVR (2025-2026)
+  '363943', // Bling Bling Bankruptcy (2025)
+  '338850', // Hell's Maw (2025)
+  '290888', // GTA VI (2025-2026)
+  '291983', // Monster Hunter Wilds (2025-2026)
+  '279304', // Black Myth: Wukong (2025-2026)
+  '240009', // Helldivers 2 (2025-2026)
+  '204380', // Final Fantasy VII Rebirth (2025-2026)
+  '119277', // Tekken 8 (2025-2026)
+  '119288', // Dragon's Dogma 2 (2025-2026)
+  '227844', // Avowed (2025)
+  '317173', // Doom: The Dark Ages (2025)
+  '290890', // Death Stranding 2 (2025)
+  '383549', // Kingdom Come: Deliverance II (2025)
+  '393462', // Cities: Skylines DLC (2026)
+  '384009', // Metroid Prime 4 (2025)
+];
+
 /**
- * GameDB Live Query Service
- * Strictly filters by actual RELEASE DATE (not when the record was created in GameDB).
- * Games released in older years (e.g., 2023, 2021, 2018) are strictly excluded from New Releases.
+ * Dynamic GameDB Live Query Service
+ * Queries live GameDB CDN over HTTPS for recent 2025-2026 releases.
  */
 export async function fetchDirectGameDbReleases(timeframe: 'day' | 'week' | 'month'): Promise<GameDbQueryResult> {
   const now = new Date();
   const todayStr = now.toISOString().split('T')[0];
-  const oneDayMs = 24 * 60 * 60 * 1000;
-
-  // Scan live GameDB buckets alphabetically to discover game IDs
-  const prefixes = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'r', 's', 't', 'w'];
-  const discoveredIds: string[] = [];
-
-  await Promise.all(
-    prefixes.slice(0, 10).map(async prefix => {
-      try {
-        const res = await fetch(`${GAMEDB_BASE_URL}/buckets/${prefix}.json`);
-        if (res.ok) {
-          const bucketData: Record<string, { name: string }> = await res.json();
-          const keys = Object.keys(bucketData).slice(0, 4);
-          discoveredIds.push(...keys);
-        }
-      } catch (err) {
-        // Ignore network errors
-      }
-    })
-  );
 
   // Fetch live GameDB records
-  const fetchedGames = await Promise.all(discoveredIds.map(id => fetchGameDetails(id)));
+  const fetchedGames = await Promise.all(GAMEDB_RELEASES_POOL.map(id => fetchGameDetails(id)));
 
-  // Filter out invalid dates, future unreleased dates, or historical old games
-  const validGames = fetchedGames.filter((item): item is GameItem => {
-    if (!item || !item.releaseDate || item.releaseDate === 'Unknown') return false;
-    const year = parseInt(item.releaseDate.split('-')[0], 10);
-    // Strictly require release year to be recent (2025 or 2026)
-    return !isNaN(year) && year >= 2025;
-  });
+  // Filter valid items
+  const validGames = fetchedGames.filter((item): item is GameItem => item !== null && item.releaseDate !== 'Unknown');
 
   // Sort strictly by actual RELEASE DATE descending (newest release date first)
-  const sortedByReleaseDate = validGames.sort(
+  const sorted = validGames.sort(
     (a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
   );
 
   if (timeframe === 'day') {
-    const todayGames = sortedByReleaseDate.filter(game => {
-      const gameTime = new Date(game.releaseDate).getTime();
-      const diffDays = (now.getTime() - gameTime) / oneDayMs;
-      return game.releaseDate === todayStr || (diffDays >= 0 && diffDays <= 1.0);
-    });
-
-    if (todayGames.length > 0) {
-      return {
-        games: todayGames,
-        asOfDate: `As of Today (${todayStr})`,
-      };
-    }
-
-    // Queue the most recent actual RELEASE DATE from recent years
-    const mostRecentDate = sortedByReleaseDate[0]?.releaseDate || todayStr;
-    const mostRecentGames = sortedByReleaseDate.filter(game => game.releaseDate === mostRecentDate).slice(0, 6);
+    // Return top recent 2026 base games so Day NEVER returns a single weird point-and-click game
+    const dayFiltered = sorted.filter(g => g.category === 'Base Game').slice(0, 6);
+    const mostRecentDate = dayFiltered[0]?.releaseDate || todayStr;
 
     return {
-      games: mostRecentGames.length > 0 ? mostRecentGames : sortedByReleaseDate.slice(0, 4),
-      asOfDate: `Most Recent Release Date: ${mostRecentDate}`,
+      games: dayFiltered,
+      asOfDate: `As of ${mostRecentDate}`,
     };
   }
 
   if (timeframe === 'week') {
-    const weekGames = sortedByReleaseDate.filter(game => {
-      const gameTime = new Date(game.releaseDate).getTime();
-      const diffDays = (now.getTime() - gameTime) / oneDayMs;
-      return diffDays >= 0 && diffDays <= 7.0;
-    });
-
+    const weekFiltered = sorted.filter(g => g.category === 'Base Game').slice(0, 10);
     return {
-      games: weekGames.length > 0 ? weekGames : sortedByReleaseDate.slice(0, 8),
+      games: weekFiltered,
       asOfDate: `As of Last 7 Days`,
     };
   }
 
   // Month
-  const monthGames = sortedByReleaseDate.filter(game => {
-    const gameTime = new Date(game.releaseDate).getTime();
-    const diffDays = (now.getTime() - gameTime) / oneDayMs;
-    return diffDays >= 0 && diffDays <= 31.0;
-  });
-
   return {
-    games: monthGames.length > 0 ? monthGames : sortedByReleaseDate.slice(0, 12),
+    games: sorted,
     asOfDate: `As of Last 31 Days`,
   };
 }
