@@ -3,7 +3,7 @@ import { adaptGameDbToGameItem, RawGameDbObject } from './gameAdapter';
 
 const GAMEDB_BASE_URL = 'https://app.lizardbyte.dev/GameDB';
 
-// Memory cache to avoid redundant network requests
+// In-memory cache to prevent duplicate fetches
 const gameCache = new Map<string, GameItem>();
 
 export async function fetchGameDetails(gameId: string): Promise<GameItem | null> {
@@ -24,72 +24,75 @@ export async function fetchGameDetails(gameId: string): Promise<GameItem | null>
   }
 }
 
-// Verified working 2025 - 2026 New Release IDs in GameDB
-const STRICT_NEW_RELEASE_IDS = [
-  '367248', // Kingdom Come: Deliverance II (2025)
-  '350111', // Grand Theft Auto Online: Money Fronts (2025)
-  '393462', // Cities: Skylines - Race Day (2026)
-  '332005', // Doom Anthology (2025)
-  '383549', // Moonlit Blessed (2025)
-  '381802', // SnapCat: Mia's Cozy Adventure (2026)
-  '383063', // Spelltooth (2025)
-  '352467', // Snail Race (2025)
+// Active GameDB game IDs across different buckets
+const GAMEDB_DISCOVERY_POOL = [
+  '119133', '119280', '19566', '138545', '204380', '119277', '119288', '227844',
+  '279304', '291983', '290888', '240009', '317173', '290890', '383549', '393462',
+  '384009', '361013', '383063', '363943', '381802', '352467', '338850', '405985',
+  '389145', '366392', '332005', '248914', '181313', '204381'
 ];
 
-// Verified working Major Upcoming Future Releases in GameDB
-const UPCOMING_GAME_IDS = [
-  '367248', // Kingdom Come II
-  '350111', // GTA Online Money Fronts
-  '393462', // Cities Skylines 2026
-  '381802', // SnapCat 2026
-];
+export async function fetchNewReleasesFromGameDb(timeframe: 'day' | 'week' | 'month'): Promise<GameItem[]> {
+  const now = new Date();
+  const todayStr = now.toISOString().split('T')[0]; // Current date yyyy-MM-dd
+  const oneDayMs = 24 * 60 * 60 * 1000;
 
-export async function fetchNewReleases(): Promise<GameItem[]> {
-  const results = await Promise.all(STRICT_NEW_RELEASE_IDS.map(id => fetchGameDetails(id)));
-  return results
-    .filter((item): item is GameItem => item !== null)
-    .filter(item => {
-      const year = new Date(item.releaseDate).getFullYear();
-      return !isNaN(year) && year >= 2025; // Strictly 2025 and 2026
-    })
-    .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
+  // Fetch items from GameDB discovery pool
+  const rawResults = await Promise.all(GAMEDB_DISCOVERY_POOL.map(id => fetchGameDetails(id)));
+  const validGames = rawResults.filter((item): item is GameItem => item !== null);
+
+  return validGames.filter(game => {
+    if (!game.releaseDate) return false;
+
+    const gameTime = new Date(game.releaseDate).getTime();
+    if (isNaN(gameTime)) return false;
+    const diffDays = (now.getTime() - gameTime) / oneDayMs;
+
+    if (timeframe === 'day') {
+      return game.releaseDate === todayStr || (diffDays >= 0 && diffDays <= 1.2);
+    }
+    if (timeframe === 'week') {
+      return diffDays >= 0 && diffDays <= 7;
+    }
+    if (timeframe === 'month') {
+      return diffDays >= 0 && diffDays <= 31;
+    }
+    return true;
+  }).sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
 }
 
 export async function fetchUpcomingGames(): Promise<GameItem[]> {
-  const results = await Promise.all(UPCOMING_GAME_IDS.map(id => fetchGameDetails(id)));
-  return results
-    .filter((item): item is GameItem => item !== null)
-    .sort((a, b) => new Date(a.releaseDate).getTime() - new Date(b.releaseDate).getTime());
+  const upcomingIds = ['119171', '119253', '290890', '317173', '227843', '227845'];
+  const results = await Promise.all(upcomingIds.map(id => fetchGameDetails(id)));
+  return results.filter((item): item is GameItem => item !== null);
 }
 
 export async function fetchCuratedGames(): Promise<GameItem[]> {
-  return fetchNewReleases();
+  return fetchNewReleasesFromGameDb('month');
 }
 
 export async function searchGamesByQuery(query: string): Promise<GameItem[]> {
   const cleanQuery = query.trim().toLowerCase();
   if (!cleanQuery) {
-    return fetchNewReleases();
+    return fetchCuratedGames();
   }
 
-  // Get 2-character bucket prefix
   const prefix = cleanQuery.slice(0, 2);
   if (prefix.length < 2) {
-    return fetchNewReleases();
+    return fetchCuratedGames();
   }
 
   try {
     const res = await fetch(`${GAMEDB_BASE_URL}/buckets/${prefix}.json`);
     if (!res.ok) {
-      return fetchNewReleases();
+      return fetchCuratedGames();
     }
     const bucketData: Record<string, { name: string }> = await res.json();
 
-    // Match game IDs by title substring
     const matchingIds = Object.entries(bucketData)
       .filter(([_, value]) => value.name.toLowerCase().includes(cleanQuery))
       .map(([id]) => id)
-      .slice(0, 8); // Top 8 matches
+      .slice(0, 10);
 
     if (matchingIds.length === 0) {
       return [];
@@ -99,6 +102,6 @@ export async function searchGamesByQuery(query: string): Promise<GameItem[]> {
     return fetchedMatches.filter((item): item is GameItem => item !== null);
   } catch (error) {
     console.warn(`Failed bucket search for prefix "${prefix}":`, error);
-    return fetchNewReleases();
+    return fetchCuratedGames();
   }
 }
