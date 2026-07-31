@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Search, Filter, X, ArrowUpDown, Calendar, Gamepad, Building2, Star } from 'lucide-react';
 import { Input } from '../ui/Input';
 import { Badge } from '../ui/Badge';
@@ -10,7 +10,7 @@ export interface FilterState {
   year: string;
   developer: string;
   platform: string;
-  minRating: number;
+  minRating: number; // 0 to 10 scale
   sortBy: 'rating' | 'title' | 'date';
 }
 
@@ -35,6 +35,8 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
   availablePlatforms,
   totalResults,
 }) => {
+  const [hoverRating, setHoverRating] = useState<number>(0);
+
   const updateFilter = (key: keyof FilterState, value: any) => {
     onFilterChange({ ...filters, [key]: value });
   };
@@ -113,7 +115,7 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
         </div>
       </div>
 
-      {/* Secondary Row: Platform, Rating, Sort Order & Results Count */}
+      {/* Secondary Row: Platform, Interactive 10-Star Rating Selector, Sort Order & Results Count */}
       <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-slate-800/80">
         <div className="flex flex-wrap items-center gap-3">
           {/* Platform Filter */}
@@ -133,6 +135,38 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
             <Gamepad className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 top-2.5 pointer-events-none" />
           </div>
 
+          {/* Interactive 10-Star Rating Bar */}
+          <div className="flex items-center gap-1.5 bg-slate-900 px-3.5 py-1.5 rounded-xl border border-slate-800">
+            <span className="text-xs font-semibold text-slate-400">Rating:</span>
+            <div className="flex items-center gap-0.5">
+              {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(starNum => {
+                const isHighlighted = (hoverRating || filters.minRating) >= starNum;
+                return (
+                  <button
+                    key={starNum}
+                    type="button"
+                    onMouseEnter={() => setHoverRating(starNum)}
+                    onMouseLeave={() => setHoverRating(0)}
+                    onClick={() => updateFilter('minRating', filters.minRating === starNum ? 0 : starNum)}
+                    className="p-0.5 transition-transform hover:scale-125 focus:outline-none"
+                    title={`Filter games rated ${starNum}/10 or higher`}
+                  >
+                    <Star
+                      className={`w-4 h-4 transition-colors ${
+                        isHighlighted
+                          ? 'fill-amber-400 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]'
+                          : 'fill-slate-800 text-slate-700 hover:text-slate-500'
+                      }`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+            {filters.minRating > 0 && (
+              <span className="text-xs font-bold font-mono text-amber-400 ml-1">{filters.minRating}+ Stars</span>
+            )}
+          </div>
+
           {/* Sort Order */}
           <div className="relative flex items-center">
             <select
@@ -146,25 +180,12 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
             </select>
             <ArrowUpDown className="w-3.5 h-3.5 text-slate-500 absolute right-2.5 pointer-events-none" />
           </div>
-
-          {/* Min Rating Filter Toggle */}
-          <button
-            onClick={() => updateFilter('minRating', filters.minRating === 9.0 ? 0 : 9.0)}
-            className={`px-3 py-1.5 rounded-xl border text-xs font-bold transition-all flex items-center gap-1.5 ${
-              filters.minRating === 9.0
-                ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
-                : 'bg-slate-900 text-slate-400 border-slate-800 hover:text-white'
-            }`}
-          >
-            <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-            <span>9.0+ Masterpieces</span>
-          </button>
         </div>
 
         {/* Results Badge */}
         <div className="flex items-center gap-2">
           <span className="text-xs font-mono text-slate-400">
-            Found <span className="font-bold text-indigo-400">{totalResults}</span> games matching criteria
+            Found <span className="font-bold text-indigo-400">{totalResults}</span> games
           </span>
         </div>
       </div>
@@ -211,7 +232,7 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
 
           {filters.minRating > 0 && (
             <Badge variant="amber" className="gap-1">
-              Rating: {filters.minRating}+
+              Rating: {filters.minRating}/10+ Stars
               <X className="w-3 h-3 cursor-pointer" onClick={() => updateFilter('minRating', 0)} />
             </Badge>
           )}
