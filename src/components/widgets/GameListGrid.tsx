@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Grid,
   List as ListIcon,
@@ -8,13 +8,16 @@ import {
   Calendar,
   BookmarkPlus,
   RefreshCw,
-  Search
+  Search,
+  Loader2,
+  Globe
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { GameItem } from '../../types/game';
 import { AdvancedSearchFilter, FilterState } from './AdvancedSearchFilter';
+import { fetchCuratedGames, searchGamesByQuery } from '../../services/gameDbService';
 
 interface GameListGridProps {
   title?: string;
@@ -24,97 +27,6 @@ interface GameListGridProps {
   showControls?: boolean;
   onShareClick?: () => void;
 }
-
-const defaultMockGames: GameItem[] = [
-  {
-    id: 'game-1',
-    title: 'Elden Ring: Shadow of the Erdtree',
-    coverUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=600&auto=format&fit=crop',
-    rating: 9.7,
-    releaseDate: '2024-06-21',
-    platforms: ['PC', 'PS5', 'Xbox'],
-    genres: ['Action RPG', 'Open World', 'Fantasy'],
-    developer: 'FromSoftware',
-    summary: 'Explore the Land of Shadow in this monumental dark fantasy action RPG expansion.',
-  },
-  {
-    id: 'game-2',
-    title: 'It Takes Two',
-    coverUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600&auto=format&fit=crop',
-    rating: 9.5,
-    releaseDate: '2021-03-26',
-    platforms: ['PC', 'PS5', 'Xbox', 'Switch'],
-    genres: ['Co-Op', 'Platformer', 'Adventure'],
-    developer: 'Hazelight Studios',
-    summary: 'The ultimate co-op adventure built purely for two players.',
-  },
-  {
-    id: 'game-3',
-    title: 'Baldur’s Gate 3',
-    coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
-    rating: 9.8,
-    releaseDate: '2023-08-03',
-    platforms: ['PC', 'PS5', 'Xbox'],
-    genres: ['Turn-Based RPG', 'Fantasy', 'RPG'],
-    developer: 'Larian Studios',
-    summary: 'Gather your party and return to the Forgotten Realms in an epic story-rich RPG.',
-  },
-  {
-    id: 'game-4',
-    title: 'Cyberpunk 2077: Phantom Liberty',
-    coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
-    rating: 9.2,
-    releaseDate: '2023-09-26',
-    platforms: ['PC', 'PS5', 'Xbox'],
-    genres: ['Sci-Fi RPG', 'Action', 'Open World'],
-    developer: 'CD Projekt Red',
-    summary: 'A high-stakes spy thriller set in a futuristic new district of Night City.',
-  },
-  {
-    id: 'game-5',
-    title: 'Grand Theft Auto VI',
-    coverUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600&auto=format&fit=crop',
-    rating: 9.9,
-    releaseDate: '2026-11-15',
-    platforms: ['PS5', 'Xbox', 'PC'],
-    genres: ['Action', 'Open World'],
-    developer: 'Rockstar Games',
-    summary: 'Welcome to Vice City in the biggest open world gaming launch of the decade.',
-  },
-  {
-    id: 'game-6',
-    title: 'Monster Hunter Wilds',
-    coverUrl: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?q=80&w=600&auto=format&fit=crop',
-    rating: 9.3,
-    releaseDate: '2025-02-28',
-    platforms: ['PC', 'PS5', 'Xbox'],
-    genres: ['Action RPG', 'Co-Op', 'Fantasy'],
-    developer: 'Capcom',
-    summary: 'Hunt massive legendary beasts in dynamic living wilderness ecosystems.',
-  },
-  {
-    id: 'game-7',
-    title: 'Final Fantasy VII Rebirth',
-    coverUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=600&auto=format&fit=crop',
-    rating: 9.4,
-    releaseDate: '2024-02-29',
-    platforms: ['PS5', 'PC'],
-    genres: ['Action RPG', 'Fantasy', 'RPG'],
-    developer: 'Square Enix',
-    summary: 'Cloud and his companions enter the wider world beyond Midgar.',
-  },
-  {
-    id: 'game-8',
-    title: 'Zelda: Tears of the Kingdom',
-    coverUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=600&auto=format&fit=crop',
-    rating: 9.6,
-    releaseDate: '2023-05-12',
-    platforms: ['Switch'],
-    genres: ['Action RPG', 'Open World', 'Adventure'],
-    developer: 'Nintendo',
-    summary: 'Explore the land and skies of Hyrule with revolutionary creative sandbox mechanics.',
-  },
-];
 
 const initialFilterState: FilterState = {
   searchQuery: '',
@@ -128,57 +40,93 @@ const initialFilterState: FilterState = {
 
 export const GameListGrid: React.FC<GameListGridProps> = ({
   title = 'Top 10 Game of the Year (GOTY 2026)',
-  description = 'Ranked top list of featured games with ratings, release dates, and developer info.',
-  badge = 'TOP 10 RANKED',
-  games = defaultMockGames,
+  description = 'Live game metadata fetched from GameDB CDN.',
+  badge = 'LIVE GAMEDB FEED',
+  games: initialGames,
   showControls = true,
   onShareClick,
 }) => {
+  const [liveGames, setLiveGames] = useState<GameItem[]>(initialGames || []);
+  const [loading, setLoading] = useState<boolean>(!initialGames || initialGames.length === 0);
   const [viewMode, setViewMode] = useState<'grid' | 'cards' | 'list'>('grid');
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
+
+  // Fetch live games from GameDB CDN on mount
+  useEffect(() => {
+    if (!initialGames || initialGames.length === 0) {
+      let isMounted = true;
+      setLoading(true);
+      fetchCuratedGames().then(data => {
+        if (isMounted) {
+          setLiveGames(data);
+          setLoading(false);
+        }
+      });
+      return () => {
+        isMounted = false;
+      };
+    }
+  }, [initialGames]);
+
+  // Handle Live Query Search via GameDB CDN Bucket Search
+  useEffect(() => {
+    if (filters.searchQuery.trim().length >= 2) {
+      let isMounted = true;
+      setLoading(true);
+      const timer = setTimeout(() => {
+        searchGamesByQuery(filters.searchQuery).then(data => {
+          if (isMounted) {
+            setLiveGames(data);
+            setLoading(false);
+          }
+        });
+      }, 400);
+
+      return () => {
+        isMounted = false;
+        clearTimeout(timer);
+      };
+    } else if (filters.searchQuery.trim().length === 0 && !initialGames) {
+      setLoading(true);
+      fetchCuratedGames().then(data => {
+        setLiveGames(data);
+        setLoading(false);
+      });
+    }
+  }, [filters.searchQuery, initialGames]);
 
   // Extract unique criteria values for dropdown options
   const availableGenres = useMemo(() => {
     const genresSet = new Set<string>();
-    games.forEach(g => g.genres.forEach(genre => genresSet.add(genre)));
+    liveGames.forEach(g => g.genres.forEach(genre => genresSet.add(genre)));
     return Array.from(genresSet).sort();
-  }, [games]);
+  }, [liveGames]);
 
   const availableYears = useMemo(() => {
     const yearsSet = new Set<string>();
-    games.forEach(g => {
+    liveGames.forEach(g => {
       const year = new Date(g.releaseDate).getFullYear().toString();
       if (!isNaN(parseInt(year))) yearsSet.add(year);
     });
     return Array.from(yearsSet).sort((a, b) => parseInt(b) - parseInt(a));
-  }, [games]);
+  }, [liveGames]);
 
   const availableDevelopers = useMemo(() => {
     const devsSet = new Set<string>();
-    games.forEach(g => devsSet.add(g.developer));
+    liveGames.forEach(g => devsSet.add(g.developer));
     return Array.from(devsSet).sort();
-  }, [games]);
+  }, [liveGames]);
 
   const availablePlatforms = useMemo(() => {
     const platSet = new Set<string>();
-    games.forEach(g => g.platforms.forEach(p => platSet.add(p)));
+    liveGames.forEach(g => g.platforms.forEach(p => platSet.add(p)));
     return Array.from(platSet).sort();
-  }, [games]);
+  }, [liveGames]);
 
   // Multi-criteria filtering logic
   const filteredGames = useMemo(() => {
-    return games
+    return liveGames
       .filter(game => {
-        // Query search
-        if (
-          filters.searchQuery &&
-          !game.title.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
-          !game.summary.toLowerCase().includes(filters.searchQuery.toLowerCase()) &&
-          !game.developer.toLowerCase().includes(filters.searchQuery.toLowerCase())
-        ) {
-          return false;
-        }
-
         // Genre filter
         if (filters.genre !== 'all' && !game.genres.includes(filters.genre)) {
           return false;
@@ -213,7 +161,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         if (filters.sortBy === 'date') return new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime();
         return 0;
       });
-  }, [games, filters]);
+  }, [liveGames, filters]);
 
   return (
     <div className="space-y-6">
@@ -222,7 +170,10 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <Badge variant="indigo">{badge}</Badge>
-            <span className="text-xs text-slate-400 font-mono">{filteredGames.length} Games Shown</span>
+            <span className="text-xs text-slate-400 font-mono flex items-center gap-1">
+              <Globe className="w-3 h-3 text-cyan-400" />
+              {loading ? 'Fetching GameDB...' : `${filteredGames.length} Live Games`}
+            </span>
           </div>
           <h3 className="text-2xl font-bold text-white tracking-tight">{title}</h3>
           <p className="text-sm text-slate-400 mt-0.5">{description}</p>
@@ -276,15 +227,23 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         />
       )}
 
+      {/* Loading Skeleton */}
+      {loading && (
+        <div className="flex flex-col items-center justify-center p-12 glass-panel rounded-2xl border border-slate-800 space-y-3">
+          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
+          <span className="text-xs font-mono text-slate-400">Fetching live game metadata from GameDB CDN...</span>
+        </div>
+      )}
+
       {/* Empty State when no games match search filters */}
-      {filteredGames.length === 0 && (
+      {!loading && filteredGames.length === 0 && (
         <Card glass className="p-12 text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 mx-auto">
             <Search className="w-6 h-6" />
           </div>
           <div>
             <h4 className="text-lg font-bold text-white">No games match your search criteria</h4>
-            <p className="text-xs text-slate-400 mt-1">Try resetting your genre, year, or developer filters.</p>
+            <p className="text-xs text-slate-400 mt-1">Try searching for a different title or resetting your filters.</p>
           </div>
           <Button variant="glow" size="sm" icon={<RefreshCw className="w-4 h-4" />} onClick={() => setFilters(initialFilterState)}>
             Reset All Filters
@@ -293,7 +252,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
       )}
 
       {/* Rendered Games Container */}
-      {viewMode === 'grid' && filteredGames.length > 0 && (
+      {!loading && viewMode === 'grid' && filteredGames.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {filteredGames.map((game, index) => (
             <Card key={game.id} interactive glass className="group flex flex-col justify-between">
@@ -314,8 +273,8 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-[11px] font-semibold text-indigo-400 mb-1">
-                  <span>{game.developer}</span>
-                  <span className="text-slate-500 font-mono">{new Date(game.releaseDate).getFullYear()}</span>
+                  <span className="truncate max-w-[120px]">{game.developer}</span>
+                  <span className="text-slate-500 font-mono">{new Date(game.releaseDate).getFullYear() || '2024'}</span>
                 </div>
 
                 <h4 className="font-bold text-white text-base group-hover:text-indigo-300 transition-colors line-clamp-1">
@@ -341,7 +300,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         </div>
       )}
 
-      {viewMode === 'cards' && filteredGames.length > 0 && (
+      {!loading && viewMode === 'cards' && filteredGames.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {filteredGames.map((game, index) => (
             <Card key={game.id} interactive glass className="flex flex-col sm:flex-row gap-4 p-4">
@@ -376,7 +335,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         </div>
       )}
 
-      {viewMode === 'list' && filteredGames.length > 0 && (
+      {!loading && viewMode === 'list' && filteredGames.length > 0 && (
         <div className="space-y-2">
           {filteredGames.map((game, index) => (
             <div
