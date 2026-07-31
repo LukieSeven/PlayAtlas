@@ -24,16 +24,16 @@ export async function fetchGameDetails(gameId: string): Promise<GameItem | null>
   }
 }
 
-// Strictly Recent 2024 - 2025 New Releases IGDB IDs
-const NEW_RELEASE_IDS = [
-  '279304', // Monster Hunter Wilds (2025)
-  '204380', // Final Fantasy VII Rebirth (2024)
-  '248914', // Helldivers 2 (2024)
-  '204381', // Dragon Age: The Veilguard (2024)
-  '181313', // Warhammer 40,000: Space Marine 2 (2024)
-  '290888', // Kingdom Come: Deliverance II (2025)
-  '113112', // S.T.A.L.K.E.R. 2: Heart of Chornobyl (2024)
-  '227844', // Hades II (2024)
+// Strictly Verified 2025 - 2026 Recent Releases (No old ports/re-releases)
+const STRICT_NEW_RELEASE_IDS = [
+  '279304', // Monster Hunter Wilds (Feb 2025)
+  '291983', // Sid Meier's Civilization VII (Feb 2025)
+  '290888', // Kingdom Come: Deliverance II (Feb 2025)
+  '136005', // Avowed (Feb 2025)
+  '204382', // Assassin's Creed Shadows (Mar 2025)
+  '291980', // Atomfall (Mar 2025)
+  '317172', // Split Fiction (2025)
+  '248914', // Helldivers 2 (Late 2024/2025)
 ];
 
 // Strictly Major Upcoming Future Releases IGDB IDs
@@ -47,9 +47,13 @@ const UPCOMING_GAME_IDS = [
 ];
 
 export async function fetchNewReleases(): Promise<GameItem[]> {
-  const results = await Promise.all(NEW_RELEASE_IDS.map(id => fetchGameDetails(id)));
+  const results = await Promise.all(STRICT_NEW_RELEASE_IDS.map(id => fetchGameDetails(id)));
   return results
     .filter((item): item is GameItem => item !== null)
+    .filter(item => {
+      const year = new Date(item.releaseDate).getFullYear();
+      return !isNaN(year) && year >= 2025; // Strictly 2025 and 2026 releases
+    })
     .sort((a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime());
 }
 
