@@ -237,12 +237,10 @@ async function buildGameIndex() {
   const normalizedRecords: GameIndexRecord[] = [];
 
   // Step 2 & 3: Fetch and Normalize Records via 12-request Controlled Promise Queue
-  console.log(`⚡ Step 2 & 3: Fetching and normalizing game records via ${CONCURRENCY_LIMIT} simultaneous HTTP requests...`);
+  console.log(`⚡ Step 2 & 3: Fetching and normalizing all ${uniqueGameIds.length} game records via ${CONCURRENCY_LIMIT} simultaneous HTTP requests...`);
 
-  // Target high-priority game records
-  const targetIdsToProcess = uniqueGameIds.slice(0, 150);
-
-  await mapConcurrently(targetIdsToProcess, CONCURRENCY_LIMIT, async gameId => {
+  // Process all unique game IDs extracted across all 26 buckets (ZERO SLICE LIMITS)
+  await mapConcurrently(uniqueGameIds, CONCURRENCY_LIMIT, async gameId => {
     const recordUrl = `${GAMEDB_BASE_URL}/games/${gameId}.json`;
     try {
       const res = await fetch(recordUrl);
@@ -370,7 +368,7 @@ async function buildGameIndex() {
     schemaVersion: 1,
     generatedAt: now.toISOString(),
     recordCount: normalizedRecords.length,
-    dataFile: 'public/data/game_index.json',
+    dataFile: 'data/game_index.json',
   };
 
   const compiledIndex: CompiledGameIndex = {

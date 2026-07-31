@@ -78,48 +78,51 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
   const { dateStr: userToday, timezone: userTimezone } = getUserLocalDate();
   const records = compiledCatalogCache.records;
 
-  // Filter records chronologically by date and view type
-  const matchedRecords = records.filter(record => {
-    let dateMatch = false;
+  console.log(`[Query Diagnostics] Selected date: ${userToday} (${userTimezone})`);
+  console.log(`[Query Diagnostics] Selected release mode: ${options.viewType} | Timeframe: ${options.timeframe}`);
+  console.log(`[Query Diagnostics] Total catalog records in IndexedDB: ${records.length}`);
 
+  // Step 1: Match by date & release view mode (before UI filters)
+  const dateMatchedRecords = records.filter(record => {
     if (options.viewType === 'first_release') {
       // Mode 1: Games receiving their first-ever release on selected date
       if (options.timeframe === 'day') {
-        dateMatch = record.firstReleaseDate === userToday;
+        return record.firstReleaseDate === userToday;
       } else if (options.timeframe === 'week') {
-        dateMatch = record.firstReleaseDate !== null && record.firstReleaseDate >= '2026-07-24' && record.firstReleaseDate <= userToday;
+        return record.firstReleaseDate !== null && record.firstReleaseDate >= '2026-07-24' && record.firstReleaseDate <= userToday;
       } else if (options.timeframe === 'month') {
-        dateMatch = record.firstReleaseDate !== null && record.firstReleaseDate >= '2026-07-01' && record.firstReleaseDate <= userToday;
+        return record.firstReleaseDate !== null && record.firstReleaseDate >= '2026-07-01' && record.firstReleaseDate <= userToday;
       }
     } else {
       // Mode 2: Games receiving a platform-specific release on selected date
       if (options.timeframe === 'day') {
-        dateMatch = record.platformReleaseDates.some(p => p.dateStr === userToday);
+        return record.platformReleaseDates.some(p => p.dateStr === userToday);
       } else if (options.timeframe === 'week') {
-        dateMatch = record.platformReleaseDates.some(
+        return record.platformReleaseDates.some(
           p => p.dateStr !== null && p.dateStr >= '2026-07-24' && p.dateStr <= userToday
         );
       } else if (options.timeframe === 'month') {
-        dateMatch = record.platformReleaseDates.some(
+        return record.platformReleaseDates.some(
           p => p.dateStr !== null && p.dateStr >= '2026-07-01' && p.dateStr <= userToday
         );
       }
     }
+    return false;
+  });
 
-    if (!dateMatch) return false;
+  console.log(`[Query Diagnostics] Number of matching records BEFORE UI filters: ${dateMatchedRecords.length}`);
 
-    // Optional Category Filter
+  // Step 2: Apply UI filters (category, genre, platform)
+  const finalFilteredRecords = dateMatchedRecords.filter(record => {
     if (options.category && options.category !== 'All') {
       if (options.category === 'Main Games' && record.category !== 'Base Game') return false;
       if (options.category !== 'Main Games' && record.category !== options.category) return false;
     }
 
-    // Optional Genre Filter
     if (options.genre && options.genre !== 'all') {
       if (!record.genres.some(g => g.name.toLowerCase() === options.genre?.toLowerCase())) return false;
     }
 
-    // Optional Platform Filter
     if (options.platform && options.platform !== 'all') {
       if (!record.platforms.some(p => p.name.toLowerCase() === options.platform?.toLowerCase())) return false;
     }
@@ -131,11 +134,13 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
     return tsB - tsA; // Chronological descending sort
   });
 
-  const games = matchedRecords.map(convertIndexRecordToGameItem);
+  console.log(`[Query Diagnostics] Number of matching records AFTER UI filters: ${finalFilteredRecords.length}`);
+
+  const games = finalFilteredRecords.map(convertIndexRecordToGameItem);
 
   return {
     games,
-    records: matchedRecords,
+    records: finalFilteredRecords,
     manifest: compiledCatalogCache.manifest,
     diagnostics: compiledCatalogCache.diagnostics,
     selectedDate: userToday,

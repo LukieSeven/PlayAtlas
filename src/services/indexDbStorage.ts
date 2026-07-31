@@ -86,58 +86,80 @@ export function saveManifestMetadataToLocalStorage(manifest: IndexManifest): voi
 
 /**
  * Check Manifest & Sync Catalog with IndexedDB
- * Checks lightweight public/data/game_index_manifest.json before downloading complete index.
+ * Uses Vite base-aware paths (import.meta.env.BASE_URL) & logs diagnostics to console.
  */
 export async function syncGameIndexCatalog(): Promise<CompiledGameIndex> {
-  const manifestRes = await fetch('./data/game_index_manifest.json');
+  const rawBaseUrl = (import.meta as any).env?.BASE_URL || './';
+  const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
+  const manifestUrl = `${baseUrl}data/game_index_manifest.json`;
+  const indexUrl = `${baseUrl}data/game_index.json`;
+
+  console.log(`[Diagnostics] Manifest URL requested: ${manifestUrl}`);
+  const manifestRes = await fetch(manifestUrl);
+  console.log(`[Diagnostics] Manifest response status: ${manifestRes.status} ${manifestRes.statusText}`);
+
   if (!manifestRes.ok) {
-    throw new Error(`Failed to fetch index manifest: ${manifestRes.statusText}`);
+    throw new Error(`Failed to fetch index manifest (${manifestRes.status}): ${manifestRes.statusText}`);
   }
+
   const publishedManifest: IndexManifest = await manifestRes.json();
   const cachedManifest = getCachedManifestMetadata();
+  const cachedRecords = await loadRecordsFromIndexedDB();
 
-  // If cached manifest matches published manifest, load catalog directly from IndexedDB
-  if (
-    cachedManifest &&
+  console.log(`[Diagnostics] LocalStorage cached manifest:`, cachedManifest);
+  console.log(`[Diagnostics] IndexedDB cached record count: ${cachedRecords.length}`);
+
+  // Invalidate cache if cached record count is zero, manifest differs, or schema version changed
+  const isCacheValid =
+    cachedManifest !== null &&
+    cachedRecords.length > 0 &&
     cachedManifest.version === publishedManifest.version &&
-    cachedManifest.generatedAt === publishedManifest.generatedAt
-  ) {
-    const cachedRecords = await loadRecordsFromIndexedDB();
-    if (cachedRecords.length > 0) {
-      return {
-        manifest: publishedManifest,
-        diagnostics: {
-          bucketFilesProcessed: 26,
-          bucketEntriesProcessed: publishedManifest.recordCount,
-          uniqueGameIdsFound: publishedManifest.recordCount,
-          duplicateEntriesRemoved: 0,
-          gameRecordsLoaded: cachedRecords.length,
-          validReleaseDatesCount: cachedRecords.filter(r => r.firstReleaseDate !== null).length,
-          recordsWithoutReleaseDates: cachedRecords.filter(r => r.firstReleaseDate === null).length,
-          recordsWithPlatformReleaseDates: cachedRecords.filter(r => r.platformReleaseDates.length > 0).length,
-          firstReleaseTodayCount: 0,
-          platformReleaseTodayCount: 0,
-          diagnosticDate: new Date().toISOString().split('T')[0],
-          diagnosticTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-          failedRecordRequests: [],
-          indexGeneratedAt: publishedManifest.generatedAt,
-        },
-        records: cachedRecords,
-      };
-    }
+    cachedManifest.schemaVersion === publishedManifest.schemaVersion &&
+    cachedManifest.generatedAt === publishedManifest.generatedAt &&
+    cachedRecords.length === publishedManifest.recordCount;
+
+  if (isCacheValid) {
+    console.log(`[Diagnostics] IndexedDB catalog cache is up-to-date (${cachedRecords.length} records). Loading from IndexedDB without network download.`);
+    return {
+      manifest: publishedManifest,
+      diagnostics: {
+        bucketFilesProcessed: 26,
+        bucketEntriesProcessed: publishedManifest.recordCount,
+        uniqueGameIdsFound: publishedManifest.recordCount,
+        duplicateEntriesRemoved: 0,
+        gameRecordsLoaded: cachedRecords.length,
+        validReleaseDatesCount: cachedRecords.filter(r => r.firstReleaseDate !== null).length,
+        recordsWithoutReleaseDates: cachedRecords.filter(r => r.firstReleaseDate === null).length,
+        recordsWithPlatformReleaseDates: cachedRecords.filter(r => r.platformReleaseDates.length > 0).length,
+        firstReleaseTodayCount: 0,
+        platformReleaseTodayCount: 0,
+        diagnosticDate: new Date().toISOString().split('T')[0],
+        diagnosticTimezone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+        failedRecordRequests: [],
+        indexGeneratedAt: publishedManifest.generatedAt,
+      },
+      records: cachedRecords,
+    };
   }
 
-  // Published index is newer or cache missing: download full compiled index
-  const indexRes = await fetch('./data/game_index.json');
+  // Published index is newer or cache invalid: download full compiled index
+  console.log(`[Diagnostics] Downloading fresh full index from URL: ${indexUrl}`);
+  const indexRes = await fetch(indexUrl);
+  console.log(`[Diagnostics] Index response status: ${indexRes.status} ${indexRes.statusText}`);
+
   if (!indexRes.ok) {
-    throw new Error(`Failed to fetch full game index: ${indexRes.statusText}`);
+    throw new Error(`Failed to fetch full game index (${indexRes.status}): ${indexRes.statusText}`);
   }
 
   const compiledIndex: CompiledGameIndex = await indexRes.json();
+  console.log(`[Diagnostics] Downloaded record count: ${compiledIndex.records.length}`);
 
-  // Save complete catalog to IndexedDB and metadata to LocalStorage
+  // Save complete catalog to IndexedDB and manifest metadata to LocalStorage
   await saveRecordsToIndexedDB(compiledIndex.records);
   saveManifestMetadataToLocalStorage(compiledIndex.manifest);
+
+  const updatedIndexedDBRecords = await loadRecordsFromIndexedDB();
+  console.log(`[Diagnostics] Updated IndexedDB record count: ${updatedIndexedDBRecords.length}`);
 
   return compiledIndex;
 }
