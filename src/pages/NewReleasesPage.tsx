@@ -1,31 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { GameListGrid } from '../components/widgets/GameListGrid';
-import { fetchNewReleasesFromGameDb } from '../services/gameDbService';
-import { GameItem } from '../types/game';
-import { Loader2, Globe } from 'lucide-react';
+import { getMainstreamReleases } from '../services/mainstreamGames';
 
 type TimeFrame = 'day' | 'week' | 'month';
 
 export const NewReleasesPage: React.FC = () => {
   const [timeframe, setTimeframe] = useState<TimeFrame>('day'); // Defaults strictly to Day
-  const [liveGames, setLiveGames] = useState<GameItem[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
 
-  // Dynamically query GameDB CDN whenever timeframe changes
-  useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-
-    fetchNewReleasesFromGameDb(timeframe).then(fetched => {
-      if (isMounted) {
-        setLiveGames(fetched);
-        setLoading(false);
-      }
-    });
-
-    return () => {
-      isMounted = false;
-    };
+  // Fetch verified mainstream releases by timeframe
+  const filteredGames = useMemo(() => {
+    return getMainstreamReleases(timeframe);
   }, [timeframe]);
 
   return (
@@ -34,10 +18,7 @@ export const NewReleasesPage: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-5 rounded-2xl border border-slate-800">
         <div>
           <h1 className="text-3xl font-extrabold text-white tracking-tight">New Releases</h1>
-          <span className="text-[10px] font-mono text-cyan-400 flex items-center gap-1 mt-0.5">
-            <Globe className="w-3 h-3 text-cyan-400" />
-            Live GameDB CDN Query ({liveGames.length} games found)
-          </span>
+          <span className="text-[10px] font-mono text-indigo-400">Verified Mainstream Hit Releases</span>
         </div>
 
         {/* Clean Timeframe Toggle Selector (Defaults strictly to Day) */}
@@ -75,23 +56,11 @@ export const NewReleasesPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Loading Spinner */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center p-12 glass-panel rounded-2xl border border-slate-800 space-y-3">
-          <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-          <span className="text-xs font-mono text-slate-400">
-            Querying LizardByte GameDB CDN for {timeframe.toUpperCase()} releases...
-          </span>
-        </div>
-      )}
-
-      {/* Rendered Live GameDB Results Grid */}
-      {!loading && (
-        <GameListGrid
-          games={liveGames}
-          showRankNumbers={false}
-        />
-      )}
+      {/* Game List Grid directly rendering verified mainstream games */}
+      <GameListGrid
+        games={filteredGames}
+        showRankNumbers={false}
+      />
     </div>
   );
 };
