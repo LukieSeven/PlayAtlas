@@ -7,7 +7,7 @@ import { AddWidgetModal } from '../components/widgets/AddWidgetModal';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
-import { Plus, Share2, Flame, Gamepad2 } from 'lucide-react';
+import { Plus, Share2, Flame, Rocket, Tag } from 'lucide-react';
 
 interface ActiveWidget {
   id: string;
@@ -15,14 +15,15 @@ interface ActiveWidget {
   title: string;
 }
 
-const defaultDashboardWidgets: ActiveWidget[] = [
-  { id: 'w-countdown', type: 'spotlight_countdown', title: 'Upcoming Release Countdown Spotlight' },
-  { id: 'w-goty', type: 'top_ten_list', title: 'Top 10 Game of the Year (GOTY 2026)' },
-  { id: 'w-backlog', type: 'backlog_tracker', title: 'Backlog & Playing Tracker' },
+// Default widgets are strictly System Discovery & Spotlight feeds
+const defaultSystemWidgets: ActiveWidget[] = [
+  { id: 'w-countdown', type: 'spotlight_countdown', title: 'Major Upcoming Games Countdown Spotlight' },
+  { id: 'w-new-releases', type: 'new_releases', title: 'New Releases & Trending Spotlight' },
+  { id: 'w-deals', type: 'deals_discounts', title: 'Games on Sale & Featured Discounts' },
 ];
 
 export const HomePage: React.FC = () => {
-  const [widgets, setWidgets] = useState<ActiveWidget[]>(defaultDashboardWidgets);
+  const [widgets, setWidgets] = useState<ActiveWidget[]>(defaultSystemWidgets);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [isAddWidgetModalOpen, setIsAddWidgetModalOpen] = useState(false);
 
@@ -45,7 +46,7 @@ export const HomePage: React.FC = () => {
       <PageHeader
         badge="DISCORD LAYOUT CANVAS"
         title="Welcome to Play Atlas"
-        subtitle="Your customizable gaming dashboard. Discover games, track release countdowns, organize lists, and share collections."
+        subtitle="Your customizable gaming dashboard. Discover new releases, track upcoming countdowns, and build custom lists."
         actions={
           <>
             <Button
@@ -63,7 +64,7 @@ export const HomePage: React.FC = () => {
         }
       />
 
-      {/* Rendered Widget Cards Canvas Grid */}
+      {/* Rendered Dashboard Canvas Grid */}
       <div className="space-y-8">
         {widgets.map(w => {
           if (w.type === 'spotlight_countdown') {
@@ -86,10 +87,14 @@ export const HomePage: React.FC = () => {
             );
           }
 
-          if (w.type === 'top_ten_list' || w.type === 'custom_list') {
+          if (w.type === 'new_releases' || w.type === 'top_ten_list' || w.type === 'custom_list') {
             return (
               <section key={w.id} className="pt-2 relative group">
-                <div className="flex items-center justify-end mb-2">
+                <div className="flex items-center justify-between mb-2">
+                  <div className="flex items-center gap-2">
+                    <Rocket className="w-5 h-5 text-cyan-400" />
+                    <h2 className="text-xl font-bold text-white">{w.title}</h2>
+                  </div>
                   <button
                     onClick={() => removeWidget(w.id)}
                     className="text-xs text-slate-500 hover:text-rose-400 transition-colors opacity-0 group-hover:opacity-100"
@@ -99,20 +104,20 @@ export const HomePage: React.FC = () => {
                 </div>
                 <GameListGrid
                   title={w.title}
-                  description="Sortable & filterable custom list presentation."
-                  badge={w.type === 'top_ten_list' ? 'TOP 10 RANKED' : 'CURATED LIST'}
+                  description="Explore and filter game titles by genre, release year, developer, and rating."
+                  badge={w.type === 'new_releases' ? 'NEW RELEASES' : 'CUSTOM LIST'}
                   onShareClick={() => setIsShareModalOpen(true)}
                 />
               </section>
             );
           }
 
-          if (w.type === 'backlog_tracker') {
+          if (w.type === 'deals_discounts') {
             return (
               <section key={w.id} className="relative group">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <Gamepad2 className="w-5 h-5 text-cyan-400" />
+                    <Tag className="w-5 h-5 text-purple-400" />
                     <h2 className="text-xl font-bold text-white">{w.title}</h2>
                   </div>
                   <button
@@ -124,19 +129,19 @@ export const HomePage: React.FC = () => {
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <Card glass className="p-4 space-y-2">
-                    <Badge variant="emerald">CURRENTLY PLAYING</Badge>
-                    <h4 className="font-bold text-white">Elden Ring: Shadow of the Erdtree</h4>
-                    <p className="text-xs text-slate-400">45 Hours Played • FromSoftware</p>
+                    <Badge variant="rose">50% OFF</Badge>
+                    <h4 className="font-bold text-white">Cyberpunk 2077: Phantom Liberty</h4>
+                    <p className="text-xs text-slate-400">$14.99 • Steam & GOG</p>
                   </Card>
                   <Card glass className="p-4 space-y-2">
-                    <Badge variant="cyan">UP NEXT</Badge>
-                    <h4 className="font-bold text-white">Baldur’s Gate 3</h4>
-                    <p className="text-xs text-slate-400">Backlog Queue • Larian Studios</p>
+                    <Badge variant="amber">33% OFF</Badge>
+                    <h4 className="font-bold text-white">Elden Ring</h4>
+                    <p className="text-xs text-slate-400">$39.99 • PlayStation Store</p>
                   </Card>
                   <Card glass className="p-4 space-y-2">
-                    <Badge variant="indigo">COMPLETED (100%)</Badge>
-                    <h4 className="font-bold text-white">It Takes Two</h4>
-                    <p className="text-xs text-slate-400">Co-Op Campaign Finished • Hazelight</p>
+                    <Badge variant="emerald">FREE WEEKEND</Badge>
+                    <h4 className="font-bold text-white">Helldivers 2</h4>
+                    <p className="text-xs text-slate-400">Play for Free on PC</p>
                   </Card>
                 </div>
               </section>

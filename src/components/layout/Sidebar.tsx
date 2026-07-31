@@ -5,14 +5,14 @@ import {
   Rocket,
   Flame,
   CalendarDays,
-  Trophy,
-  Gamepad2,
-  Layers,
   Tag,
   Plus,
   Trash2,
   Bookmark,
-  Compass
+  Compass,
+  Trophy,
+  Layers,
+  Gamepad2
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { Badge } from '../ui/Badge';
@@ -23,16 +23,20 @@ const iconMap: Record<string, React.ReactNode> = {
   Rocket: <Rocket className="w-4 h-4 text-cyan-400" />,
   Flame: <Flame className="w-4 h-4 text-amber-400" />,
   CalendarDays: <CalendarDays className="w-4 h-4 text-emerald-400" />,
+  Tag: <Tag className="w-4 h-4 text-purple-400" />,
   Trophy: <Trophy className="w-4 h-4 text-amber-400" />,
   Gamepad2: <Gamepad2 className="w-4 h-4 text-cyan-400" />,
-  Layers: <Layers className="w-4 h-4 text-purple-400" />,
-  Tag: <Tag className="w-4 h-4 text-emerald-400" />,
+  Layers: <Layers className="w-4 h-4 text-rose-400" />,
   Bookmark: <Bookmark className="w-4 h-4 text-indigo-400" />,
 };
 
 export const Sidebar: React.FC = () => {
   const { customTabs, addTab, deleteTab } = useSidebar();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  const isDefaultSystemTab = (id: string) => {
+    return ['home', 'new-releases', 'upcoming', 'calendar', 'deals'].includes(id);
+  };
 
   return (
     <aside className="hidden lg:flex flex-col border-r border-slate-800/80 glass-panel w-64 md:w-72 h-screen sticky top-0 left-0 shrink-0 z-30 justify-between">
@@ -51,9 +55,9 @@ export const Sidebar: React.FC = () => {
         </div>
       </div>
 
-      {/* One Continuous Sidebar Navigation List */}
+      {/* Sidebar Navigation List */}
       <div className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
-        {/* Pinned Homepage Tab - Distinct & Larger, Part of the Same Bar */}
+        {/* Pinned Homepage Tab - Distinct & Larger */}
         <NavLink
           to="/"
           end
@@ -72,7 +76,7 @@ export const Sidebar: React.FC = () => {
           <Badge variant="indigo">PRIMARY</Badge>
         </NavLink>
 
-        {/* Secondary Navigation Tabs */}
+        {/* Discovery Feeds */}
         <nav className="space-y-1">
           {customTabs
             .filter(t => t.id !== 'home')
@@ -97,29 +101,31 @@ export const Sidebar: React.FC = () => {
                 </NavLink>
 
                 {/* Delete Hover Button for Custom Secondary Tabs */}
-                <button
-                  onClick={e => {
-                    e.preventDefault();
-                    deleteTab(item.id);
-                  }}
-                  className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
-                  title="Delete Tab"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {!isDefaultSystemTab(item.id) && (
+                  <button
+                    onClick={e => {
+                      e.preventDefault();
+                      deleteTab(item.id);
+                    }}
+                    className="absolute right-2 opacity-0 group-hover:opacity-100 p-1 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-all"
+                    title="Delete Custom Tab"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             ))}
         </nav>
       </div>
 
-      {/* Bottom Action Footer */}
+      {/* Bottom Action Footer with Create Triggers */}
       <div className="p-3 border-t border-slate-800/80 space-y-2">
         <button
           onClick={() => setIsAddModalOpen(true)}
           className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-slate-700 text-slate-400 hover:text-indigo-300 hover:border-indigo-500/50 hover:bg-indigo-600/10 text-xs font-bold transition-all"
         >
           <Plus className="w-4 h-4" />
-          <span>Add Custom Tab</span>
+          <span>Create Custom Tab / List</span>
         </button>
 
         <div className="text-[10px] text-slate-500 text-center font-mono pt-1">

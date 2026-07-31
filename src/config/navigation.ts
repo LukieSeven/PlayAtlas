@@ -15,7 +15,7 @@ export const navigationConfig: NavSection[] = [
     ],
   },
   {
-    title: 'Discovery & Feeds',
+    title: 'Discovery Feeds',
     items: [
       {
         id: 'new-releases',
@@ -38,33 +38,6 @@ export const navigationConfig: NavSection[] = [
         label: 'Games Calendar',
         path: '/calendar',
         iconName: 'CalendarDays',
-      },
-    ],
-  },
-  {
-    title: 'Personal & Lists',
-    items: [
-      {
-        id: 'goty-2026',
-        label: 'Top 10 GOTY 2026',
-        path: '/lists',
-        iconName: 'Trophy',
-        badge: 'TOP 10',
-        badgeColor: 'amber',
-      },
-      {
-        id: 'backlog',
-        label: 'Backlog & Playing',
-        path: '/backlog',
-        iconName: 'Gamepad2',
-        badge: 12,
-        badgeColor: 'cyan',
-      },
-      {
-        id: 'tier-studio',
-        label: 'Tier List Studio',
-        path: '/tier-lists',
-        iconName: 'Layers',
       },
       {
         id: 'deals',

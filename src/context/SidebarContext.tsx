@@ -15,7 +15,7 @@ const SidebarContext = createContext<SidebarContextType | undefined>(undefined);
 
 export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [customTabs, setCustomTabs] = useState<NavItem[]>(() => {
-    const saved = localStorage.getItem('playatlas_custom_tabs');
+    const saved = localStorage.getItem('playatlas_custom_tabs_v2');
     if (saved) {
       try {
         return JSON.parse(saved);
@@ -31,7 +31,7 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addTab = (newTab: NavItem) => {
     setCustomTabs(prev => {
       const updated = [...prev, newTab];
-      localStorage.setItem('playatlas_custom_tabs', JSON.stringify(updated));
+      localStorage.setItem('playatlas_custom_tabs_v2', JSON.stringify(updated));
       return updated;
     });
   };
@@ -40,7 +40,7 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (tabId === 'home') return; // Cannot delete home
     setCustomTabs(prev => {
       const updated = prev.filter(t => t.id !== tabId);
-      localStorage.setItem('playatlas_custom_tabs', JSON.stringify(updated));
+      localStorage.setItem('playatlas_custom_tabs_v2', JSON.stringify(updated));
       return updated;
     });
   };
