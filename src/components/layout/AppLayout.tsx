@@ -7,21 +7,21 @@ import { Footer } from './Footer';
 
 export const AppLayout: React.FC = () => {
   return (
-    <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-indigo-600 selection:text-white">
-      {/* Top Header Navigation */}
-      <Header />
+    <div className="h-screen w-screen overflow-hidden flex bg-slate-950 text-slate-100 font-sans selection:bg-indigo-600 selection:text-white">
+      {/* Discord-Style Left Pinned Sidebar */}
+      <Sidebar />
 
-      {/* Main Container Layout */}
-      <div className="flex-1 flex w-full max-w-7xl mx-auto">
-        {/* Sidebar Navigation */}
-        <Sidebar />
+      {/* Mobile Drawer Overlay */}
+      <MobileNav />
 
-        {/* Mobile Overlay Nav */}
-        <MobileNav />
+      {/* Main Viewport Container */}
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+        {/* Sticky Top Header Navigation */}
+        <Header />
 
-        {/* Dynamic Route View Content Area */}
-        <main className="flex-1 min-w-0 p-4 md:p-8 lg:p-10 flex flex-col justify-between">
-          <div>
+        {/* Scrollable Main Dashboard Canvas Area */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 flex flex-col justify-between">
+          <div className="max-w-7xl mx-auto w-full space-y-8">
             <Outlet />
           </div>
           <Footer />

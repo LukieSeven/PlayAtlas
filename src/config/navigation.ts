@@ -2,65 +2,83 @@ import { NavSection } from '../types/navigation';
 
 export const navigationConfig: NavSection[] = [
   {
-    title: 'Discover & Organize',
+    title: 'Primary',
     items: [
       {
         id: 'home',
-        label: 'Home Dashboard',
+        label: 'Homepage',
         path: '/',
-        iconName: 'LayoutDashboard',
+        iconName: 'Home',
+        badge: 'MAIN',
+        badgeColor: 'indigo',
+      },
+    ],
+  },
+  {
+    title: 'Discovery & Feeds',
+    items: [
+      {
+        id: 'new-releases',
+        label: 'New Releases',
+        path: '/new-releases',
+        iconName: 'Rocket',
+        badge: 'NEW',
+        badgeColor: 'cyan',
       },
       {
-        id: 'ranked-lists',
-        label: 'Ranked Lists',
+        id: 'upcoming',
+        label: 'Major Upcoming Games',
+        path: '/upcoming',
+        iconName: 'Flame',
+        badge: 'SPOTLIGHT',
+        badgeColor: 'amber',
+      },
+      {
+        id: 'calendar',
+        label: 'Games Calendar',
+        path: '/calendar',
+        iconName: 'CalendarDays',
+      },
+    ],
+  },
+  {
+    title: 'Personal & Lists',
+    items: [
+      {
+        id: 'wife-coop',
+        label: 'Games My Wife & I Enjoy',
+        path: '/lists',
+        iconName: 'Heart',
+        badge: 'CO-OP',
+        badgeColor: 'rose',
+      },
+      {
+        id: 'goty-2026',
+        label: 'Top 10 GOTY 2026',
         path: '/lists',
         iconName: 'Trophy',
         badge: 'TOP 10',
         badgeColor: 'amber',
       },
       {
-        id: 'tier-lists',
-        label: 'Tier Lists',
-        path: '/tier-lists',
-        iconName: 'Layers',
-        badge: 'S-TIER',
-        badgeColor: 'indigo',
-      },
-      {
-        id: 'collections',
-        label: 'Custom Collections',
-        path: '/collections',
-        iconName: 'Bookmark',
-      },
-      {
         id: 'backlog',
-        label: 'Game Backlog',
+        label: 'Backlog & Playing',
         path: '/backlog',
         iconName: 'Gamepad2',
         badge: 12,
         badgeColor: 'cyan',
       },
-    ],
-  },
-  {
-    title: 'Sharing & Social',
-    items: [
       {
-        id: 'shared-lists',
-        label: 'Shared Links',
-        path: '/share/goty-2026',
-        iconName: 'Share2',
+        id: 'tier-studio',
+        label: 'Tier List Studio',
+        path: '/tier-lists',
+        iconName: 'Layers',
       },
-    ],
-  },
-  {
-    title: 'System',
-    items: [
       {
-        id: 'settings',
-        label: 'Settings & Theme',
-        path: '/settings',
-        iconName: 'Settings',
+        id: 'deals',
+        label: 'Deals & Discounts',
+        path: '/deals',
+        iconName: 'Tag',
       },
     ],
   },

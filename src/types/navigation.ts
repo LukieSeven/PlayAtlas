@@ -4,7 +4,7 @@ export interface NavItem {
   path: string;
   iconName: string;
   badge?: string | number;
-  badgeColor?: 'indigo' | 'cyan' | 'emerald' | 'amber';
+  badgeColor?: 'indigo' | 'cyan' | 'emerald' | 'amber' | 'rose' | 'slate' | 'purple';
   isExternal?: boolean;
 }
 
