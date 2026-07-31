@@ -1,13 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { PageHeader } from '../components/layout/PageHeader';
 import { GameListGrid } from '../components/widgets/GameListGrid';
 import { fetchNewReleases } from '../services/gameDbService';
 import { GameItem } from '../types/game';
-import { Clock } from 'lucide-react';
 
-type TimeFrame = 'today' | 'week' | 'month';
+type TimeFrame = 'day' | 'week' | 'month';
 
-// Sample verified releases with exact dates relative to current date (July 31, 2026)
+// Verified sample releases with exact dates relative to July 31, 2026
 const sampleLiveNewReleases: GameItem[] = [
   {
     id: 'rel-1',
@@ -19,17 +17,19 @@ const sampleLiveNewReleases: GameItem[] = [
     genres: ['Action', 'RPG'],
     developer: 'Astraea Games',
     summary: 'Released TODAY! Dark fantasy action RPG adventure.',
+    category: 'Base Game',
   },
   {
     id: 'rel-2',
     title: 'Cipheur: Trivia Geography',
     coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
     rating: 8.8,
-    releaseDate: '2026-07-30',
+    releaseDate: '2026-07-31',
     platforms: ['PC'],
     genres: ['Puzzle', 'Trivia'],
     developer: 'Cipheur Studios',
     summary: 'Released TODAY! Educational geography trivia puzzle game.',
+    category: 'Base Game',
   },
   {
     id: 'rel-3',
@@ -41,6 +41,7 @@ const sampleLiveNewReleases: GameItem[] = [
     genres: ['Cozy', 'Adventure'],
     developer: 'Wholesome Games',
     summary: 'Released THIS WEEK! Relaxing cat photography exploration game.',
+    category: 'Base Game',
   },
   {
     id: 'rel-4',
@@ -52,6 +53,7 @@ const sampleLiveNewReleases: GameItem[] = [
     genres: ['Narrative', 'Thriller'],
     developer: 'Summer Interactive',
     summary: 'Released THIS WEEK! High tension survival mystery in intense heatwave.',
+    category: 'Base Game',
   },
   {
     id: 'rel-5',
@@ -63,6 +65,7 @@ const sampleLiveNewReleases: GameItem[] = [
     genres: ['Simulation', 'Strategy'],
     developer: 'Colossal Order',
     summary: 'Released THIS MONTH! Motorsport & street racing city expansion.',
+    category: 'DLC / Expansion',
   },
   {
     id: 'rel-6',
@@ -74,11 +77,12 @@ const sampleLiveNewReleases: GameItem[] = [
     genres: ['Action RPG', 'Indie'],
     developer: 'Spelltooth Devs',
     summary: 'Released THIS MONTH! Fast-paced spellcasting dungeon crawler.',
+    category: 'Base Game',
   },
 ];
 
 export const NewReleasesPage: React.FC = () => {
-  const [timeframe, setTimeframe] = useState<TimeFrame>('week');
+  const [timeframe, setTimeframe] = useState<TimeFrame>('day'); // Defaults to Day
   const [games, setGames] = useState<GameItem[]>(sampleLiveNewReleases);
 
   useEffect(() => {
@@ -99,7 +103,7 @@ export const NewReleasesPage: React.FC = () => {
       if (isNaN(gDate)) return false;
       const diffDays = (today - gDate) / oneDayMs;
 
-      if (timeframe === 'today') {
+      if (timeframe === 'day') {
         return diffDays >= 0 && diffDays <= 1.5; // Released in last 24-36 hrs
       }
       if (timeframe === 'week') {
@@ -113,66 +117,59 @@ export const NewReleasesPage: React.FC = () => {
   }, [games, timeframe]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      <PageHeader
-        badge="NEW RELEASES FEED"
-        title="New & Recent Game Releases"
-        subtitle="Track brand new video game launches strictly filtered by release timeframe."
-      />
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Simple Minimalist Header Bar: Title + Day/Week/Month Toggle */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 glass-panel p-5 rounded-2xl border border-slate-800">
+        <h1 className="text-3xl font-extrabold text-white tracking-tight">New Releases</h1>
 
-      {/* Interactive Timeframe Filter Selector Tabs */}
-      <div className="glass-panel p-4 rounded-2xl border border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="flex items-center gap-2">
-          <Clock className="w-4 h-4 text-cyan-400" />
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-300">Release Timeframe:</span>
-        </div>
-
-        <div className="flex items-center gap-2 bg-slate-900/90 p-1 rounded-xl border border-slate-800">
+        {/* Clean Timeframe Toggle Selector (Defaults to Day) */}
+        <div className="flex items-center gap-1.5 bg-slate-900/90 p-1 rounded-xl border border-slate-800 self-start sm:self-auto">
           <button
-            onClick={() => setTimeframe('today')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
-              timeframe === 'today'
-                ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md'
+            onClick={() => setTimeframe('day')}
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all ${
+              timeframe === 'day'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            🔥 Released Today
+            Day
           </button>
           <button
             onClick={() => setTimeframe('week')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all ${
               timeframe === 'week'
-                ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            📅 This Week (Last 7 Days)
+            Week
           </button>
           <button
             onClick={() => setTimeframe('month')}
-            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${
+            className={`px-4 py-2 rounded-lg text-xs font-extrabold transition-all ${
               timeframe === 'month'
-                ? 'bg-gradient-to-r from-cyan-500 to-indigo-600 text-white shadow-md'
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-600/30'
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            📆 This Month (July 2026)
+            Month
           </button>
         </div>
       </div>
 
-      {/* Game List Grid strictly rendering filtered time window */}
+      {/* Game List Grid directly rendering filtered games with search and filter bar below */}
       <GameListGrid
         title={
-          timeframe === 'today'
+          timeframe === 'day'
             ? 'Games Released Today'
             : timeframe === 'week'
-            ? 'Games Released This Week (Last 7 Days)'
-            : 'Games Released This Month (July 2026)'
+            ? 'Games Released This Week'
+            : 'Games Released This Month'
         }
-        description={`Showing games strictly released in your selected timeframe (${filteredGames.length} games).`}
+        description={`Showing new releases for your selected timeframe (${filteredGames.length} games).`}
         badge="STRICT TIMEFRAME FEED"
         games={filteredGames}
+        showRankNumbers={false}
       />
     </div>
   );

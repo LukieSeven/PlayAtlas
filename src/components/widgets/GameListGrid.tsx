@@ -25,16 +25,23 @@ interface GameListGridProps {
   badge?: string;
   games?: GameItem[];
   showControls?: boolean;
+  showRankNumbers?: boolean; // Default false for unranked discovery cards
   onShareClick?: () => void;
 }
 
 const initialFilterState: FilterState = {
   searchQuery: '',
+  category: 'Main Games', // Defaults to Main Games
   genre: 'all',
-  year: 'all',
-  developer: 'all',
   platform: 'all',
   minRating: 0,
+  developer: 'all',
+  publisher: 'all',
+  status: 'all',
+  year: 'all',
+  gameMode: 'all',
+  perspective: 'all',
+  theme: 'all',
   sortBy: 'rating',
 };
 
@@ -44,6 +51,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   badge = 'LIVE GAMEDB FEED',
   games: initialGames,
   showControls = true,
+  showRankNumbers = false, // Unranked discovery cards by default
   onShareClick,
 }) => {
   const [liveGames, setLiveGames] = useState<GameItem[]>(initialGames || []);
@@ -135,6 +143,13 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   const filteredGames = useMemo(() => {
     return liveGames
       .filter(game => {
+        // Category Filter (Defaults to Main Games)
+        if (filters.category === 'Main Games' && game.category && game.category !== 'Base Game') {
+          return false;
+        } else if (filters.category !== 'All' && filters.category !== 'Main Games') {
+          if (game.category !== filters.category) return false;
+        }
+
         // Genre filter
         if (filters.genre !== 'all' && !game.genres.includes(filters.genre)) {
           return false;
@@ -187,7 +202,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
             <Badge variant="indigo">{badge}</Badge>
             <span className="text-xs text-slate-400 font-mono flex items-center gap-1">
               <Globe className="w-3 h-3 text-cyan-400" />
-              {loading ? 'Fetching GameDB...' : `${filteredGames.length} Live Games`}
+              {loading ? 'Fetching GameDB...' : `${filteredGames.length} Games Shown`}
             </span>
           </div>
           <h3 className="text-2xl font-bold text-white tracking-tight">{title}</h3>
@@ -266,7 +281,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         </Card>
       )}
 
-      {/* Rendered Games Container */}
+      {/* Rendered Games Container - Unranked Cover Cards */}
       {!loading && viewMode === 'grid' && filteredGames.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
           {filteredGames.map((game, index) => (
@@ -278,9 +293,13 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
                     alt={game.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                   />
-                  <div className="absolute top-2 left-2 w-7 h-7 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-center font-mono text-xs font-bold text-amber-400">
-                    #{index + 1}
-                  </div>
+
+                  {/* Optional Rank Badge (Only shown if explicitly enabled) */}
+                  {showRankNumbers && (
+                    <div className="absolute top-2 left-2 w-7 h-7 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-center font-mono text-xs font-bold text-amber-400">
+                      #{index + 1}
+                    </div>
+                  )}
 
                   {/* Category Type Badge */}
                   <div className="absolute bottom-2 left-2">
@@ -329,9 +348,11 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
             <Card key={game.id} interactive glass className="flex flex-col sm:flex-row gap-4 p-4">
               <div className="shrink-0 relative w-full sm:w-36 aspect-[3/4] rounded-xl overflow-hidden">
                 <img src={game.coverUrl} alt={game.title} className="w-full h-full object-cover" />
-                <div className="absolute top-2 left-2 w-7 h-7 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-center font-mono text-xs font-bold text-amber-400">
-                  #{index + 1}
-                </div>
+                {showRankNumbers && (
+                  <div className="absolute top-2 left-2 w-7 h-7 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-center font-mono text-xs font-bold text-amber-400">
+                    #{index + 1}
+                  </div>
+                )}
                 <div className="absolute bottom-2 left-2">
                   <Badge variant={getCategoryBadgeVariant(game.category)}>
                     {game.category || 'Base Game'}
@@ -371,7 +392,9 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
               className="glass-panel p-3.5 rounded-xl border border-slate-800 flex items-center justify-between hover:border-indigo-500/40 transition-colors gap-4"
             >
               <div className="flex items-center gap-4">
-                <span className="w-6 font-mono font-bold text-indigo-400 text-sm">#{index + 1}</span>
+                {showRankNumbers && (
+                  <span className="w-6 font-mono font-bold text-indigo-400 text-sm">#{index + 1}</span>
+                )}
                 <img src={game.coverUrl} alt={game.title} className="w-10 h-10 rounded-lg object-cover" />
                 <div>
                   <div className="flex items-center gap-2">
