@@ -4,6 +4,10 @@ import { ThemeProvider } from './context/ThemeContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { HomePage } from './pages/HomePage';
+import { NewReleasesPage } from './pages/NewReleasesPage';
+import { UpcomingGamesPage } from './pages/UpcomingGamesPage';
+import { CalendarPage } from './pages/CalendarPage';
+import { DealsPage } from './pages/DealsPage';
 import { RankedListsPage } from './pages/RankedListsPage';
 import { TierListsPage } from './pages/TierListsPage';
 import { CollectionsPage } from './pages/CollectionsPage';
@@ -20,6 +24,10 @@ export const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<AppLayout />}>
               <Route index element={<HomePage />} />
+              <Route path="new-releases" element={<NewReleasesPage />} />
+              <Route path="upcoming" element={<UpcomingGamesPage />} />
+              <Route path="calendar" element={<CalendarPage />} />
+              <Route path="deals" element={<DealsPage />} />
               <Route path="lists" element={<RankedListsPage />} />
               <Route path="tier-lists" element={<TierListsPage />} />
               <Route path="collections" element={<CollectionsPage />} />
