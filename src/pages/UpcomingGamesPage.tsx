@@ -1,10 +1,18 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PageHeader } from '../components/layout/PageHeader';
 import { CountdownCard } from '../components/widgets/CountdownCard';
 import { GameListGrid } from '../components/widgets/GameListGrid';
+import { fetchUpcomingGames } from '../services/gameDbService';
+import { GameItem } from '../types/game';
 import { Flame } from 'lucide-react';
 
 export const UpcomingGamesPage: React.FC = () => {
+  const [upcomingGames, setUpcomingGames] = useState<GameItem[]>([]);
+
+  useEffect(() => {
+    fetchUpcomingGames().then(data => setUpcomingGames(data));
+  }, []);
+
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <PageHeader
@@ -22,9 +30,10 @@ export const UpcomingGamesPage: React.FC = () => {
       </section>
 
       <GameListGrid
-        title="Anticipated Releases Grid"
+        title="Anticipated Future Releases"
         description="Filter upcoming game announcements by genre, developer, and release year."
         badge="UPCOMING SPOTLIGHT"
+        games={upcomingGames}
       />
     </div>
   );
