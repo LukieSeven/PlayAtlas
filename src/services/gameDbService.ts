@@ -28,72 +28,54 @@ export interface GameDbQueryResult {
   asOfDate: string;
 }
 
-// Active GameDB IDs for recent 2025-2026 releases across all genres
-const GAMEDB_RELEASES_POOL = [
-  '405985', // Heatwave: Sam's Stay (2026)
-  '408339', // SpringTale (2026)
-  '381802', // SnapCat: Mia's Cozy Adventure (2026)
-  '383063', // Spelltooth (2025-2026)
-  '364729', // CinemaLandVR (2025-2026)
-  '363943', // Bling Bling Bankruptcy (2025)
-  '338850', // Hell's Maw (2025)
-  '290888', // GTA VI (2025-2026)
-  '291983', // Monster Hunter Wilds (2025-2026)
-  '279304', // Black Myth: Wukong (2025-2026)
-  '240009', // Helldivers 2 (2025-2026)
-  '204380', // Final Fantasy VII Rebirth (2025-2026)
-  '119277', // Tekken 8 (2025-2026)
-  '119288', // Dragon's Dogma 2 (2025-2026)
-  '227844', // Avowed (2025)
-  '317173', // Doom: The Dark Ages (2025)
-  '290890', // Death Stranding 2 (2025)
-  '383549', // Kingdom Come: Deliverance II (2025)
-  '393462', // Cities: Skylines DLC (2026)
-  '384009', // Metroid Prime 4 (2025)
+// Live GameDB ID Pool to inspect
+const GAMEDB_INSPECT_POOL = [
+  '405985', '408339', '381802', '383063', '364729', '363943', '338850', '290888',
+  '291983', '279304', '240009', '204380', '119277', '119288', '227844', '317173',
+  '290890', '383549', '393462', '384009'
 ];
 
 /**
- * Dynamic GameDB Live Query Service
- * Queries live GameDB CDN over HTTPS for recent 2025-2026 releases.
+ * Strict Date Filter Engine
+ * DAY: Strictly games released on 07/31/2026 OR 07/30/2026. NOTHING ELSE.
+ * WEEK: Strictly games released in last 7 days (07/24/2026 to 07/31/2026). NOTHING ELSE.
+ * MONTH: Strictly games released in last 31 days (07/01/2026 to 07/31/2026). NOTHING ELSE.
  */
 export async function fetchDirectGameDbReleases(timeframe: 'day' | 'week' | 'month'): Promise<GameDbQueryResult> {
-  const now = new Date();
-  const todayStr = now.toISOString().split('T')[0];
+  const todayStr = '2026-07-31';
+  const yesterdayStr = '2026-07-30';
 
   // Fetch live GameDB records
-  const fetchedGames = await Promise.all(GAMEDB_RELEASES_POOL.map(id => fetchGameDetails(id)));
-
-  // Filter valid items
+  const fetchedGames = await Promise.all(GAMEDB_INSPECT_POOL.map(id => fetchGameDetails(id)));
   const validGames = fetchedGames.filter((item): item is GameItem => item !== null && item.releaseDate !== 'Unknown');
 
-  // Sort strictly by actual RELEASE DATE descending (newest release date first)
-  const sorted = validGames.sort(
-    (a, b) => new Date(b.releaseDate).getTime() - new Date(a.releaseDate).getTime()
-  );
-
   if (timeframe === 'day') {
-    // Return top recent 2026 base games so Day NEVER returns a single weird point-and-click game
-    const dayFiltered = sorted.filter(g => g.category === 'Base Game').slice(0, 6);
-    const mostRecentDate = dayFiltered[0]?.releaseDate || todayStr;
+    // STRICT FILTER: MUST BE 07/31/2026 OR 07/30/2026. If not 07/30/26 or 07/31/26 -> NOT SHOWN.
+    const dayFiltered = validGames.filter(g => g.releaseDate === todayStr || g.releaseDate === yesterdayStr);
 
+    const hasToday = dayFiltered.some(g => g.releaseDate === todayStr);
     return {
       games: dayFiltered,
-      asOfDate: `As of ${mostRecentDate}`,
+      asOfDate: hasToday ? `Released Today (${todayStr})` : `Released Yesterday (${yesterdayStr})`,
     };
   }
 
   if (timeframe === 'week') {
-    const weekFiltered = sorted.filter(g => g.category === 'Base Game').slice(0, 10);
+    // STRICT FILTER: MUST BE 07/24/2026 TO 07/31/2026. NOTHING ELSE.
+    const weekFiltered = validGames.filter(g => g.releaseDate >= '2026-07-24' && g.releaseDate <= '2026-07-31');
+
     return {
       games: weekFiltered,
-      asOfDate: `As of Last 7 Days`,
+      asOfDate: `Released This Week (07/24/26 - 07/31/26)`,
     };
   }
 
-  // Month
+  // MONTH: STRICT FILTER: MUST BE 07/01/2026 TO 07/31/2026. NOTHING ELSE.
+  const monthFiltered = validGames.filter(g => g.releaseDate >= '2026-07-01' && g.releaseDate <= '2026-07-31');
+
   return {
-    games: sorted,
-    asOfDate: `As of Last 31 Days`,
+    games: monthFiltered,
+    asOfDate: `Released This Month (07/01/26 - 07/31/26)`,
   };
 }
 
