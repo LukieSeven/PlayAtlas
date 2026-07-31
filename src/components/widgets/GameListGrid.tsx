@@ -127,9 +127,9 @@ const initialFilterState: FilterState = {
 };
 
 export const GameListGrid: React.FC<GameListGridProps> = ({
-  title = 'Games My Wife & I Enjoy (Co-Op GOTY)',
-  description = 'Curated list of our favorite couch & online co-op adventures.',
-  badge = 'CUSTOM LIST',
+  title = 'Top 10 Game of the Year (GOTY 2026)',
+  description = 'Ranked top list of featured games with ratings, release dates, and developer info.',
+  badge = 'TOP 10 RANKED',
   games = defaultMockGames,
   showControls = true,
   onShareClick,

@@ -9,7 +9,7 @@ export const navigationConfig: NavSection[] = [
         label: 'Homepage',
         path: '/',
         iconName: 'Home',
-        badge: 'MAIN',
+        badge: 'PRIMARY',
         badgeColor: 'indigo',
       },
     ],
@@ -44,14 +44,6 @@ export const navigationConfig: NavSection[] = [
   {
     title: 'Personal & Lists',
     items: [
-      {
-        id: 'wife-coop',
-        label: 'Games My Wife & I Enjoy',
-        path: '/lists',
-        iconName: 'Heart',
-        badge: 'CO-OP',
-        badgeColor: 'rose',
-      },
       {
         id: 'goty-2026',
         label: 'Top 10 GOTY 2026',

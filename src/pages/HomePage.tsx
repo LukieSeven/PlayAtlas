@@ -17,8 +17,7 @@ interface ActiveWidget {
 
 const defaultDashboardWidgets: ActiveWidget[] = [
   { id: 'w-countdown', type: 'spotlight_countdown', title: 'Upcoming Release Countdown Spotlight' },
-  { id: 'w-goty', type: 'top_ten_list', title: 'Top 10 Game of the Year List' },
-  { id: 'w-coop', type: 'custom_list', title: 'Games My Wife & I Enjoy (Co-Op GOTY)' },
+  { id: 'w-goty', type: 'top_ten_list', title: 'Top 10 Game of the Year (GOTY 2026)' },
   { id: 'w-backlog', type: 'backlog_tracker', title: 'Backlog & Playing Tracker' },
 ];
 

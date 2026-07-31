@@ -5,25 +5,24 @@ import {
   Rocket,
   Flame,
   CalendarDays,
-  Heart,
   Trophy,
   Gamepad2,
   Layers,
   Tag,
   Plus,
   Trash2,
-  Bookmark
+  Bookmark,
+  Compass
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { Badge } from '../ui/Badge';
 import { AddTabModal } from '../widgets/AddTabModal';
 
 const iconMap: Record<string, React.ReactNode> = {
-  Home: <Home className="w-4 h-4 text-indigo-400" />,
+  Home: <Home className="w-5 h-5 text-indigo-400" />,
   Rocket: <Rocket className="w-4 h-4 text-cyan-400" />,
   Flame: <Flame className="w-4 h-4 text-amber-400" />,
   CalendarDays: <CalendarDays className="w-4 h-4 text-emerald-400" />,
-  Heart: <Heart className="w-4 h-4 text-rose-400" />,
   Trophy: <Trophy className="w-4 h-4 text-amber-400" />,
   Gamepad2: <Gamepad2 className="w-4 h-4 text-cyan-400" />,
   Layers: <Layers className="w-4 h-4 text-purple-400" />,
@@ -37,49 +36,43 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="hidden lg:flex flex-col border-r border-slate-800/80 glass-panel w-64 md:w-72 h-screen sticky top-0 left-0 shrink-0 z-30 justify-between">
-      {/* Top Brand & Homepage Pinned Header */}
-      <div className="p-4 border-b border-slate-800/80 space-y-3">
+      {/* Top Brand Header */}
+      <div className="p-4 border-b border-slate-800/80">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
-            <Home className="w-4 h-4" />
+          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25">
+            <Compass className="w-5 h-5" />
           </div>
           <div className="flex flex-col">
-            <span className="font-extrabold text-base tracking-wider text-white leading-none">
+            <span className="font-extrabold text-lg tracking-wider text-white leading-none">
               PLAY<span className="text-indigo-400">ATLAS</span>
             </span>
-            <span className="text-[10px] text-slate-400 font-mono tracking-tight">DISCORD LAYOUT CANVAS</span>
+            <span className="text-[10px] text-slate-400 font-mono tracking-tight mt-0.5">GAME DISCOVERY & LISTS</span>
           </div>
         </div>
+      </div>
 
-        {/* Pinned Primary Homepage Tab */}
+      {/* One Continuous Sidebar Navigation List */}
+      <div className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+        {/* Pinned Homepage Tab - Distinct & Larger, Part of the Same Bar */}
         <NavLink
           to="/"
           end
           className={({ isActive }) =>
-            `flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-sm transition-all duration-200 ${
+            `flex items-center justify-between px-4 py-3 rounded-2xl font-extrabold text-sm transition-all duration-200 mb-3 shadow-md ${
               isActive
-                ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 border border-indigo-400/30'
-                : 'bg-slate-900/90 text-slate-300 hover:bg-slate-800 hover:text-white border border-slate-800'
+                ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white shadow-indigo-600/30 border border-indigo-400/50'
+                : 'bg-slate-900/90 text-slate-200 hover:bg-slate-800 hover:text-white border border-slate-800'
             }`
           }
         >
-          <div className="flex items-center gap-2.5">
-            <Home className="w-4 h-4 text-indigo-300" />
-            <span>Homepage</span>
+          <div className="flex items-center gap-3">
+            <Home className="w-5 h-5 text-indigo-300" />
+            <span className="text-base tracking-wide">Homepage</span>
           </div>
           <Badge variant="indigo">PRIMARY</Badge>
         </NavLink>
-      </div>
 
-      {/* Customizable Tabs List (Middle Scroll Area) */}
-      <div className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
-        <div className="flex items-center justify-between px-2">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
-            Taskbar Tabs & Channels
-          </span>
-          <span className="text-[10px] text-slate-500 font-mono">{customTabs.length} Total</span>
-        </div>
-
+        {/* Secondary Navigation Tabs */}
         <nav className="space-y-1">
           {customTabs
             .filter(t => t.id !== 'home')
@@ -88,7 +81,7 @@ export const Sidebar: React.FC = () => {
                 <NavLink
                   to={item.path}
                   className={({ isActive }) =>
-                    `flex-1 flex items-center justify-between px-3 py-2.5 rounded-xl font-medium text-xs transition-all duration-200 ${
+                    `flex-1 flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 ${
                       isActive
                         ? 'bg-slate-800/90 text-white border border-indigo-500/30 shadow-md'
                         : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
