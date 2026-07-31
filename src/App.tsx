@@ -1,0 +1,39 @@
+import React from 'react';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { ThemeProvider } from './context/ThemeContext';
+import { SidebarProvider } from './context/SidebarContext';
+import { AppLayout } from './components/layout/AppLayout';
+import { HomePage } from './pages/HomePage';
+import { RankedListsPage } from './pages/RankedListsPage';
+import { TierListsPage } from './pages/TierListsPage';
+import { CollectionsPage } from './pages/CollectionsPage';
+import { BacklogPage } from './pages/BacklogPage';
+import { SharedListPage } from './pages/SharedListPage';
+import { SettingsPage } from './pages/SettingsPage';
+import { NotFoundPage } from './pages/NotFoundPage';
+
+export const App: React.FC = () => {
+  return (
+    <ThemeProvider>
+      <SidebarProvider>
+        <BrowserRouter>
+          <Routes>
+            <Route path="/" element={<AppLayout />}>
+              <Route index element={<HomePage />} />
+              <Route path="lists" element={<RankedListsPage />} />
+              <Route path="tier-lists" element={<TierListsPage />} />
+              <Route path="collections" element={<CollectionsPage />} />
+              <Route path="backlog" element={<BacklogPage />} />
+              <Route path="share/:listId" element={<SharedListPage />} />
+              <Route path="settings" element={<SettingsPage />} />
+              <Route path="404" element={<NotFoundPage />} />
+              <Route path="*" element={<Navigate to="/404" replace />} />
+            </Route>
+          </Routes>
+        </BrowserRouter>
+      </SidebarProvider>
+    </ThemeProvider>
+  );
+};
+
+export default App;
