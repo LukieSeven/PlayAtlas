@@ -8,6 +8,7 @@ export interface RawGameDbObject {
   storyline?: string;
   rating?: number;
   aggregated_rating?: number;
+  category?: number; // IGDB category enum
   cover?: {
     id: number;
     url: string;
@@ -57,6 +58,18 @@ export function adaptGameDbToGameItem(raw: RawGameDbObject): GameItem {
     bannerUrl = shotUrl.replace('t_thumb', 't_1080p');
   }
 
+  // Format Category Type
+  let category: 'Base Game' | 'DLC / Expansion' | 'Bundle' | 'Remake' | 'Mod' = 'Base Game';
+  if (raw.category === 1 || raw.category === 2 || raw.category === 4) {
+    category = 'DLC / Expansion';
+  } else if (raw.category === 3) {
+    category = 'Bundle';
+  } else if (raw.category === 8 || raw.category === 9) {
+    category = 'Remake';
+  } else if (raw.category === 5) {
+    category = 'Mod';
+  }
+
   // Format Developer Name
   let developer = 'Game Studio';
   if (raw.involved_companies && raw.involved_companies.length > 0) {
@@ -81,15 +94,18 @@ export function adaptGameDbToGameItem(raw: RawGameDbObject): GameItem {
     : ['PC', 'PS5', 'Xbox'];
 
   // Format Release Date
-  let releaseDate = '2024-01-01';
+  let releaseDate = '2026-07-31';
   if (raw.release_dates && raw.release_dates.length > 0) {
-    const firstDate = raw.release_dates[0];
-    if (firstDate.human) {
-      releaseDate = firstDate.human;
-    } else if (firstDate.date) {
-      releaseDate = new Date(firstDate.date * 1000).toISOString().split('T')[0];
-    } else if (firstDate.y) {
-      releaseDate = `${firstDate.y}-01-01`;
+    const validDates = raw.release_dates.filter(d => d.date || d.y);
+    if (validDates.length > 0) {
+      const initial = validDates[0];
+      if (initial.human) {
+        releaseDate = initial.human;
+      } else if (initial.date) {
+        releaseDate = new Date(initial.date * 1000).toISOString().split('T')[0];
+      } else if (initial.y) {
+        releaseDate = `${initial.y}-01-01`;
+      }
     }
   }
 
@@ -104,5 +120,6 @@ export function adaptGameDbToGameItem(raw: RawGameDbObject): GameItem {
     genres,
     developer,
     summary: raw.summary || raw.storyline || 'No detailed summary available for this title.',
+    category,
   };
 }

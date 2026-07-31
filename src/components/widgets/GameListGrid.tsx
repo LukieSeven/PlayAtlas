@@ -51,7 +51,15 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   const [viewMode, setViewMode] = useState<'grid' | 'cards' | 'list'>('grid');
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
 
-  // Fetch live games from GameDB CDN on mount
+  // Sync internal games state when initialGames prop changes
+  useEffect(() => {
+    if (initialGames) {
+      setLiveGames(initialGames);
+      setLoading(false);
+    }
+  }, [initialGames]);
+
+  // Fetch live games from GameDB CDN if no initialGames provided
   useEffect(() => {
     if (!initialGames || initialGames.length === 0) {
       let isMounted = true;
@@ -163,6 +171,13 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
       });
   }, [liveGames, filters]);
 
+  const getCategoryBadgeVariant = (cat?: string) => {
+    if (cat === 'DLC / Expansion') return 'purple';
+    if (cat === 'Bundle') return 'amber';
+    if (cat === 'Remake') return 'cyan';
+    return 'indigo';
+  };
+
   return (
     <div className="space-y-6">
       {/* Header Bar */}
@@ -266,6 +281,14 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
                   <div className="absolute top-2 left-2 w-7 h-7 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-center font-mono text-xs font-bold text-amber-400">
                     #{index + 1}
                   </div>
+
+                  {/* Category Type Badge */}
+                  <div className="absolute bottom-2 left-2">
+                    <Badge variant={getCategoryBadgeVariant(game.category)}>
+                      {game.category || 'Base Game'}
+                    </Badge>
+                  </div>
+
                   <div className="absolute top-2 right-2 flex items-center gap-1 bg-slate-950/80 backdrop-blur-md px-2 py-0.5 rounded-md border border-white/10 text-xs font-bold text-emerald-400">
                     <Star className="w-3 h-3 fill-emerald-400 text-emerald-400" />
                     <span>{game.rating}</span>
@@ -274,7 +297,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
                 <div className="flex items-center justify-between text-[11px] font-semibold text-indigo-400 mb-1">
                   <span className="truncate max-w-[120px]">{game.developer}</span>
-                  <span className="text-slate-500 font-mono">{new Date(game.releaseDate).getFullYear() || '2024'}</span>
+                  <span className="text-slate-500 font-mono">{new Date(game.releaseDate).getFullYear() || '2026'}</span>
                 </div>
 
                 <h4 className="font-bold text-white text-base group-hover:text-indigo-300 transition-colors line-clamp-1">
@@ -308,6 +331,11 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
                 <img src={game.coverUrl} alt={game.title} className="w-full h-full object-cover" />
                 <div className="absolute top-2 left-2 w-7 h-7 rounded-lg bg-slate-950/80 backdrop-blur-md border border-white/10 flex items-center justify-center font-mono text-xs font-bold text-amber-400">
                   #{index + 1}
+                </div>
+                <div className="absolute bottom-2 left-2">
+                  <Badge variant={getCategoryBadgeVariant(game.category)}>
+                    {game.category || 'Base Game'}
+                  </Badge>
                 </div>
               </div>
               <div className="flex-1 flex flex-col justify-between">
@@ -346,7 +374,12 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
                 <span className="w-6 font-mono font-bold text-indigo-400 text-sm">#{index + 1}</span>
                 <img src={game.coverUrl} alt={game.title} className="w-10 h-10 rounded-lg object-cover" />
                 <div>
-                  <h4 className="font-bold text-white text-sm">{game.title}</h4>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-white text-sm">{game.title}</h4>
+                    <Badge variant={getCategoryBadgeVariant(game.category)}>
+                      {game.category || 'Base Game'}
+                    </Badge>
+                  </div>
                   <p className="text-xs text-slate-400">{game.developer} • {game.genres.join(', ')} • {game.platforms.join(', ')}</p>
                 </div>
               </div>
