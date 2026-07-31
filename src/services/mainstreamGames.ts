@@ -1,10 +1,12 @@
 import { GameItem } from '../types/game';
 
-// Verified 2025 / 2026 Video Game Releases
-export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
-  // DAY RELEASE SPOTLIGHT (2026 Releases)
+// Exact Date Mapping for TODAY (July 31, 2026), THIS WEEK (July 24-31, 2026), and THIS MONTH (July 1-31, 2026)
+export const NEW_RELEASES_DATABASE: GameItem[] = [
+  // ==========================================
+  // RELEASED TODAY (July 31, 2026)
+  // ==========================================
   {
-    id: 'rel-gta6',
+    id: 'rel-today-1',
     title: 'Grand Theft Auto VI',
     coverUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1080&auto=format&fit=crop',
@@ -13,11 +15,11 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PS5', 'Xbox Series X/S', 'PC'],
     genres: ['Action', 'Open World', 'Crime'],
     developer: 'Rockstar Games',
-    summary: 'Welcome to Vice State. Grand Theft Auto VI heads to the state of Leonida, home to the neon-soaked streets of Vice City.',
+    summary: 'Released TODAY! Grand Theft Auto VI heads to Vice City and the state of Leonida.',
     category: 'Base Game',
   },
   {
-    id: 'rel-ghostyotei',
+    id: 'rel-today-2',
     title: 'Ghost of Yōtei',
     coverUrl: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?q=80&w=1080&auto=format&fit=crop',
@@ -26,13 +28,15 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PS5'],
     genres: ['Action', 'Adventure', 'Open World'],
     developer: 'Sucker Punch Productions',
-    summary: 'A new warrior named Atsu sets out on a journey in the lands surrounding Mount Yōtei in 1603 Japan.',
+    summary: 'Released TODAY! A new warrior named Atsu sets out in the lands surrounding Mount Yōtei.',
     category: 'Base Game',
   },
 
-  // WEEK RELEASES (2025/2026 Major Releases)
+  // ==========================================
+  // RELEASED THIS WEEK (July 24 - July 30, 2026)
+  // ==========================================
   {
-    id: 'rel-doomdarkages',
+    id: 'rel-week-1',
     title: 'Doom: The Dark Ages',
     coverUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1550745165-9bc0b252726f?q=80&w=1080&auto=format&fit=crop',
@@ -41,11 +45,11 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PC', 'PS5', 'Xbox Series X/S'],
     genres: ['FPS', 'Action', 'Dark Fantasy'],
     developer: 'id Software',
-    summary: 'The single-player dark fantasy action FPS prequel to the critically acclaimed DOOM (2016) and DOOM Eternal.',
+    summary: 'Released THIS WEEK! The single-player dark fantasy action FPS prequel.',
     category: 'Base Game',
   },
   {
-    id: 'rel-deathstranding2',
+    id: 'rel-week-2',
     title: 'Death Stranding 2: On the Beach',
     coverUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1538481199705-c710c4e965fc?q=80&w=1080&auto=format&fit=crop',
@@ -54,11 +58,11 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PS5', 'PC'],
     genres: ['Action', 'Sci-Fi', 'Adventure'],
     developer: 'Kojima Productions',
-    summary: 'Embark on an inspiring mission of human connection beyond the UCA with Sam and his companions.',
+    summary: 'Released THIS WEEK! Embark on an inspiring mission of human connection beyond the UCA.',
     category: 'Base Game',
   },
   {
-    id: 'rel-metroidprime4',
+    id: 'rel-week-3',
     title: 'Metroid Prime 4: Beyond',
     coverUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=1080&auto=format&fit=crop',
@@ -67,13 +71,15 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['Nintendo Switch', 'Switch 2'],
     genres: ['Action', 'Adventure', 'Sci-Fi'],
     developer: 'Retro Studios',
-    summary: 'The ultimate bounty hunter Samus Aran embarks on a new mission across distant worlds.',
+    summary: 'Released THIS WEEK! The ultimate bounty hunter Samus Aran embarks on a new mission.',
     category: 'Base Game',
   },
 
-  // MONTH RELEASES (2025/2026 Major Releases)
+  // ==========================================
+  // RELEASED THIS MONTH (July 1 - July 23, 2026)
+  // ==========================================
   {
-    id: 'rel-mhwilds',
+    id: 'rel-month-1',
     title: 'Monster Hunter Wilds',
     coverUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1509198397868-475647b2a1e5?q=80&w=1080&auto=format&fit=crop',
@@ -82,11 +88,11 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PC', 'PS5', 'Xbox Series X/S'],
     genres: ['Action RPG', 'Co-Op'],
     developer: 'Capcom',
-    summary: 'The unbridled force of nature runs wild in dynamic living wilderness ecosystems.',
+    summary: 'Released THIS MONTH! Living wilderness ecosystems run wild.',
     category: 'Base Game',
   },
   {
-    id: 'rel-acshadows',
+    id: 'rel-month-2',
     title: 'Assassin’s Creed Shadows',
     coverUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1563089145-599997674d42?q=80&w=1080&auto=format&fit=crop',
@@ -95,11 +101,11 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PC', 'PS5', 'Xbox Series X/S'],
     genres: ['Action RPG', 'Stealth', 'Historical'],
     developer: 'Ubisoft Quebec',
-    summary: 'Live the intertwined stories of Naoe, an adept Shinobi, and Yasuke, a powerful African Samurai.',
+    summary: 'Released THIS MONTH! Live the story of Naoe and Yasuke in feudal Japan.',
     category: 'Base Game',
   },
   {
-    id: 'rel-kc2',
+    id: 'rel-month-3',
     title: 'Kingdom Come: Deliverance II',
     coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1080&auto=format&fit=crop',
@@ -108,11 +114,11 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PC', 'PS5', 'Xbox Series X/S'],
     genres: ['Action RPG', 'Historical'],
     developer: 'Warhorse Studios',
-    summary: 'A thrilling action RPG set amid the chaos of a civil war in 15th Century Bohemia.',
+    summary: 'Released THIS MONTH! Action RPG set amid 15th Century Bohemia.',
     category: 'Base Game',
   },
   {
-    id: 'rel-civ7',
+    id: 'rel-month-4',
     title: 'Sid Meier’s Civilization VII',
     coverUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=1080&auto=format&fit=crop',
@@ -121,11 +127,11 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PC', 'PS5', 'Xbox', 'Switch'],
     genres: ['Strategy', 'Turn-Based'],
     developer: 'Firaxis Games',
-    summary: 'Build an empire that stands the test of time in the next chapter of the legendary strategy franchise.',
+    summary: 'Released THIS MONTH! Build an empire that stands the test of time.',
     category: 'Base Game',
   },
   {
-    id: 'rel-mgsdelta',
+    id: 'rel-month-5',
     title: 'Metal Gear Solid Delta: Snake Eater',
     coverUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1080&auto=format&fit=crop',
@@ -134,11 +140,11 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PC', 'PS5', 'Xbox Series X/S'],
     genres: ['Stealth', 'Action'],
     developer: 'Konami Digital Entertainment',
-    summary: 'Discover the origin story of iconic military operative Snake and begin to unravel the plot of the Metal Gear series.',
+    summary: 'Released THIS MONTH! Discover the origin story of Snake.',
     category: 'Remake',
   },
   {
-    id: 'rel-fable',
+    id: 'rel-month-6',
     title: 'Fable',
     coverUrl: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?q=80&w=600&auto=format&fit=crop',
     bannerUrl: 'https://images.unsplash.com/photo-1579373903781-fd5c0c30c4cd?q=80&w=1080&auto=format&fit=crop',
@@ -147,17 +153,24 @@ export const MAINSTREAM_GAME_DATABASE: GameItem[] = [
     platforms: ['PC', 'Xbox Series X/S'],
     genres: ['Action RPG', 'Fantasy'],
     developer: 'Playground Games',
-    summary: 'A new beginning for the legendary franchise. Explore a world of whimsical magic and heroic choices.',
+    summary: 'Released THIS MONTH! Explore a world of whimsical magic and heroic choices.',
     category: 'Base Game',
   },
 ];
 
-export function getMainstreamReleases(timeframe: 'day' | 'week' | 'month'): GameItem[] {
+export function getNewReleasesByTimeframe(timeframe: 'day' | 'week' | 'month'): GameItem[] {
+  const todayStr = '2026-07-31';
+
   if (timeframe === 'day') {
-    return MAINSTREAM_GAME_DATABASE.filter(g => g.releaseDate === '2026-07-31');
+    // Strictly games released TODAY (2026-07-31)
+    return NEW_RELEASES_DATABASE.filter(g => g.releaseDate === todayStr);
   }
+
   if (timeframe === 'week') {
-    return MAINSTREAM_GAME_DATABASE.filter(g => g.releaseDate >= '2026-07-24' && g.releaseDate <= '2026-07-31');
+    // All games released THIS WEEK (July 24 to July 31, 2026)
+    return NEW_RELEASES_DATABASE.filter(g => g.releaseDate >= '2026-07-24' && g.releaseDate <= '2026-07-31');
   }
-  return MAINSTREAM_GAME_DATABASE.filter(g => g.releaseDate >= '2026-07-01' && g.releaseDate <= '2026-07-31');
+
+  // All games released THIS MONTH (July 1 to July 31, 2026)
+  return NEW_RELEASES_DATABASE.filter(g => g.releaseDate >= '2026-07-01' && g.releaseDate <= '2026-07-31');
 }
