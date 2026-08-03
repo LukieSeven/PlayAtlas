@@ -24,8 +24,8 @@ export function tokenizeTitle(title: string | null | undefined): string[] {
 
   for (const token of rawTokens) {
     if (!token) continue;
-    // Discard single alphabetic letters
-    if (/^[a-z]$/.test(token)) continue;
+    // Discard stopword 'the' and single alphabetic letters
+    if (token === 'the' || /^[a-z]$/.test(token)) continue;
 
     if (!seen.has(token)) {
       seen.add(token);

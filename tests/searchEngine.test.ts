@@ -45,7 +45,7 @@ async function runSearchEngineTests() {
 
   // 2. Tokenization Test
   const witcherTokens = tokenizeTitle('The Witcher 3: Wild Hunt');
-  assertEqual(witcherTokens.join(','), 'the,witcher,3,wild,hunt', 'Tokenizes "The Witcher 3: Wild Hunt"');
+  assertEqual(witcherTokens.join(','), 'witcher,3,wild,hunt', 'Tokenizes "The Witcher 3: Wild Hunt" into 4 tokens');
 
   // 3. Priority Ranking Order Tests
   const scoreTheWitcher = calculateRankScore('The Witcher', 'witcher', ['witcher'], true);
