@@ -11,24 +11,24 @@
   --header-bg: rgba(245, 240, 225, 0.92);
   --paper-base: #f7f4ea;
   --paper-highlight: #fefcf5;
-  --paper-grain-opacity: 0.22;
+  --paper-grain-opacity: 0.35;
   --wash-blue: #2b7a94;
   --wash-teal: #1b5e75;
   --wash-green: #366e57;
   --wash-navy: #0f2b48;
-  --wash-opacity: 0.38;
-  --pigment-edge-opacity: 0.45;
+  --wash-opacity: 0.75;
+  --pigment-edge-opacity: 0.55;
   --atlas-line-color: #2b4c6f;
-  --atlas-line-opacity: 0.18;
+  --atlas-line-opacity: 0.35;
   --route-line-color: #d4af37;
-  --route-line-opacity: 0.35;
+  --route-line-opacity: 0.45;
   --ornament-color: #d4af37;
-  --ornament-opacity: 0.3;
+  --ornament-opacity: 0.4;
   --panel-paper-color: #fefcf6;
-  --panel-texture-opacity: 0.15;
-  --panel-bg: #fefcf6;
-  --panel-elevated-bg: #ffffff;
-  --panel-border: rgba(212, 175, 55, 0.4);
+  --panel-texture-opacity: 0.2;
+  --panel-bg: rgba(254, 252, 246, 0.92);
+  --panel-elevated-bg: rgba(255, 255, 255, 0.95);
+  --panel-border: rgba(212, 175, 55, 0.45);
   --text-primary: #0f2b48;
   --text-secondary: #2b4c6f;
   --text-muted: #64748b;
@@ -38,8 +38,8 @@
   --accent-color: #d4af37;
   --focus-ring: rgba(212, 175, 55, 0.5);
   --input-bg: #fefcf6;
-  --input-border: rgba(43, 122, 148, 0.3);
-  --badge-bg: rgba(54, 110, 87, 0.15);
+  --input-border: rgba(43, 122, 148, 0.35);
+  --badge-bg: rgba(54, 110, 87, 0.18);
   --badge-text: #1b5e75;
   --overlay-bg: rgba(12, 22, 38, 0.75);
   --status-success: #366e57;
@@ -47,9 +47,9 @@
   --status-danger: #c53030;
   --font-heading: 'Cinzel', 'Playfair Display', Georgia, serif;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --shadow-style: 0 10px 25px -5px rgba(15, 43, 72, 0.1), 0 0 10px rgba(212, 175, 55, 0.15);
+  --shadow-style: 0 10px 25px -5px rgba(15, 43, 72, 0.12), 0 0 12px rgba(212, 175, 55, 0.18);
   --border-radius: 1rem;
-  --texture-opacity: 0.25;
+  --texture-opacity: 0.35;
 }
 
 @layer base {
@@ -63,36 +63,6 @@
     color: var(--text-primary);
     font-family: var(--font-body);
     min-height: 100vh;
-    position: relative;
-    overflow-x: hidden;
-  }
-
-  /* Layer 1 - Paper Base & Fine Grain Texture */
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: url('/branding/watercolor-paper-grain.svg');
-    opacity: var(--paper-grain-opacity);
-    pointer-events: none;
-    z-index: 0;
-  }
-
-  /* Layer 2 & 3 - Organic Watercolor Pigment Washes & Tide Marks */
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image: 
-      url('/branding/watercolor-wash-ocean.svg'),
-      url('/branding/watercolor-wash-teal.svg');
-    background-position: top left, bottom right;
-    background-repeat: no-repeat;
-    background-size: 650px 450px, 550px 550px;
-    opacity: var(--wash-opacity);
-    pointer-events: none;
-    z-index: 0;
-    transition: opacity 0.25s ease;
   }
 
   h1, h2, h3, h4, .serif-heading {
@@ -111,34 +81,66 @@
   transition-duration: 0.001ms !important;
 }
 
-/* Layer 4 - Atlas Cartographic Lines Overlay Container */
+/* Semantic Application Shell with Multi-Layered Organic Watercolor System */
+.themed-app-shell {
+  background-color: var(--app-bg);
+  color: var(--text-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Layer 1 - Fine Noise Paper Grain Texture directly on App Shell */
+.themed-app-shell::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: url('/branding/watercolor-paper-grain.svg');
+  opacity: var(--paper-grain-opacity);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Layer 2 & 3 - Organic Watercolor Pigment Washes & Tide Marks directly on App Shell */
+.themed-app-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: 
+    url('/branding/watercolor-wash-ocean.svg'),
+    url('/branding/watercolor-wash-teal.svg');
+  background-position: -80px -60px, right -60px bottom -60px;
+  background-repeat: no-repeat;
+  background-size: 750px 550px, 650px 650px;
+  opacity: var(--wash-opacity);
+  pointer-events: none;
+  z-index: 0;
+  transition: opacity 0.25s ease;
+}
+
+/* Layer 4 - Cartographic Atlas Contour & Dotted Route Overlay Container */
 .cartographic-bg-overlay {
-  position: fixed;
+  position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   background-image: 
     url('/branding/map-contour-lines.svg'),
     url('/branding/dotted-route.svg');
-  background-position: top right, bottom left;
+  background-position: top 20px right 20px, bottom 30px left 280px;
   background-repeat: no-repeat;
-  background-size: 400px 400px, 350px 150px;
+  background-size: 450px 450px, 400px 180px;
   opacity: var(--atlas-line-opacity);
+  transition: opacity 0.25s ease;
 }
 
-/* Semantic Component Styling Classes */
-.themed-app-shell {
-  background-color: var(--app-bg);
-  color: var(--text-primary);
-  position: relative;
-  z-index: 1;
-}
-
+/* UI Components & Surface Styling */
 .themed-sidebar {
   background-color: var(--sidebar-bg);
   color: var(--sidebar-text);
   border-right: 1px solid var(--panel-border);
-  box-shadow: 4px 0 25px rgba(0, 0, 0, 0.25);
+  box-shadow: 4px 0 25px rgba(0, 0, 0, 0.3);
+  position: relative;
+  z-index: 10;
 }
 
 .themed-header {
@@ -147,6 +149,8 @@
   border-bottom: 1px solid var(--panel-border);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
+  position: relative;
+  z-index: 20;
 }
 
 .themed-panel {
@@ -156,6 +160,7 @@
   box-shadow: var(--shadow-style);
   color: var(--text-primary);
   position: relative;
+  backdrop-filter: blur(8px);
 }
 
 .themed-card {
@@ -165,12 +170,13 @@
   box-shadow: var(--shadow-style);
   color: var(--text-primary);
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+  backdrop-filter: blur(8px);
 }
 
 .themed-card-hover:hover {
   transform: translateY(-2px);
   border-color: var(--accent-color);
-  box-shadow: 0 12px 30px -5px rgba(212, 175, 55, 0.25);
+  box-shadow: 0 12px 30px -5px rgba(212, 175, 55, 0.3);
 }
 
 .themed-input {
@@ -250,12 +256,6 @@
 
 .themed-gold-border {
   border-color: var(--accent-color);
-}
-
-/* Cartographic Decorative Ornaments */
-.cartographic-ornament {
-  opacity: var(--ornament-opacity);
-  pointer-events: none;
 }
 
 /* Custom Scrollbar */
