@@ -60,10 +60,22 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--header-bg', tokens.headerBackground);
   root.style.setProperty('--panel-border', tokens.panelBorder);
 
-  // Apply Official Parchment Paper Asset & Texture System Variables
+  // Apply Sidebar Beveled Rail Tokens
+  root.style.setProperty('--sidebar-edge-primary', tokens.sidebarEdgePrimary || '#d4af37');
+  root.style.setProperty('--sidebar-edge-secondary', tokens.sidebarEdgeSecondary || '#1b5e75');
+
+  // Apply Parchment Paper & Landmass Texture System Variables
   const activePaperTextureUrl = (accessibility.disableTextures || accessibility.plainBackgroundMode || !tokens.paperTextureUrl)
     ? 'none'
     : `url("${tokens.paperTextureUrl}")`;
+
+  const activeLandmassTextureUrl = (accessibility.disableTextures || accessibility.plainBackgroundMode || !tokens.landmassTextureUrl)
+    ? 'none'
+    : `url("${tokens.landmassTextureUrl}")`;
+
+  const activeCoastlineTextureUrl = (accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode || !tokens.coastlineTextureUrl)
+    ? 'none'
+    : `url("${tokens.coastlineTextureUrl}")`;
 
   const activePaperTextureOpacity = (accessibility.disableTextures || accessibility.plainBackgroundMode)
     ? 0
@@ -72,6 +84,8 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--paper-base', tokens.paperBase);
   root.style.setProperty('--paper-highlight', tokens.paperHighlight);
   root.style.setProperty('--paper-texture-url', activePaperTextureUrl);
+  root.style.setProperty('--landmass-texture-url', activeLandmassTextureUrl);
+  root.style.setProperty('--coastline-texture-url', activeCoastlineTextureUrl);
   root.style.setProperty('--paper-texture-opacity', activePaperTextureOpacity.toString());
 
   root.style.setProperty('--wash-blue', tokens.washBlue);
@@ -84,6 +98,7 @@ export function applyThemeTokensToDOM(
   const activeWashOpacity = accessibility.disableTextures || accessibility.plainBackgroundMode ? 0 : tokens.washOpacity;
   const activePigmentEdgeOpacity = accessibility.disableTextures || accessibility.plainBackgroundMode ? 0 : tokens.pigmentEdgeOpacity;
   const activeAtlasLineOpacity = accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode ? 0 : tokens.atlasLineOpacity;
+  const activeMapLabelOpacity = accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode ? 0 : tokens.mapLabelOpacity;
   const activeRouteOpacity = accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode ? 0 : tokens.routeLineOpacity;
   const activeOrnamentOpacity = accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode ? 0 : tokens.ornamentOpacity;
 
@@ -92,6 +107,7 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--pigment-edge-opacity', activePigmentEdgeOpacity.toString());
   root.style.setProperty('--atlas-line-color', tokens.atlasLineColor);
   root.style.setProperty('--atlas-line-opacity', activeAtlasLineOpacity.toString());
+  root.style.setProperty('--map-label-opacity', activeMapLabelOpacity.toString());
   root.style.setProperty('--route-line-color', tokens.routeLineColor);
   root.style.setProperty('--route-line-opacity', activeRouteOpacity.toString());
   root.style.setProperty('--ornament-color', tokens.ornamentColor);
@@ -127,8 +143,8 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--status-warning', tokens.warning);
   root.style.setProperty('--status-danger', tokens.danger);
 
-  // Apply Font Families
-  root.style.setProperty('--font-heading', tokens.headingFontFamily);
+  // Apply Font Families (Cormorant Garamond display headings)
+  root.style.setProperty('--font-heading', tokens.displayHeadingFont || tokens.headingFontFamily);
   root.style.setProperty('--font-body', tokens.bodyFontFamily);
 
   // Apply Utilities & General Styles

@@ -4,7 +4,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
   watercolor_atlas: {
     presetKey: 'watercolor_atlas',
     name: 'Watercolor Atlas (Default)',
-    description: 'Fantasy cartography featuring authentic parchment paper texture, organic ocean-blue & sea-green watercolor washes, uneven pigment pooling, deep navy ink, and compass gold accents.',
+    description: 'Fantasy cartography featuring Cormorant Garamond lettering, rich ocean-blue & forest-green landmasses, play-arrow beveled gold sidebar framing, faded atlas script, and compass gold accents.',
     
     appBackground: '#f5f0e1',               // Warm Parchment Base
     appBackgroundSecondary: '#ece4d0',      // Aged Parchment Shadow
@@ -12,20 +12,33 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     sidebarText: '#f1f5f9',                  // Parchment White Sidebar Text
     sidebarMutedText: '#94a3b8',             // Muted Slate Navy
     sidebarActiveBackground: 'linear-gradient(135deg, rgba(43, 122, 148, 0.45) 0%, rgba(54, 110, 87, 0.45) 100%)',
-    headerBackground: 'rgba(245, 240, 225, 0.92)', // Parchment Translucent Header
+    headerBackground: 'rgba(245, 240, 225, 0.94)', // Parchment Translucent Header
     
-    // Official Parchment Paper Asset & Watercolor System
+    // Play-Arrow Inspired Beveled Sidebar Rail
+    sidebarEdgeStyle: 'beveled-arrow',
+    sidebarEdgePrimary: '#d4af37',
+    sidebarEdgeSecondary: '#1b5e75',
+
+    // Official Parchment Paper, Forest Landmass & Atlas Text System
     paperBase: '#f7f4ea',
     paperHighlight: '#fefcf5',
     paperTextureUrl: '/branding/watercolor-parchment-base.webp',
     paperTextureOpacity: 0.85,
-    paperGrainOpacity: 0.25,
+    paperGrainOpacity: 0.35,
     washBlue: '#2b7a94',
     washTeal: '#1b5e75',
     washGreen: '#366e57',
     washNavy: '#0f2b48',
-    washOpacity: 0.75, // Increased by 70% from initial deployed strength
-    pigmentEdgeOpacity: 0.55,
+    washOpacity: 0.85, // 2-3x richer watercolor visual presence
+    pigmentEdgeOpacity: 0.6,
+    landmassTextureUrl: '/branding/watercolor-landmass-forest.svg',
+    coastlineTextureUrl: '/branding/watercolor-coastline.svg',
+    mapLabelOpacity: 0.14,
+    routeDensity: 'high',
+    coastlineOpacity: 0.35,
+    backgroundArtworkIntensity: 1.0,
+    contentSurfaceOpacity: 0.95,
+
     atlasLineColor: '#2b4c6f',
     atlasLineOpacity: 0.35,
     routeLineColor: '#d4af37',
@@ -33,10 +46,10 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     ornamentColor: '#d4af37',
     ornamentOpacity: 0.4,
     panelPaperColor: '#fefcf6',
-    panelTextureOpacity: 0.2,
+    panelTextureOpacity: 0.25,
 
-    panelBackground: 'rgba(254, 252, 246, 0.92)',
-    panelElevatedBackground: 'rgba(255, 255, 255, 0.95)',
+    panelBackground: 'rgba(254, 252, 246, 0.95)',
+    panelElevatedBackground: 'rgba(255, 255, 255, 0.97)',
     panelBorder: 'rgba(212, 175, 55, 0.45)',
     
     textPrimary: '#0f2b48',                  // Deep Navy Ink Primary
@@ -59,7 +72,8 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     warning: '#d4af37',                      // Compass Gold
     danger: '#c53030',                       // Wax Seal Red
     
-    headingFontFamily: "'Cinzel', 'Playfair Display', Georgia, serif",
+    headingFontFamily: "'Cormorant Garamond', 'Playfair Display', Georgia, serif",
+    displayHeadingFont: "'Cormorant Garamond', 'Playfair Display', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
     
     shadow: '0 10px 25px -5px rgba(15, 43, 72, 0.12), 0 0 12px rgba(212, 175, 55, 0.18)',
@@ -81,6 +95,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     sidebarActiveBackground: 'rgba(14, 165, 233, 0.2)',
     headerBackground: 'rgba(3, 7, 18, 0.85)',
     
+    sidebarEdgeStyle: 'simple-border',
+    sidebarEdgePrimary: 'rgba(56, 189, 248, 0.25)',
+
     paperBase: '#030712',
     paperHighlight: '#0f172a',
     paperTextureOpacity: 0.0,
@@ -91,6 +108,12 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     washNavy: '#0f172a',
     washOpacity: 0.15,
     pigmentEdgeOpacity: 0.1,
+    mapLabelOpacity: 0.0,
+    routeDensity: 'low',
+    coastlineOpacity: 0.0,
+    backgroundArtworkIntensity: 0.0,
+    contentSurfaceOpacity: 0.95,
+
     atlasLineColor: '#38bdf8',
     atlasLineOpacity: 0.05,
     routeLineColor: '#38bdf8',
@@ -125,6 +148,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     danger: '#ef4444',
     
     headingFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    displayHeadingFont: "'Plus Jakarta Sans', system-ui, sans-serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
     
     shadow: '0 10px 30px -5px rgba(0, 0, 0, 0.5)',
@@ -146,6 +170,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     sidebarActiveBackground: 'rgba(30, 64, 175, 0.1)',
     headerBackground: 'rgba(255, 255, 255, 0.9)',
     
+    sidebarEdgeStyle: 'simple-border',
+    sidebarEdgePrimary: '#e2e8f0',
+
     paperBase: '#f8fafc',
     paperHighlight: '#ffffff',
     paperTextureOpacity: 0.0,
@@ -156,6 +183,12 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     washNavy: '#1e293b',
     washOpacity: 0.05,
     pigmentEdgeOpacity: 0.05,
+    mapLabelOpacity: 0.05,
+    routeDensity: 'low',
+    coastlineOpacity: 0.05,
+    backgroundArtworkIntensity: 0.1,
+    contentSurfaceOpacity: 1.0,
+
     atlasLineColor: '#cbd5e1',
     atlasLineOpacity: 0.1,
     routeLineColor: '#b45309',
@@ -189,7 +222,8 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     warning: '#b45309',
     danger: '#b91c1c',
     
-    headingFontFamily: "'Cinzel', Georgia, serif",
+    headingFontFamily: "'Cormorant Garamond', Georgia, serif",
+    displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
     
     shadow: '0 4px 12px -2px rgba(0, 0, 0, 0.05)',
@@ -211,6 +245,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     sidebarActiveBackground: 'rgba(236, 72, 153, 0.25)',
     headerBackground: 'rgba(9, 5, 20, 0.88)',
     
+    sidebarEdgeStyle: 'simple-border',
+    sidebarEdgePrimary: 'rgba(236, 72, 153, 0.35)',
+
     paperBase: '#090514',
     paperHighlight: '#160d29',
     paperTextureOpacity: 0.0,
@@ -221,6 +258,12 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     washNavy: '#160d29',
     washOpacity: 0.15,
     pigmentEdgeOpacity: 0.1,
+    mapLabelOpacity: 0.0,
+    routeDensity: 'low',
+    coastlineOpacity: 0.0,
+    backgroundArtworkIntensity: 0.0,
+    contentSurfaceOpacity: 0.95,
+
     atlasLineColor: '#ec4899',
     atlasLineOpacity: 0.1,
     routeLineColor: '#06b6d4',
@@ -254,7 +297,8 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     warning: '#f59e0b',
     danger: '#f43f5e',
     
-    headingFontFamily: "'Cinzel', sans-serif",
+    headingFontFamily: "'Cormorant Garamond', sans-serif",
+    displayHeadingFont: "'Cormorant Garamond', sans-serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
     
     shadow: '0 0 25px rgba(236, 72, 153, 0.3)',
@@ -276,6 +320,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     sidebarActiveBackground: 'rgba(217, 119, 6, 0.3)',
     headerBackground: 'rgba(24, 18, 12, 0.9)',
     
+    sidebarEdgeStyle: 'simple-border',
+    sidebarEdgePrimary: 'rgba(217, 119, 6, 0.35)',
+
     paperBase: '#18120c',
     paperHighlight: '#261c14',
     paperTextureOpacity: 0.0,
@@ -286,6 +333,12 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     washNavy: '#261c14',
     washOpacity: 0.15,
     pigmentEdgeOpacity: 0.15,
+    mapLabelOpacity: 0.0,
+    routeDensity: 'low',
+    coastlineOpacity: 0.0,
+    backgroundArtworkIntensity: 0.0,
+    contentSurfaceOpacity: 0.95,
+
     atlasLineColor: '#d97706',
     atlasLineOpacity: 0.1,
     routeLineColor: '#d97706',
@@ -319,7 +372,8 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     warning: '#d97706',
     danger: '#dc2626',
     
-    headingFontFamily: "'Cinzel', Georgia, serif",
+    headingFontFamily: "'Cormorant Garamond', Georgia, serif",
+    displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
     
     shadow: '4px 4px 0px rgba(0, 0, 0, 0.8)',
@@ -341,6 +395,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     sidebarActiveBackground: 'rgba(16, 185, 129, 0.25)',
     headerBackground: 'rgba(6, 26, 18, 0.9)',
     
+    sidebarEdgeStyle: 'simple-border',
+    sidebarEdgePrimary: 'rgba(16, 185, 129, 0.3)',
+
     paperBase: '#061a12',
     paperHighlight: '#0d2d20',
     paperTextureOpacity: 0.0,
@@ -351,6 +408,12 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     washNavy: '#0d2d20',
     washOpacity: 0.2,
     pigmentEdgeOpacity: 0.25,
+    mapLabelOpacity: 0.05,
+    routeDensity: 'medium',
+    coastlineOpacity: 0.1,
+    backgroundArtworkIntensity: 0.2,
+    contentSurfaceOpacity: 0.95,
+
     atlasLineColor: '#10b981',
     atlasLineOpacity: 0.15,
     routeLineColor: '#eab308',
@@ -384,7 +447,8 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     warning: '#eab308',
     danger: '#ef4444',
     
-    headingFontFamily: "'Cinzel', Georgia, serif",
+    headingFontFamily: "'Cormorant Garamond', Georgia, serif",
+    displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
     
     shadow: '0 10px 25px -5px rgba(6, 26, 18, 0.7)',

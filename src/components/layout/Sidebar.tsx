@@ -39,9 +39,12 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="hidden lg:flex flex-col themed-sidebar w-64 md:w-72 h-screen sticky top-0 left-0 shrink-0 z-30 justify-between">
+    <aside className="hidden lg:flex flex-col themed-sidebar w-64 md:w-72 h-screen sticky top-0 left-0 shrink-0 z-30 justify-between relative">
+      {/* Play-Arrow Inspired Beveled Layered Sidebar Edge Rail (14px wide) */}
+      <div className="beveled-sidebar-rail" />
+
       {/* Official Brand Logo Header */}
-      <div className="p-4 border-b border-[var(--panel-border)] bg-[rgba(0,0,0,0.15)]">
+      <div className="p-4 border-b border-[var(--panel-border)] bg-[rgba(0,0,0,0.15)] relative z-10">
         <div className="w-full flex items-center justify-center">
           <img
             src="./branding/play-atlas-watercolor-logo.jpg"
@@ -52,7 +55,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Sidebar Navigation List */}
-      <div className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+      <div className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto relative z-10">
         {/* Pinned Homepage Tab - Distinct & Larger */}
         <NavLink
           to="/"
@@ -115,7 +118,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Bottom Action Footer */}
-      <div className="p-3 border-t border-[var(--panel-border)] space-y-2 bg-[rgba(0,0,0,0.1)]">
+      <div className="p-3 border-t border-[var(--panel-border)] space-y-2 bg-[rgba(0,0,0,0.1)] relative z-10">
         <button
           onClick={() => setIsAddModalOpen(true)}
           className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-dashed border-[var(--panel-border)] text-[var(--sidebar-muted-text)] hover:text-white hover:border-[var(--accent-color)] hover:bg-[rgba(255,255,255,0.08)] text-xs font-bold transition-all"

@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 450" fill="none">
+  <defs>
+    <style>
+      .map-label { font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; font-size: 20px; font-weight: 700; fill: #0f2b48; opacity: 0.14; letter-spacing: 3px; }
+      .map-sublabel { font-family: 'Cormorant Garamond', 'Playfair Display', Georgia, serif; font-size: 13px; font-style: italic; fill: #2b4c6f; opacity: 0.12; letter-spacing: 2px; }
+    </style>
+  </defs>
+
+  <!-- Island Shorelines & Ink Coastlines -->
+  <path d="M50 80 Q 140 40, 220 100 T 180 220 Q 80 240, 50 80 Z" stroke="#0f2b48" stroke-width="1.5" opacity="0.25" stroke-dasharray="4 2" fill="none" />
+  <path d="M480 260 Q 580 200, 640 300 T 560 420 Q 450 400, 480 260 Z" stroke="#0f2b48" stroke-width="1.5" opacity="0.25" stroke-dasharray="4 2" fill="none" />
+
+  <!-- Latitude & Longitude Coordinate Arcs -->
+  <path d="M-50 150 C 200 80, 450 80, 750 150" stroke="#d4af37" stroke-width="1" opacity="0.2" fill="none" />
+  <path d="M-50 300 C 200 230, 450 230, 750 300" stroke="#d4af37" stroke-width="1" opacity="0.2" fill="none" />
+  <path d="M200 -50 C 180 150, 180 300, 200 500" stroke="#d4af37" stroke-width="1" opacity="0.15" stroke-dasharray="3 3" fill="none" />
+  <path d="M500 -50 C 480 150, 480 300, 500 500" stroke="#d4af37" stroke-width="1" opacity="0.15" stroke-dasharray="3 3" fill="none" />
+
+  <!-- Faded Fantasy Atlas Text Labels -->
+  <text x="70" y="60" className="map-label" transform="rotate(-4 70 60)">THE VERDANT COAST</text>
+  <text x="380" y="110" className="map-label" transform="rotate(3 380 110)">AZURE PASSAGE</text>
+  <text x="180" y="380" className="map-label" transform="rotate(-2 180 380)">THE GOLDEN ROUTE</text>
+  <text x="490" y="240" className="map-sublabel">Western Isles • Lat. 34°N</text>
+</svg>

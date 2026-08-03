@@ -28,7 +28,12 @@ export interface ThemeTokens {
   sidebarActiveBackground: string;
   headerBackground: string;
   
-  // Paper & Watercolor Texture System Tokens
+  // Custom Sidebar Edge Framing
+  sidebarEdgeStyle?: 'beveled-arrow' | 'simple-border' | 'none';
+  sidebarEdgePrimary?: string;
+  sidebarEdgeSecondary?: string;
+
+  // Paper, Watercolor & Landmass Texture Tokens
   paperBase: string;
   paperHighlight: string;
   paperTextureUrl?: string;
@@ -40,6 +45,14 @@ export interface ThemeTokens {
   washNavy: string;
   washOpacity: number;
   pigmentEdgeOpacity: number;
+  landmassTextureUrl?: string;
+  coastlineTextureUrl?: string;
+  mapLabelOpacity: number;
+  routeDensity: 'high' | 'medium' | 'low' | 'none';
+  coastlineOpacity: number;
+  backgroundArtworkIntensity: number;
+  contentSurfaceOpacity: number;
+
   atlasLineColor: string;
   atlasLineOpacity: number;
   routeLineColor: string;
@@ -80,6 +93,7 @@ export interface ThemeTokens {
 
   // Typography Families
   headingFontFamily: string;
+  displayHeadingFont: string;
   bodyFontFamily: string;
 
   // Utilities & Decorative Controls
