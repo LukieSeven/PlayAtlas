@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "tsx tests/normalization.test.ts tests/browserCatalog.test.ts",
+    "test": "tsx tests/normalization.test.ts tests/browserCatalog.test.ts tests/searchEngine.test.ts",
     "build:igdb-test": "IGDB_IMPORT_MODE=test tsx scripts/build-igdb-index.ts",
     "build:igdb-full": "IGDB_IMPORT_MODE=full tsx scripts/build-igdb-index.ts",
     "build:browser-catalog": "tsx scripts/build-browser-catalog.ts",

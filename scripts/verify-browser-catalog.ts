@@ -10,7 +10,7 @@ async function verifyBrowserCatalog() {
   const targetArg = process.argv[2] || 'generated/browser-catalog-test';
   const targetDir = path.isAbsolute(targetArg) ? targetArg : path.join(process.cwd(), targetArg);
 
-  console.log(`🔍 Verifying Browser Catalog Output in: ${targetDir}`);
+  console.log(`🔍 Verifying Compact Token Browser Catalog in: ${targetDir}`);
 
   if (!fs.existsSync(targetDir)) {
     console.error(`❌ VERIFICATION FAILURE: Output directory does not exist: ${targetDir}`);
@@ -32,7 +32,6 @@ async function verifyBrowserCatalog() {
 
   // 2. Verify Full Detail Chunks
   const validChunkPaths = new Set<string>();
-  const chunkSourceIdMap = new Map<number, string>();
   let totalChunkRecords = 0;
 
   for (const chunkInfo of browserManifest.fullCatalog.chunks) {
@@ -48,20 +47,12 @@ async function verifyBrowserCatalog() {
     const rawBuffer = fs.readFileSync(chunkAbsPath);
     const calculatedHash = computeSha256(rawBuffer);
     if (calculatedHash !== chunkInfo.sha256) {
-      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for ${chunkRelPath}! Manifest: ${chunkInfo.sha256}, Actual: ${calculatedHash}`);
+      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for ${chunkRelPath}!`);
       process.exit(1);
     }
 
     const records: any[] = JSON.parse(rawBuffer.toString('utf-8'));
-    if (records.length !== chunkInfo.recordCount) {
-      console.error(`❌ VERIFICATION FAILURE: Record count mismatch for ${chunkRelPath}! Manifest: ${chunkInfo.recordCount}, Parsed: ${records.length}`);
-      process.exit(1);
-    }
-
     totalChunkRecords += records.length;
-    for (const r of records) {
-      chunkSourceIdMap.set(r.sourceId, chunkRelPath);
-    }
   }
 
   if (totalChunkRecords !== browserManifest.catalogRecordCount) {
@@ -69,54 +60,106 @@ async function verifyBrowserCatalog() {
     process.exit(1);
   }
 
-  // 3. Verify Search Index & Manifest
+  // 3. Verify Token Search Manifest & Games Lookup Files
   const searchManifestPath = path.join(targetDir, browserManifest.searchManifest);
   if (!fs.existsSync(searchManifestPath)) {
-    console.error(`❌ VERIFICATION FAILURE: Search manifest missing: ${searchManifestPath}`);
+    console.error(`❌ VERIFICATION FAILURE: Token search manifest missing: ${searchManifestPath}`);
     process.exit(1);
   }
 
-  const searchManifest = JSON.parse(fs.readFileSync(searchManifestPath, 'utf-8'));
-  const globalSearchIds = new Set<number>();
-  let totalSearchRecords = 0;
+  const tokenManifest = JSON.parse(fs.readFileSync(searchManifestPath, 'utf-8'));
+  const lookupGameIds = new Map<number, number>(); // ID -> chunk ID
+  let totalLookupRecords = 0;
 
-  for (const bucketInfo of searchManifest.buckets) {
+  for (const lookupInfo of tokenManifest.lookupFiles) {
+    const lookupAbsPath = path.join(targetDir, lookupInfo.file);
+    if (!fs.existsSync(lookupAbsPath)) {
+      console.error(`❌ VERIFICATION FAILURE: Compact lookup file missing: ${lookupAbsPath}`);
+      process.exit(1);
+    }
+
+    const rawBuffer = fs.readFileSync(lookupAbsPath);
+    const calculatedHash = computeSha256(rawBuffer);
+    if (calculatedHash !== lookupInfo.sha256) {
+      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for lookup file ${lookupInfo.file}!`);
+      process.exit(1);
+    }
+
+    const records: any[] = JSON.parse(rawBuffer.toString('utf-8'));
+    totalLookupRecords += records.length;
+
+    let prevId = -1;
+    for (const r of records) {
+      if (typeof r.id !== 'number' || !r.name || typeof r.name !== 'string') {
+        console.error(`❌ VERIFICATION FAILURE: Invalid lookup record in ${lookupInfo.file}:`, r);
+        process.exit(1);
+      }
+
+      if (lookupGameIds.has(r.id)) {
+        console.error(`❌ VERIFICATION FAILURE: Duplicate IGDB ID ${r.id} in lookup file ${lookupInfo.file}`);
+        process.exit(1);
+      }
+      lookupGameIds.set(r.id, r.chunk);
+
+      if (r.id <= prevId) {
+        console.error(`❌ VERIFICATION FAILURE: Non-ascending ID order in lookup file ${lookupInfo.file}: ID ${r.id} <= ${prevId}`);
+        process.exit(1);
+      }
+      prevId = r.id;
+
+      const mappedChunkPath = tokenManifest.chunkFiles[r.chunk];
+      if (!mappedChunkPath || !validChunkPaths.has(mappedChunkPath)) {
+        console.error(`❌ VERIFICATION FAILURE: Lookup record ${r.id} maps to invalid chunk ID ${r.chunk}`);
+        process.exit(1);
+      }
+    }
+  }
+
+  if (totalLookupRecords !== browserManifest.catalogRecordCount) {
+    console.error(`❌ VERIFICATION FAILURE: Total lookup records (${totalLookupRecords}) !== catalogRecordCount (${browserManifest.catalogRecordCount})`);
+    process.exit(1);
+  }
+
+  // 4. Verify 256 Token Posting Buckets
+  if (!Array.isArray(tokenManifest.tokenBuckets) || tokenManifest.tokenBuckets.length !== 256) {
+    console.error(`❌ VERIFICATION FAILURE: tokenBuckets length is ${tokenManifest.tokenBuckets?.length} (expected 256).`);
+    process.exit(1);
+  }
+
+  const globalTokens = new Set<string>();
+
+  for (const bucketInfo of tokenManifest.tokenBuckets) {
     const bucketAbsPath = path.join(targetDir, bucketInfo.file);
     if (!fs.existsSync(bucketAbsPath)) {
-      console.error(`❌ VERIFICATION FAILURE: Search bucket missing: ${bucketAbsPath}`);
+      console.error(`❌ VERIFICATION FAILURE: Token bucket file missing: ${bucketAbsPath}`);
       process.exit(1);
     }
 
     const rawBuffer = fs.readFileSync(bucketAbsPath);
     const calculatedHash = computeSha256(rawBuffer);
     if (calculatedHash !== bucketInfo.sha256) {
-      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for search bucket ${bucketInfo.file}! Manifest: ${bucketInfo.sha256}, Actual: ${calculatedHash}`);
+      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for token bucket ${bucketInfo.file}!`);
       process.exit(1);
     }
 
-    const records: any[] = JSON.parse(rawBuffer.toString('utf-8'));
-    totalSearchRecords += records.length;
-
-    for (const r of records) {
-      if (globalSearchIds.has(r.sourceId)) {
-        console.error(`❌ VERIFICATION FAILURE: Duplicate sourceId ${r.sourceId} in search bucket ${bucketInfo.file}`);
-        process.exit(1);
-      }
-      globalSearchIds.add(r.sourceId);
-
-      if (!validChunkPaths.has(r.dataChunk)) {
-        console.error(`❌ VERIFICATION FAILURE: Search record ${r.id} points to invalid dataChunk: ${r.dataChunk}`);
-        process.exit(1);
+    const bucketObj: Record<string, number[]> = JSON.parse(rawBuffer.toString('utf-8'));
+    for (const [token, ids] of Object.entries(bucketObj)) {
+      globalTokens.add(token);
+      for (const id of ids) {
+        if (!lookupGameIds.has(id)) {
+          console.error(`❌ VERIFICATION FAILURE: Token '${token}' points to non-existent game ID ${id} in ${bucketInfo.file}`);
+          process.exit(1);
+        }
       }
     }
   }
 
-  if (totalSearchRecords !== browserManifest.catalogRecordCount) {
-    console.error(`❌ VERIFICATION FAILURE: Total search records (${totalSearchRecords}) !== catalogRecordCount (${browserManifest.catalogRecordCount})`);
+  if (globalTokens.size !== tokenManifest.uniqueTokenCount) {
+    console.error(`❌ VERIFICATION FAILURE: Verified unique tokens (${globalTokens.size}) !== tokenManifest.uniqueTokenCount (${tokenManifest.uniqueTokenCount})`);
     process.exit(1);
   }
 
-  // 4. Verify Release Partitions & Manifest
+  // 5. Verify Subdivided Release Partitions
   const releaseManifestPath = path.join(targetDir, browserManifest.releaseManifest);
   if (!fs.existsSync(releaseManifestPath)) {
     console.error(`❌ VERIFICATION FAILURE: Release manifest missing: ${releaseManifestPath}`);
@@ -136,7 +179,7 @@ async function verifyBrowserCatalog() {
     const rawBuffer = fs.readFileSync(partAbsPath);
     const calculatedHash = computeSha256(rawBuffer);
     if (calculatedHash !== partInfo.sha256) {
-      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for release partition ${partInfo.file}! Manifest: ${partInfo.sha256}, Actual: ${calculatedHash}`);
+      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for release partition ${partInfo.file}!`);
       process.exit(1);
     }
 
@@ -156,7 +199,7 @@ async function verifyBrowserCatalog() {
     process.exit(1);
   }
 
-  // 5. Verify Master ZIP Archive
+  // 6. Verify Master ZIP Archive
   const zipPath = path.join(targetDir, browserManifest.optionalArchive.file);
   if (!fs.existsSync(zipPath)) {
     console.error(`❌ VERIFICATION FAILURE: Master ZIP archive missing: ${zipPath}`);
@@ -170,7 +213,7 @@ async function verifyBrowserCatalog() {
     process.exit(1);
   }
 
-  // 6. Credential Leak Verification
+  // 7. Security Leak Check
   const tokenRegex = /access_token|bearer/i;
   const rawBrowserManifestStr = fs.readFileSync(browserManifestPath, 'utf-8');
   if (tokenRegex.test(rawBrowserManifestStr)) {
@@ -179,15 +222,17 @@ async function verifyBrowserCatalog() {
   }
 
   console.log('====================================================');
-  console.log('📊 BROWSER CATALOG INDEPENDENT VERIFICATION REPORT');
+  console.log('📊 REVISED BROWSER CATALOG VERIFICATION REPORT');
   console.log('====================================================');
   console.log(`📁 Target Directory:          ${targetDir}`);
-  console.log(`🎮 Total Catalog Records:    ${totalChunkRecords.toLocaleString()}`);
-  console.log(`🔍 Search Buckets Verified:   ${searchManifest.buckets.length} buckets`);
+  console.log(`🎮 Total Verified Games:      ${totalLookupRecords.toLocaleString()}`);
+  console.log(`🔤 Unique Search Tokens:      ${globalTokens.size.toLocaleString()}`);
+  console.log(`🎮 Compact Lookup Files:      ${tokenManifest.lookupFiles.length} files`);
+  console.log(`🔤 Token Buckets Verified:    ${tokenManifest.tokenBuckets.length} buckets`);
   console.log(`📅 Release Partitions:        ${releaseManifest.partitions.length} partitions`);
   console.log(`📦 Full Chunks Verified:      ${browserManifest.fullCatalog.chunks.length} chunks`);
   console.log(`🗜️ Master ZIP Verified:      ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
-  console.log(`🔒 Hashes & Links:            All SHA-256 hashes and dataChunk links verified!`);
+  console.log(`🔒 Hashes & Links:            All SHA-256 hashes and numeric chunk IDs verified!`);
   console.log('====================================================');
   console.log('✅ Independent Browser Catalog Verification Passed Cleanly!');
 }

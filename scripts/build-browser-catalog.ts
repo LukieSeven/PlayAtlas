@@ -3,10 +3,10 @@ import path from 'path';
 import crypto from 'crypto';
 import archiver from 'archiver';
 import {
-  normalizeSearchQuery,
-  getSearchBucketKey,
+  tokenizeTitle,
+  getTokenBucketKey,
   getReleaseYearKey,
-  buildCoverThumbnailUrl,
+  getReleaseMonthKey,
 } from '../src/utils/browserCatalogUtils';
 
 function loadEnvFile() {
@@ -32,29 +32,20 @@ loadEnvFile();
 
 const INPUT_DIR_ENV = process.env.IGDB_FULL_CATALOG_DIR || 'generated/igdb-full-test';
 const OUTPUT_DIR_ENV = process.env.PLAY_ATLAS_BROWSER_DATA_DIR || 'generated/browser-catalog-test';
+const LOOKUP_FILE_RECORD_LIMIT = 10000;
+const RELEASE_FILE_RECORD_LIMIT = 2500;
 
 function computeSha256(content: Buffer | string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
 }
 
-export interface SearchIndexRecord {
-  id: string;
-  sourceId: number;
+export interface CompactGameLookupRecord {
+  id: number;
   name: string;
-  normalizedName: string;
-  slug: string | null;
+  year: number | null;
   gameType: string;
-  gameTypeLabel: string;
   defaultVisible: boolean;
-  firstReleaseDate: string | null;
-  firstReleaseYear: number | null;
-  platforms: Array<{
-    id: number;
-    name: string;
-    abbreviation: string | null;
-  }>;
-  coverThumbnailUrl: string | null;
-  dataChunk: string;
+  chunk: number;
 }
 
 export interface ReleaseListingRecord {
@@ -78,7 +69,7 @@ export interface ReleaseListingRecord {
 }
 
 async function runBrowserCatalogBuilder() {
-  console.log('🚀 Starting Play Atlas Browser Catalog Builder...');
+  console.log('🚀 Starting Compact Token-Based Browser Catalog Builder...');
 
   const inputDir = path.isAbsolute(INPUT_DIR_ENV) ? INPUT_DIR_ENV : path.join(process.cwd(), INPUT_DIR_ENV);
   const outputDir = path.isAbsolute(OUTPUT_DIR_ENV) ? OUTPUT_DIR_ENV : path.join(process.cwd(), OUTPUT_DIR_ENV);
@@ -105,18 +96,25 @@ async function runBrowserCatalogBuilder() {
     process.exit(1);
   }
 
-  // Setup Output Directory Structure
+  // Setup Output Subdirectories
   const searchDir = path.join(outputDir, 'search');
+  const searchGamesDir = path.join(searchDir, 'games');
+  const searchTokensDir = path.join(searchDir, 'tokens');
+
   const releasesDir = path.join(outputDir, 'releases');
+  const releasesUndatedDir = path.join(releasesDir, 'undated');
   const chunksDir = path.join(outputDir, 'chunks');
 
   if (fs.existsSync(outputDir)) fs.rmSync(outputDir, { recursive: true, force: true });
-  fs.mkdirSync(searchDir, { recursive: true });
-  fs.mkdirSync(releasesDir, { recursive: true });
+  fs.mkdirSync(searchGamesDir, { recursive: true });
+  fs.mkdirSync(searchTokensDir, { recursive: true });
+  fs.mkdirSync(releasesUndatedDir, { recursive: true });
   fs.mkdirSync(chunksDir, { recursive: true });
 
-  const searchBucketsMap = new Map<string, SearchIndexRecord[]>();
-  const releaseYearsMap = new Map<string, ReleaseListingRecord[]>();
+  const allCompactRecords: CompactGameLookupRecord[] = [];
+  const tokenPostingsMap = new Map<string, Set<number>>();
+  const yearPartitionsMap = new Map<string, ReleaseListingRecord[]>();
+  const chunkFilesMapping: Record<number, string> = {};
 
   const outputChunksList: Array<{
     file: string;
@@ -132,7 +130,9 @@ async function runBrowserCatalogBuilder() {
 
   console.log(`📦 Processing ${inputChunks.length} full detail chunks...`);
 
-  for (const chunkInfo of inputChunks) {
+  for (let cIdx = 0; cIdx < inputChunks.length; cIdx++) {
+    const chunkInfo = inputChunks[cIdx];
+    const chunkNumericId = cIdx + 1; // 1-indexed chunk number
     const chunkFilename = path.basename(chunkInfo.file);
     const chunkInputPath = path.join(inputDir, chunkFilename);
 
@@ -144,11 +144,12 @@ async function runBrowserCatalogBuilder() {
     const rawChunkContent = fs.readFileSync(chunkInputPath);
     const records: any[] = JSON.parse(rawChunkContent.toString('utf-8'));
 
+    const relativeChunkPath = `chunks/${chunkFilename}`;
     const chunkOutputPath = path.join(chunksDir, chunkFilename);
     fs.writeFileSync(chunkOutputPath, rawChunkContent);
 
     const chunkSha256 = computeSha256(rawChunkContent);
-    const relativeChunkPath = `chunks/${chunkFilename}`;
+    chunkFilesMapping[chunkNumericId] = relativeChunkPath;
 
     outputChunksList.push({
       file: relativeChunkPath,
@@ -163,33 +164,28 @@ async function runBrowserCatalogBuilder() {
     totalCatalogUncompressedBytes += rawChunkContent.length;
 
     for (const record of records) {
-      const normalizedName = normalizeSearchQuery(record.name);
-      const bucketKey = getSearchBucketKey(normalizedName);
-      const yearKey = getReleaseYearKey(record.firstReleaseDate);
-
+      const yearStr = getReleaseYearKey(record.firstReleaseDate);
       const firstYear = record.firstReleaseDate ? parseInt(record.firstReleaseDate.slice(0, 4), 10) : null;
 
-      // 1. Lightweight Search Record
-      const searchRecord: SearchIndexRecord = {
-        id: record.id,
-        sourceId: record.sourceId,
+      // 1. Compact Game Lookup Record
+      const compactRecord: CompactGameLookupRecord = {
+        id: record.sourceId,
         name: record.name,
-        normalizedName,
-        slug: record.slug || null,
+        year: isNaN(firstYear!) ? null : firstYear,
         gameType: record.gameType,
-        gameTypeLabel: record.gameTypeLabel,
         defaultVisible: record.defaultVisible,
-        firstReleaseDate: record.firstReleaseDate || null,
-        firstReleaseYear: isNaN(firstYear!) ? null : firstYear,
-        platforms: record.platforms || [],
-        coverThumbnailUrl: buildCoverThumbnailUrl(record.coverImageId),
-        dataChunk: relativeChunkPath,
+        chunk: chunkNumericId,
       };
+      allCompactRecords.push(compactRecord);
 
-      if (!searchBucketsMap.has(bucketKey)) searchBucketsMap.set(bucketKey, []);
-      searchBucketsMap.get(bucketKey)!.push(searchRecord);
+      // 2. Token Posting Index Extraction
+      const tokens = tokenizeTitle(record.name);
+      for (const token of tokens) {
+        if (!tokenPostingsMap.has(token)) tokenPostingsMap.set(token, new Set<number>());
+        tokenPostingsMap.get(token)!.add(record.sourceId);
+      }
 
-      // 2. Release Listing Record
+      // 3. Release Listing Record
       const summaryPreview = record.summary ? (record.summary.length > 200 ? `${record.summary.slice(0, 197)}...` : record.summary) : null;
 
       const releaseRecord: ReleaseListingRecord = {
@@ -208,14 +204,131 @@ async function runBrowserCatalogBuilder() {
         dataChunk: relativeChunkPath,
       };
 
-      if (!releaseYearsMap.has(yearKey)) releaseYearsMap.set(yearKey, []);
-      releaseYearsMap.get(yearKey)!.push(releaseRecord);
+      if (!yearPartitionsMap.has(yearStr)) yearPartitionsMap.set(yearStr, []);
+      yearPartitionsMap.get(yearStr)!.push(releaseRecord);
     }
   }
 
-  // Write Search Buckets & Search Manifest
-  console.log('🔍 Writing Lightweight Search Buckets & Search Manifest...');
-  const searchManifestBuckets: Array<{
+  // --- BUILD 1: COMPACT GAME LOOKUP FILES (search/games/games_0001.json, etc.) ---
+  console.log('🎮 Partitioning Compact Game Lookup Table...');
+  allCompactRecords.sort((a, b) => a.id - b.id); // Sorted by numeric source ID
+
+  const lookupFilesList: Array<{
+    file: string;
+    firstId: number;
+    lastId: number;
+    recordCount: number;
+    byteSize: number;
+    sha256: string;
+  }> = [];
+
+  let totalLookupBytes = 0;
+  let fileIndex = 1;
+
+  for (let i = 0; i < allCompactRecords.length; i += LOOKUP_FILE_RECORD_LIMIT) {
+    const chunkRecords = allCompactRecords.slice(i, i + LOOKUP_FILE_RECORD_LIMIT);
+    const filename = `games_${String(fileIndex).padStart(4, '0')}.json`;
+    const filePath = path.join(searchGamesDir, filename);
+
+    const jsonStr = JSON.stringify(chunkRecords, null, 2);
+    const buffer = Buffer.from(jsonStr, 'utf-8');
+
+    fs.writeFileSync(filePath, buffer);
+    const sha256 = computeSha256(buffer);
+    totalLookupBytes += buffer.length;
+
+    lookupFilesList.push({
+      file: `search/games/${filename}`,
+      firstId: chunkRecords[0].id,
+      lastId: chunkRecords[chunkRecords.length - 1].id,
+      recordCount: chunkRecords.length,
+      byteSize: buffer.length,
+      sha256,
+    });
+    fileIndex++;
+  }
+
+  // --- BUILD 2: 256 TOKEN POSTING BUCKETS (search/tokens/tokens_00.json to tokens_ff.json) ---
+  console.log('🔤 Partitioning 256 Token Posting Buckets...');
+  const tokenBucketsMap = new Map<string, Record<string, number[]>>();
+
+  // Initialize 256 bucket keys ("00" to "ff")
+  for (let b = 0; b < 256; b++) {
+    const hexKey = b.toString(16).padStart(2, '0');
+    tokenBucketsMap.set(hexKey, {});
+  }
+
+  for (const [token, idSet] of tokenPostingsMap.entries()) {
+    const bucketKey = getTokenBucketKey(token);
+    const sortedIds = Array.from(idSet).sort((a, b) => a - b);
+    const bucketObj = tokenBucketsMap.get(bucketKey)!;
+    bucketObj[token] = sortedIds;
+  }
+
+  const tokenBucketsList: Array<{
+    key: string;
+    file: string;
+    tokenCount: number;
+    postingCount: number;
+    byteSize: number;
+    sha256: string;
+  }> = [];
+
+  let totalTokenBytes = 0;
+
+  for (let b = 0; b < 256; b++) {
+    const hexKey = b.toString(16).padStart(2, '0');
+    const bucketObj = tokenBucketsMap.get(hexKey)!;
+    const tokenCount = Object.keys(bucketObj).length;
+    let postingCount = 0;
+    for (const ids of Object.values(bucketObj)) {
+      postingCount += ids.length;
+    }
+
+    const filename = `tokens_${hexKey}.json`;
+    const filePath = path.join(searchTokensDir, filename);
+
+    // Sort tokens deterministically
+    const sortedTokens = Object.keys(bucketObj).sort();
+    const sortedBucketObj: Record<string, number[]> = {};
+    for (const t of sortedTokens) {
+      sortedBucketObj[t] = bucketObj[t];
+    }
+
+    const jsonStr = JSON.stringify(sortedBucketObj, null, 2);
+    const buffer = Buffer.from(jsonStr, 'utf-8');
+
+    fs.writeFileSync(filePath, buffer);
+    const sha256 = computeSha256(buffer);
+    totalTokenBytes += buffer.length;
+
+    tokenBucketsList.push({
+      key: hexKey,
+      file: `search/tokens/${filename}`,
+      tokenCount,
+      postingCount,
+      byteSize: buffer.length,
+      sha256,
+    });
+  }
+
+  // Write Search Token Manifest
+  const searchTokenManifest = {
+    schemaVersion: 2,
+    generatedAt: new Date().toISOString(),
+    gameCount: totalCatalogRecords,
+    uniqueTokenCount: tokenPostingsMap.size,
+    lookupFiles: lookupFilesList,
+    tokenBuckets: tokenBucketsList,
+    chunkFiles: chunkFilesMapping,
+  };
+
+  const searchManifestPath = path.join(searchDir, 'token_manifest.json');
+  fs.writeFileSync(searchManifestPath, JSON.stringify(searchTokenManifest, null, 2), 'utf-8');
+
+  // --- BUILD 3: SUBDIVIDED RELEASE PARTITIONS (releases/2026/01.json & releases/undated/undated_0001.json) ---
+  console.log('📅 Subdividing Release Partitions & Writing Release Manifest...');
+  const releaseManifestPartitions: Array<{
     key: string;
     file: string;
     recordCount: number;
@@ -223,93 +336,107 @@ async function runBrowserCatalogBuilder() {
     sha256: string;
   }> = [];
 
-  let totalSearchBytes = 0;
-  const sortedBucketKeys = Array.from(searchBucketsMap.keys()).sort();
-
-  for (const bucketKey of sortedBucketKeys) {
-    const bucketRecords = searchBucketsMap.get(bucketKey)!;
-    bucketRecords.sort((a, b) => a.normalizedName.localeCompare(b.normalizedName));
-
-    const filename = `search_${bucketKey}.json`;
-    const filePath = path.join(searchDir, filename);
-    const jsonStr = JSON.stringify(bucketRecords, null, 2);
-    const buffer = Buffer.from(jsonStr, 'utf-8');
-
-    fs.writeFileSync(filePath, buffer);
-    const hash = computeSha256(buffer);
-    totalSearchBytes += buffer.length;
-
-    searchManifestBuckets.push({
-      key: bucketKey,
-      file: `search/${filename}`,
-      recordCount: bucketRecords.length,
-      byteSize: buffer.length,
-      sha256: hash,
-    });
-  }
-
-  const searchManifest = {
-    schemaVersion: 1,
-    generatedAt: new Date().toISOString(),
-    recordCount: totalCatalogRecords,
-    totalBytes: totalSearchBytes,
-    buckets: searchManifestBuckets,
-  };
-
-  const searchManifestPath = path.join(searchDir, 'search_manifest.json');
-  fs.writeFileSync(searchManifestPath, JSON.stringify(searchManifest, null, 2), 'utf-8');
-
-  // Write Release Year Partitions & Release Manifest
-  console.log('📅 Writing Release-Year Partitions & Release Manifest...');
-  const releaseManifestBuckets: Array<{
-    year: string;
-    file: string;
-    recordCount: number;
-    byteSize: number;
-    sha256: string;
-  }> = [];
-
   let totalReleaseBytes = 0;
-  const sortedYearKeys = Array.from(releaseYearsMap.keys()).sort((a, b) => {
-    if (a === 'undated') return 1;
-    if (b === 'undated') return -1;
-    return b.localeCompare(a); // Year descending
-  });
 
-  for (const yearKey of sortedYearKeys) {
-    const yearRecords = releaseYearsMap.get(yearKey)!;
-    yearRecords.sort((a, b) => (b.firstReleaseDate || '').localeCompare(a.firstReleaseDate || ''));
+  for (const [yearStr, records] of yearPartitionsMap.entries()) {
+    if (yearStr === 'undated') {
+      // Partition undated records into ID-range files (max 2500 per file)
+      records.sort((a, b) => a.sourceId - b.sourceId);
+      let uIdx = 1;
+      for (let i = 0; i < records.length; i += RELEASE_FILE_RECORD_LIMIT) {
+        const uChunk = records.slice(i, i + RELEASE_FILE_RECORD_LIMIT);
+        const filename = `undated_${String(uIdx).padStart(4, '0')}.json`;
+        const filePath = path.join(releasesUndatedDir, filename);
 
-    const filename = `${yearKey}.json`;
-    const filePath = path.join(releasesDir, filename);
-    const jsonStr = JSON.stringify(yearRecords, null, 2);
-    const buffer = Buffer.from(jsonStr, 'utf-8');
+        const jsonStr = JSON.stringify(uChunk, null, 2);
+        const buffer = Buffer.from(jsonStr, 'utf-8');
 
-    fs.writeFileSync(filePath, buffer);
-    const hash = computeSha256(buffer);
-    totalReleaseBytes += buffer.length;
+        fs.writeFileSync(filePath, buffer);
+        const sha256 = computeSha256(buffer);
+        totalReleaseBytes += buffer.length;
 
-    releaseManifestBuckets.push({
-      year: yearKey,
-      file: `releases/${filename}`,
-      recordCount: yearRecords.length,
-      byteSize: buffer.length,
-      sha256: hash,
-    });
+        releaseManifestPartitions.push({
+          key: `undated_${uIdx}`,
+          file: `releases/undated/${filename}`,
+          recordCount: uChunk.length,
+          byteSize: buffer.length,
+          sha256,
+        });
+        uIdx++;
+      }
+    } else {
+      // Check if annual partition exceeds 5 MB or 2,500 records
+      const jsonTestStr = JSON.stringify(records, null, 2);
+      const testBuffer = Buffer.from(jsonTestStr, 'utf-8');
+
+      if (testBuffer.length > 5 * 1024 * 1024 || records.length > RELEASE_FILE_RECORD_LIMIT) {
+        // Subdivide annual partition by month
+        const yearSubDir = path.join(releasesDir, yearStr);
+        fs.mkdirSync(yearSubDir, { recursive: true });
+
+        const monthMap = new Map<string, ReleaseListingRecord[]>();
+        for (const r of records) {
+          const mKey = getReleaseMonthKey(r.firstReleaseDate);
+          if (!monthMap.has(mKey)) monthMap.set(mKey, []);
+          monthMap.get(mKey)!.push(r);
+        }
+
+        const sortedMonths = Array.from(monthMap.keys()).sort();
+        for (const mKey of sortedMonths) {
+          const mRecords = monthMap.get(mKey)!;
+          mRecords.sort((a, b) => (b.firstReleaseDate || '').localeCompare(a.firstReleaseDate || ''));
+
+          const filename = `${mKey}.json`;
+          const filePath = path.join(yearSubDir, filename);
+
+          const jsonStr = JSON.stringify(mRecords, null, 2);
+          const buffer = Buffer.from(jsonStr, 'utf-8');
+
+          fs.writeFileSync(filePath, buffer);
+          const sha256 = computeSha256(buffer);
+          totalReleaseBytes += buffer.length;
+
+          releaseManifestPartitions.push({
+            key: `${yearStr}/${mKey}`,
+            file: `releases/${yearStr}/${filename}`,
+            recordCount: mRecords.length,
+            byteSize: buffer.length,
+            sha256,
+          });
+        }
+      } else {
+        // Single annual release file
+        records.sort((a, b) => (b.firstReleaseDate || '').localeCompare(a.firstReleaseDate || ''));
+        const filename = `${yearStr}.json`;
+        const filePath = path.join(releasesDir, filename);
+
+        fs.writeFileSync(filePath, testBuffer);
+        const sha256 = computeSha256(testBuffer);
+        totalReleaseBytes += testBuffer.length;
+
+        releaseManifestPartitions.push({
+          key: yearStr,
+          file: `releases/${filename}`,
+          recordCount: records.length,
+          byteSize: testBuffer.length,
+          sha256,
+        });
+      }
+    }
   }
 
   const releaseManifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
     recordCount: totalCatalogRecords,
     totalBytes: totalReleaseBytes,
-    partitions: releaseManifestBuckets,
+    partitions: releaseManifestPartitions,
   };
 
   const releaseManifestPath = path.join(releasesDir, 'release_manifest.json');
   fs.writeFileSync(releaseManifestPath, JSON.stringify(releaseManifest, null, 2), 'utf-8');
 
-  // Generate Master ZIP Archive
+  // --- BUILD 4: MASTER ZIP ARCHIVE (play-atlas-full-catalog.zip) ---
   console.log('📦 Generating Master ZIP Archive (play-atlas-full-catalog.zip)...');
   const zipPath = path.join(outputDir, 'play-atlas-full-catalog.zip');
 
@@ -333,16 +460,16 @@ async function runBrowserCatalogBuilder() {
 
   console.log(`✅ Master ZIP Archive created: ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
 
-  // Write Master Browser Catalog Manifest
+  // --- BUILD 5: MASTER BROWSER CATALOG MANIFEST ---
   const browserCatalogManifest = {
     source: 'igdb',
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedAt: new Date().toISOString(),
 
     catalogRecordCount: totalCatalogRecords,
     fullCatalogUncompressedBytes: totalCatalogUncompressedBytes,
 
-    searchManifest: 'search/search_manifest.json',
+    searchManifest: 'search/token_manifest.json',
     releaseManifest: 'releases/release_manifest.json',
 
     fullCatalog: {
@@ -361,16 +488,29 @@ async function runBrowserCatalogBuilder() {
   const browserManifestPath = path.join(outputDir, 'browser_catalog_manifest.json');
   fs.writeFileSync(browserManifestPath, JSON.stringify(browserCatalogManifest, null, 2), 'utf-8');
 
+  const tokenSizes = tokenBucketsList.map(b => b.byteSize);
+  const maxTokenBucketSize = Math.max(...tokenSizes);
+  const avgTokenBucketSize = Math.round(totalTokenBytes / tokenBucketsList.length);
+
+  const lookupSizes = lookupFilesList.map(l => l.byteSize);
+  const maxLookupFileSize = Math.max(...lookupSizes);
+  const avgLookupFileSize = Math.round(totalLookupBytes / lookupFilesList.length);
+
   console.log('====================================================');
-  console.log('📊 BROWSER CATALOG BUILD DIAGNOSTICS REPORT');
+  console.log('📊 REVISED BROWSER CATALOG BUILD DIAGNOSTICS REPORT');
   console.log('====================================================');
   console.log(`🎮 Total Catalog Records:          ${totalCatalogRecords.toLocaleString()}`);
-  console.log(`🔍 Search Index Total Size:         ${(totalSearchBytes / (1024 * 1024)).toFixed(2)} MB (${searchManifestBuckets.length} buckets)`);
-  console.log(`📅 Release Partitions Total Size:   ${(totalReleaseBytes / (1024 * 1024)).toFixed(2)} MB (${releaseManifestBuckets.length} years)`);
+  console.log(`🔤 Unique Search Tokens:            ${tokenPostingsMap.size.toLocaleString()}`);
+  console.log(`🎮 Compact Lookup Table Size:       ${(totalLookupBytes / (1024 * 1024)).toFixed(2)} MB (${lookupFilesList.length} files)`);
+  console.log(`🔤 Token Posting Index Size:       ${(totalTokenBytes / (1024 * 1024)).toFixed(2)} MB (${tokenBucketsList.length} buckets)`);
+  console.log(`🔍 Combined Search System Size:     ${((totalLookupBytes + totalTokenBytes) / (1024 * 1024)).toFixed(2)} MB (vs previous 223 MB!)`);
+  console.log(`📏 Token Bucket Sizes (Max / Avg):  ${(maxTokenBucketSize / 1024).toFixed(1)} KB / ${(avgTokenBucketSize / 1024).toFixed(1)} KB`);
+  console.log(`📏 Lookup File Sizes (Max / Avg):   ${(maxLookupFileSize / (1024 * 1024)).toFixed(2)} MB / ${(avgLookupFileSize / (1024 * 1024)).toFixed(2)} MB`);
+  console.log(`📅 Release Partitions Total Size:   ${(totalReleaseBytes / (1024 * 1024)).toFixed(2)} MB (${releaseManifestPartitions.length} partitions)`);
   console.log(`📦 Full Detail Chunks:              ${outputChunksList.length} chunks (${(totalCatalogUncompressedBytes / (1024 * 1024)).toFixed(2)} MB)`);
   console.log(`🗜️ Master ZIP Archive Size:        ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
   console.log('====================================================');
-  console.log('✅ Play Atlas Browser Catalog Built Successfully!');
+  console.log('✅ Token-Based Browser Catalog Built Successfully!');
 }
 
 runBrowserCatalogBuilder().catch(err => {

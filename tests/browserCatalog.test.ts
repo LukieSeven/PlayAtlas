@@ -1,6 +1,7 @@
 import {
   normalizeSearchQuery,
-  getSearchBucketKey,
+  tokenizeTitle,
+  getTokenBucketKey,
   getReleaseYearKey,
   buildCoverThumbnailUrl,
 } from '../src/utils/browserCatalogUtils';
@@ -26,21 +27,25 @@ function runBrowserCatalogUnitTests() {
   assertEqual(normalizeSearchQuery('7 Days to Die'), '7 days to die', 'Preserves numbers and alphanumeric characters');
   assertEqual(normalizeSearchQuery('Grand   Theft   Auto'), 'grand theft auto', 'Collapses multiple internal spaces');
 
-  // 2. Search Bucket Selection Tests
-  assertEqual(getSearchBucketKey('castlevania'), 'c', 'castlevania -> bucket "c"');
-  assertEqual(getSearchBucketKey('7 days to die'), '0-9', '7 days to die -> bucket "0-9"');
-  assertEqual(getSearchBucketKey('okami'), 'o', 'okami -> bucket "o"');
-  assertEqual(getSearchBucketKey(''), 'other', 'empty string -> bucket "other"');
-  assertEqual(getSearchBucketKey('!special'), 'other', 'punctuation prefix -> bucket "other"');
+  // 2. Tokenization Tests
+  const tokens1 = tokenizeTitle('The Witcher 3: Wild Hunt');
+  assertEqual(tokens1.join(','), 'witcher,3,wild,hunt', 'Tokenizes title & discards 1-letter "the", retains "3"');
 
-  // 3. Release-Year Partition Assignment Tests
+  const tokens2 = tokenizeTitle('Tom Clancy\'s Rainbow Six');
+  assertEqual(tokens2.join(','), 'tom,clancy,rainbow,six', 'Strips punctuation & discards single letter "s"');
+
+  // 3. Token Bucket Key Selection Tests (256 SHA-256 Buckets)
+  assertEqual(getTokenBucketKey('witcher').length, 2, 'witcher -> 2 hex chars');
+  assertEqual(getTokenBucketKey('zelda').length, 2, 'zelda -> 2 hex chars');
+
+  // 4. Release-Year Partition Assignment Tests
   assertEqual(getReleaseYearKey('2026-07-31'), '2026', '2026-07-31 -> year "2026"');
   assertEqual(getReleaseYearKey('1997-10-02'), '1997', '1997-10-02 -> year "1997"');
   assertEqual(getReleaseYearKey(null), 'undated', 'null release date -> "undated"');
   assertEqual(getReleaseYearKey(''), 'undated', 'empty release date -> "undated"');
   assertEqual(getReleaseYearKey('TBD'), 'undated', 'TBD release date -> "undated"');
 
-  // 4. Cover Thumbnail URL Builder Tests
+  // 5. Cover Thumbnail URL Builder Tests
   assertEqual(
     buildCoverThumbnailUrl('co1vcf'),
     'https://images.igdb.com/igdb/image/upload/t_cover_small/co1vcf.jpg',
