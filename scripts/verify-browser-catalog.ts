@@ -56,6 +56,8 @@ async function verifyBrowserCatalog() {
     process.exit(1);
   }
 
+  const catalogBuildId = browserManifest.catalogBuildId || 'v1';
+
   // 2. Verify Full Detail Chunks (.json.gz)
   const validChunkPaths = new Set<string>();
   let totalChunkRecords = 0;
@@ -159,6 +161,11 @@ async function verifyBrowserCatalog() {
 
   let witcherPostingList: number[] | null = null;
   let threePostingList: number[] | null = null;
+  let tokens9bHash = '';
+  let tokens4eHash = '';
+
+  const expectedWitcherBucket = getBuildTokenBucketKey('witcher'); // '9b'
+  const expected3Bucket = getBuildTokenBucketKey('3'); // '4e'
 
   for (const bucketInfo of tokenManifest.tokenBuckets) {
     sumManifestTokenCount += bucketInfo.tokenCount;
@@ -174,9 +181,12 @@ async function verifyBrowserCatalog() {
     const compressedBuffer = fs.readFileSync(bucketAbsPath);
     const calculatedHash = computeSha256(compressedBuffer);
     if (calculatedHash !== bucketInfo.sha256) {
-      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for token bucket ${bucketInfo.file}!`);
+      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for token bucket ${bucketInfo.file}! Manifest: ${bucketInfo.sha256}, Actual: ${calculatedHash}`);
       process.exit(1);
     }
+
+    if (bucketInfo.key === expectedWitcherBucket) tokens9bHash = calculatedHash;
+    if (bucketInfo.key === expected3Bucket) tokens4eHash = calculatedHash;
 
     const bucketObj = decompressGzipToJson<Record<string, number[]>>(compressedBuffer);
     for (const [token, ids] of Object.entries(bucketObj)) {
@@ -201,7 +211,7 @@ async function verifyBrowserCatalog() {
     }
   }
 
-  // --- TOKEN DISTRIBUTION GUARDRAIL CHECKS ---
+  // --- TOKEN DISTRIBUTION & CONTENT GUARDRAIL CHECKS ---
   if (sumManifestTokenCount !== tokenManifest.uniqueTokenCount) {
     console.error(`❌ VERIFICATION FAILURE: Sum of manifest tokenCount values (${sumManifestTokenCount}) !== uniqueTokenCount (${tokenManifest.uniqueTokenCount})`);
     process.exit(1);
@@ -219,12 +229,12 @@ async function verifyBrowserCatalog() {
   }
 
   if (!witcherPostingList || witcherPostingList.length === 0) {
-    console.error(`❌ VERIFICATION FAILURE: 'witcher' posting list is missing or empty in tokens_06.json.gz!`);
+    console.error(`❌ VERIFICATION FAILURE: 'witcher' posting list is missing or empty in tokens_${expectedWitcherBucket}.json.gz!`);
     process.exit(1);
   }
 
   if (!threePostingList || threePostingList.length === 0) {
-    console.error(`❌ VERIFICATION FAILURE: '3' posting list is missing or empty in tokens_ca.json.gz!`);
+    console.error(`❌ VERIFICATION FAILURE: '3' posting list is missing or empty in tokens_${expected3Bucket}.json.gz!`);
     process.exit(1);
   }
 
@@ -296,11 +306,12 @@ async function verifyBrowserCatalog() {
   console.log('📊 GZIPPED BROWSER CATALOG INDEPENDENT VERIFICATION');
   console.log('====================================================');
   console.log(`📁 Target Directory:            ${targetDir}`);
+  console.log(`🏷️ Catalog Build ID:            ${catalogBuildId}`);
   console.log(`🎮 Total Verified Games:        ${totalLookupRecords.toLocaleString()}`);
   console.log(`🔤 Unique Search Tokens:        ${globalTokens.size.toLocaleString()}`);
   console.log(`🔤 Occupied Token Buckets:      ${occupiedBucketsCount}/256`);
-  console.log(`🧙 'witcher' Posting Count:      ${witcherPostingList.length} (in tokens_06.json.gz)`);
-  console.log(`3️⃣ '3' Posting Count:            ${threePostingList.length} (in tokens_ca.json.gz)`);
+  console.log(`🧙 'witcher' Bucket (tokens_${expectedWitcherBucket}.json.gz): ${witcherPostingList.length} postings | SHA-256: ${tokens9bHash}`);
+  console.log(`3️⃣ '3' Bucket (tokens_${expected3Bucket}.json.gz):       ${threePostingList.length} postings | SHA-256: ${tokens4eHash}`);
   console.log(`⚔️ 'witcher 3' Intersect Count: ${witcher3IntersectedIds.length} titles`);
   console.log(`👑 'The Witcher 3: Wild Hunt':  CONFIRMED PRESENT in search intersection!`);
   console.log(`🎮 Compact Lookup Files:        ${tokenManifest.lookupFiles.length} files (.json.gz)`);

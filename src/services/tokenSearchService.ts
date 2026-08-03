@@ -6,6 +6,7 @@ import {
 import { fetchAndDecompressJson } from '../utils/decompression';
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { CompactGameLookupRecord } from '../../scripts/build-browser-catalog';
+import { openIndexedDB } from './indexDbStorage';
 
 export interface TokenManifestLookupFile {
   file: string;
@@ -39,6 +40,32 @@ export interface TokenManifest {
   chunkFiles: Record<number, string>;
 }
 
+export interface MasterBrowserManifest {
+  source: string;
+  schemaVersion: number;
+  catalogBuildId?: string;
+  generatedAt: string;
+  catalogRecordCount: number;
+  fullCatalogCompressedBytes: number;
+  fullCatalogUncompressedBytes: number;
+  searchManifest: string;
+  releaseManifest: string;
+  platformsMetadata: string;
+  fullCatalog: {
+    chunkCount: number;
+    chunks: Array<{
+      file: string;
+      recordCount: number;
+      firstSourceId: number;
+      lastSourceId: number;
+      compressedByteSize: number;
+      uncompressedByteSize: number;
+      sha256: string;
+      compression: 'gzip';
+    }>;
+  };
+}
+
 export interface SearchPerformanceReport {
   query: string;
   tokenBucketsDownloaded: number;
@@ -53,7 +80,44 @@ export interface SearchPerformanceReport {
 
 const cachedTokenBuckets = new Map<string, Record<string, number[]>>();
 const cachedLookupFiles = new Map<string, CompactGameLookupRecord[]>();
+
+let masterManifestCache: MasterBrowserManifest | null = null;
 let tokenManifestCache: TokenManifest | null = null;
+let currentCatalogBuildId: string | null = null;
+
+/**
+ * Fetch Master Browser Catalog Manifest (cache: 'no-store') and clear stale caches on build ID change
+ */
+export async function fetchMasterBrowserManifest(): Promise<MasterBrowserManifest> {
+  if (masterManifestCache) return masterManifestCache;
+
+  const manifestUrl = getBasePathAwareUrl('data/browser_catalog_manifest.json');
+  const res = await fetch(manifestUrl, { cache: 'no-store' });
+  if (!res.ok) {
+    throw new Error(`Failed to fetch master browser catalog manifest (${res.status}): ${res.statusText}`);
+  }
+
+  masterManifestCache = await res.json();
+  const buildId = masterManifestCache?.catalogBuildId || masterManifestCache?.generatedAt || 'v1';
+
+  if (currentCatalogBuildId && currentCatalogBuildId !== buildId) {
+    console.log(`🔄 Catalog Build ID changed (${currentCatalogBuildId} -> ${buildId}). Evicting stale search & chunk caches...`);
+    cachedTokenBuckets.clear();
+    cachedLookupFiles.clear();
+    tokenManifestCache = null;
+
+    try {
+      const db = await openIndexedDB();
+      const tx = db.transaction('full_chunks', 'readwrite');
+      tx.objectStore('full_chunks').clear();
+    } catch {
+      // Non-critical cache purge error
+    }
+  }
+
+  currentCatalogBuildId = buildId;
+  return masterManifestCache!;
+}
 
 /**
  * Fetch Token Search Manifest (Base-Path Aware)
@@ -61,8 +125,12 @@ let tokenManifestCache: TokenManifest | null = null;
 export async function fetchTokenManifest(): Promise<TokenManifest> {
   if (tokenManifestCache) return tokenManifestCache;
 
-  const manifestUrl = getBasePathAwareUrl('data/search/token_manifest.json');
-  const res = await fetch(manifestUrl);
+  const master = await fetchMasterBrowserManifest();
+  const buildIdParam = master.catalogBuildId ? `?v=${encodeURIComponent(master.catalogBuildId)}` : '';
+  const searchManifestRel = master.searchManifest || 'search/token_manifest.json';
+  const manifestUrl = `${getBasePathAwareUrl(`data/${searchManifestRel}`)}${buildIdParam}`;
+
+  const res = await fetch(manifestUrl, { cache: 'no-store' });
   if (!res.ok) {
     throw new Error(`Failed to fetch token search manifest (${res.status}): ${res.statusText}`);
   }
@@ -72,18 +140,21 @@ export async function fetchTokenManifest(): Promise<TokenManifest> {
 }
 
 /**
- * Fetch & Decompress Token Bucket File (.json.gz, Base-Path Aware)
+ * Fetch & Decompress Token Bucket File (.json.gz, Base-Path Aware with Version Query Parameter)
  */
 export async function fetchTokenBucket(hexKey: string): Promise<Record<string, number[]>> {
   if (cachedTokenBuckets.has(hexKey)) {
     return cachedTokenBuckets.get(hexKey)!;
   }
 
+  const master = await fetchMasterBrowserManifest();
   const manifest = await fetchTokenManifest();
   const bucketInfo = manifest.tokenBuckets.find(b => b.key === hexKey);
   const relPath = bucketInfo ? bucketInfo.file : `search/tokens/tokens_${hexKey}.json.gz`;
 
-  const bucketUrl = getBasePathAwareUrl(`data/${relPath}`);
+  const buildIdParam = master.catalogBuildId ? `?v=${encodeURIComponent(master.catalogBuildId)}` : '';
+  const bucketUrl = `${getBasePathAwareUrl(`data/${relPath}`)}${buildIdParam}`;
+
   const bucketObj = await fetchAndDecompressJson<Record<string, number[]>>(
     bucketUrl,
     bucketInfo?.sha256
@@ -94,17 +165,20 @@ export async function fetchTokenBucket(hexKey: string): Promise<Record<string, n
 }
 
 /**
- * Fetch & Decompress Compact Game Lookup File (.json.gz, Base-Path Aware)
+ * Fetch & Decompress Compact Game Lookup File (.json.gz, Base-Path Aware with Version Query Parameter)
  */
 export async function fetchLookupFile(relPath: string): Promise<CompactGameLookupRecord[]> {
   if (cachedLookupFiles.has(relPath)) {
     return cachedLookupFiles.get(relPath)!;
   }
 
+  const master = await fetchMasterBrowserManifest();
   const manifest = await fetchTokenManifest();
   const lookupInfo = manifest.lookupFiles.find(l => l.file === relPath);
 
-  const fileUrl = getBasePathAwareUrl(`data/${relPath}`);
+  const buildIdParam = master.catalogBuildId ? `?v=${encodeURIComponent(master.catalogBuildId)}` : '';
+  const fileUrl = `${getBasePathAwareUrl(`data/${relPath}`)}${buildIdParam}`;
+
   const records = await fetchAndDecompressJson<CompactGameLookupRecord[]>(
     fileUrl,
     lookupInfo?.sha256
@@ -254,7 +328,6 @@ export async function executeProgressiveTokenSearch(
   }
 
   // 2. TRUE MULTI-TOKEN INTERSECTION
-  // Require every query token to have a non-empty posting list in the index
   for (const t of tokens) {
     if (!postingsMap.has(t) || (postingsMap.get(t) || []).length === 0) {
       return {

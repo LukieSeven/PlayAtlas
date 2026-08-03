@@ -588,10 +588,13 @@ async function runBrowserCatalogBuilder() {
 
   console.log(`✅ Master ZIP Archive created in release-assets: ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
 
+  const catalogBuildId = `build-${Date.now()}-${zipSha256.slice(0, 8)}`;
+
   // --- BUILD 5: MASTER BROWSER CATALOG MANIFEST ---
   const outputBrowserManifest = {
     source: 'igdb',
     schemaVersion: 2,
+    catalogBuildId,
     generatedAt: new Date().toISOString(),
 
     catalogRecordCount: totalCatalogRecords,
@@ -648,6 +651,7 @@ async function runBrowserCatalogBuilder() {
   console.log('====================================================');
   console.log('📊 GZIPPED CATALOG BUILD & TOKEN DISTRIBUTION REPORT');
   console.log('====================================================');
+  console.log(`Catalog Build ID:    ${catalogBuildId}`);
   console.log(`Token:               witcher`);
   console.log(`Expected Bucket:     ${witcherExpectedBucket}`);
   console.log(`Physical Bucket:     ${witcherExpectedBucket}`);

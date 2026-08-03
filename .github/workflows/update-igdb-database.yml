@@ -259,49 +259,71 @@ jobs:
           echo "⚙️ Rebuilding browser catalog with corrected SHA-256 token index from generated/browser-catalog-restored..."
           IGDB_FULL_CATALOG_DIR=generated/browser-catalog-restored PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-rebuilt npm run build:browser-catalog
 
-          echo "BROWSER_CATALOG_DIR=generated/browser-catalog-rebuilt" >> "${GITHUB_ENV}"
-
-      - name: Verify Restored Browser Catalog (Deploy Existing Mode)
+      - name: Verify Rebuilt Browser Catalog (Deploy Existing Mode)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
         run: npm run verify:browser-catalog -- generated/browser-catalog-rebuilt
 
       # --- 4. COMMON RELEASE ASSET UPLOAD & PAGES DEPLOYMENT ---
-      - name: Create or Update GitHub Release with Master ZIP Archive Asset
+      - name: Update GitHub Release Asset with Rebuilt Corrected Archive
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ZIP_SRC=""
-          if [ -f "generated/release-assets/play-atlas-full-catalog.zip" ]; then
-            ZIP_SRC="generated/release-assets"
-          elif [ -f "generated/release-download/play-atlas-full-catalog.zip" ]; then
-            ZIP_SRC="generated/release-download"
-          fi
-
-          if [ -n "$ZIP_SRC" ]; then
-            echo "📦 Publishing master ZIP archive asset to GitHub Release v1.0.0-catalog..."
+          ZIP_SRC="generated/release-assets"
+          if [ -d "generated/browser-catalog-rebuilt" ] && [ -f "$ZIP_SRC/play-atlas-full-catalog.zip" ]; then
+            echo "📦 Publishing corrected master ZIP archive asset to GitHub Release v1.0.0-catalog..."
             if gh release view v1.0.0-catalog --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
               gh release upload v1.0.0-catalog "$ZIP_SRC/play-atlas-full-catalog.zip" "$ZIP_SRC/play-atlas-full-catalog.zip.sha256" --clobber --repo "${GITHUB_REPOSITORY}"
             else
               gh release create v1.0.0-catalog "$ZIP_SRC/play-atlas-full-catalog.zip" "$ZIP_SRC/play-atlas-full-catalog.zip.sha256" --title "Play Atlas Catalog v1.0.0" --notes "Complete Play Atlas IGDB catalog." --target "${GITHUB_SHA}" --repo "${GITHUB_REPOSITORY}"
             fi
-            gh release view v1.0.0-catalog --repo "${GITHUB_REPOSITORY}"
+
+            echo "🔍 Verifying newly uploaded Release archive in clean test directory..."
+            TEST_UNZIP_DIR="${RUNNER_TEMP:-/tmp}/test-release-unzip"
+            rm -rf "${TEST_UNZIP_DIR}"
+            mkdir -p "${TEST_UNZIP_DIR}"
+            unzip -q "$ZIP_SRC/play-atlas-full-catalog.zip" -d "${TEST_UNZIP_DIR}"
+            npm run verify:browser-catalog -- "${TEST_UNZIP_DIR}"
           fi
 
-      - name: Prepare Build Output for Pages Deployment
+      - name: Prepare Clean Build Output for Pages Deployment
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         run: |
           npm run build
+          rm -rf dist/data
           mkdir -p dist/data
+
+          SRC_DIR=""
           if [ -d "generated/browser-catalog-rebuilt" ]; then
-            cp -r generated/browser-catalog-rebuilt/* dist/data/
+            SRC_DIR="generated/browser-catalog-rebuilt"
           elif [ -d "generated/browser-catalog-test" ]; then
-            cp -r generated/browser-catalog-test/* dist/data/
-          elif [ -d "generated/browser-catalog-restored" ]; then
-            cp -r generated/browser-catalog-restored/* dist/data/
+            SRC_DIR="generated/browser-catalog-test"
           fi
+
+          echo "📦 Copying single authoritative catalog source into dist/data..."
+          echo "Authoritative catalog source: ${SRC_DIR}"
+          cp -a "${SRC_DIR}/." dist/data/
           rm -f dist/data/play-atlas-full-catalog.zip
           rm -f dist/data/play-atlas-full-catalog.zip.sha256
+
+          BUILD_ID=$(jq -r '.catalogBuildId // "unknown"' dist/data/browser_catalog_manifest.json)
+          MANIFEST_HASH=$(sha256sum dist/data/browser_catalog_manifest.json | cut -d' ' -f1)
+          TOKENS_4E_HASH=$(sha256sum dist/data/search/tokens/tokens_4e.json.gz | cut -d' ' -f1)
+          TOKENS_9B_HASH=$(sha256sum dist/data/search/tokens/tokens_9b.json.gz | cut -d' ' -f1)
+
+          echo "===================================================="
+          echo "📊 DEPLOYMENT PAYLOAD CATALOG HASH DIAGNOSTIC"
+          echo "===================================================="
+          echo "Authoritative Catalog Source: ${SRC_DIR}"
+          echo "Destination Catalog Dir:      dist/data"
+          echo "Manifest Build ID:            ${BUILD_ID}"
+          echo "Manifest File SHA-256:        ${MANIFEST_HASH}"
+          echo "tokens_4e.json.gz SHA-256:    ${TOKENS_4E_HASH}"
+          echo "tokens_9b.json.gz SHA-256:    ${TOKENS_9B_HASH}"
+          echo "===================================================="
+
+          echo "🔍 Running verifier against final dist/data payload..."
+          npm run verify:browser-catalog -- dist/data
 
       - name: Measure Exact Published Deployment Size & Enforce 900 MB Ceiling
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}

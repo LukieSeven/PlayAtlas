@@ -38,7 +38,8 @@ export function tokenizeTitle(title: string | null | undefined): string[] {
 
 /**
  * Get 2-character hex bucket key (00 to ff) for a token using browser-safe Web Crypto API.
- * Never silently returns a fallback bucket key. Throws if hashing fails.
+ * Converts SHA-256 digest into complete hex string and extracts first 2 hex characters.
+ * Matches Node's crypto.createHash('sha256').update(token).digest('hex').slice(0, 2).
  */
 export async function getTokenBucketKey(token: string): Promise<string> {
   const clean = token.trim().toLowerCase();
@@ -50,8 +51,9 @@ export async function getTokenBucketKey(token: string): Promise<string> {
 
   if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle) {
     const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
-    const firstByte = new Uint8Array(digest)[0];
-    return firstByte.toString(16).padStart(2, '0');
+    const hashArray = Array.from(new Uint8Array(digest));
+    const hexHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hexHash.slice(0, 2);
   }
 
   throw new Error('Web Crypto API (globalThis.crypto.subtle) is unavailable in this environment.');

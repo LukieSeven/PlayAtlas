@@ -1,11 +1,25 @@
 /**
- * Fetch a .json.gz file, validate SHA-256 hash, and decompress using native DecompressionStream('gzip')
+ * Fetch a .json.gz file, validate SHA-256 hash, and decompress using native DecompressionStream('gzip').
+ * Retries once with cache: 'reload' on fetch failure or hash mismatch to bypass stale CDN/browser caches.
  */
 export async function fetchAndDecompressJson<T>(
   url: string,
   expectedSha256?: string
 ): Promise<T> {
-  const res = await fetch(url);
+  try {
+    return await doFetchAndDecompress<T>(url, expectedSha256, { cache: 'default' });
+  } catch (err: any) {
+    console.warn(`Initial fetch or hash validation failed for ${url}. Retrying once with cache: 'reload'...`, err?.message);
+    return await doFetchAndDecompress<T>(url, expectedSha256, { cache: 'reload' });
+  }
+}
+
+async function doFetchAndDecompress<T>(
+  url: string,
+  expectedSha256?: string,
+  init?: RequestInit
+): Promise<T> {
+  const res = await fetch(url, init);
   if (!res.ok) {
     throw new Error(`Failed to fetch compressed resource ${url} (HTTP ${res.status})`);
   }
@@ -20,7 +34,6 @@ export async function fetchAndDecompressJson<T>(
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     } else {
-      // Node.js fallback
       const nodeCrypto = await import('crypto');
       hashHex = nodeCrypto.createHash('sha256').update(new Uint8Array(arrayBuffer)).digest('hex');
     }
@@ -32,13 +45,11 @@ export async function fetchAndDecompressJson<T>(
 
   let jsonText = '';
 
-  // Use native DecompressionStream if available (supported in Chrome 80+, Firefox 113+, Safari 16.4+, Edge)
   if (typeof DecompressionStream !== 'undefined') {
     const ds = new DecompressionStream('gzip');
     const decompressedStream = new Response(arrayBuffer).body!.pipeThrough(ds);
     jsonText = await new Response(decompressedStream).text();
   } else {
-    // Node.js fallback using zlib
     try {
       const zlib = await import('zlib');
       const decompressedBuffer = zlib.gunzipSync(Buffer.from(arrayBuffer));
