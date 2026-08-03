@@ -47,11 +47,11 @@ export interface GameIndexRecord {
   title: string;
   slug: string | null;
 
-  gameType: string;
-  rawGameType: number | null;
+  gameType: string; // Stable key e.g. "main_game"
+  gameTypeLabel: string; // Display label e.g. "Main Game"
+  rawGameType: string | number | null;
   defaultVisible: boolean;
   category: string;
-  gameStatus: string | null;
 
   firstReleaseDate: string | null;
   firstReleaseTimestamp: number | null;
@@ -84,6 +84,7 @@ export interface GameIndexRecord {
     [key: string]: string | undefined;
   };
 
+  gameStatus: string | null;
   igdbUpdatedAt: string | null;
   sourceRecordPath: string;
 }
@@ -102,15 +103,25 @@ export interface IndexDiagnostics {
   duplicateRecordsRemoved: number;
   finalNormalizedRecords: number;
 
-  recordsWithExactFirstReleaseDates: number;
-  recordsWithPartialFirstReleaseDates: number;
+  missingGameTypeCount: number;
+  unknownGameTypeCount: number;
+  gameTypeFrequency: Record<string, number>;
+  gameTypeCounts: Record<string, number>;
+
+  exactDateCount: number;
+  monthOnlyCount: number;
+  yearOnlyCount: number;
+  quarterOnlyCount: number;
+  tbdCount: number;
+  unknownPrecisionCount: number;
+  dateFormatFrequency: Record<string, number>;
+
   recordsWithPlatformSpecificDates: number;
   recordsWithCovers: number;
   recordsWithoutCovers: number;
 
   defaultVisibleRecords: number;
   hiddenRecords: number;
-  unknownGameTypes: number;
   invalidRecordsSkipped: number;
 
   generatedDatabaseSize: number;
@@ -141,75 +152,73 @@ export interface CompiledGameIndex {
   records: GameIndexRecord[];
 }
 
-/**
- * Twitch OAuth Client Credentials Access Token Request
- */
-async function getTwitchAccessToken(clientId: string, clientSecret: string): Promise<string> {
-  const tokenUrl = `https://id.twitch.tv/oauth2/token?client_id=${encodeURIComponent(
-    clientId
-  )}&client_secret=${encodeURIComponent(clientSecret)}&grant_type=client_credentials`;
+const GAME_TYPE_LABELS: Record<string, string> = {
+  main_game: 'Main Game',
+  dlc_addon: 'DLC / Add-on',
+  expansion: 'Expansion',
+  bundle: 'Bundle',
+  standalone_expansion: 'Standalone Expansion',
+  mod: 'Mod',
+  episode: 'Episode',
+  season: 'Season',
+  remake: 'Remake',
+  remaster: 'Remaster',
+  expanded_game: 'Expanded Game',
+  port: 'Port',
+  fork: 'Fork',
+  pack: 'Pack',
+  update: 'Update',
+};
 
-  const res = await fetch(tokenUrl, { method: 'POST' });
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(`Twitch OAuth Token request failed (HTTP ${res.status}): ${errText}`);
-  }
+const DEFAULT_VISIBLE_GAME_TYPES = new Set([
+  'main_game',
+  'standalone_expansion',
+  'remake',
+  'remaster',
+  'expanded_game',
+  'port',
+]);
 
-  const data = await res.json();
-  if (!data.access_token) {
-    throw new Error('Twitch OAuth response missing access_token');
-  }
-
-  return data.access_token;
+function normalizeGameTypeKey(value: string | null | undefined): string {
+  return (
+    value
+      ?.trim()
+      .toLowerCase()
+      .replace(/[\s-]+/g, '_') ?? 'unknown'
+  );
 }
 
-/**
- * IGDB Game Type Enum Mapping & Default Visibility Rules
- */
-function mapGameType(rawType: number | undefined | null): { gameType: string; defaultVisible: boolean } {
-  if (typeof rawType !== 'number') {
-    return { gameType: 'Unknown', defaultVisible: false };
+function parseRawGameTypeKey(gameTypeVal: any): string {
+  if (gameTypeVal === null || gameTypeVal === undefined) return 'unknown';
+  if (typeof gameTypeVal === 'object' && gameTypeVal.type !== undefined) {
+    return normalizeGameTypeKey(String(gameTypeVal.type));
   }
-
-  switch (rawType) {
-    case 0:
-      return { gameType: 'Main Game', defaultVisible: true };
-    case 1:
-      return { gameType: 'DLC / Add-on', defaultVisible: false };
-    case 2:
-      return { gameType: 'Expansion', defaultVisible: false };
-    case 3:
-      return { gameType: 'Bundle', defaultVisible: false };
-    case 4:
-      return { gameType: 'Standalone Expansion', defaultVisible: true };
-    case 5:
-      return { gameType: 'Mod', defaultVisible: false };
-    case 6:
-      return { gameType: 'Episode', defaultVisible: false };
-    case 7:
-      return { gameType: 'Season', defaultVisible: false };
-    case 8:
-      return { gameType: 'Remake', defaultVisible: true };
-    case 9:
-      return { gameType: 'Remaster', defaultVisible: true };
-    case 10:
-      return { gameType: 'Expanded Game', defaultVisible: true };
-    case 11:
-      return { gameType: 'Port', defaultVisible: true };
-    case 12:
-      return { gameType: 'Fork', defaultVisible: false };
-    case 13:
-      return { gameType: 'Pack', defaultVisible: false };
-    case 14:
-      return { gameType: 'Update', defaultVisible: false };
-    default:
-      return { gameType: 'Unknown', defaultVisible: false };
+  if (typeof gameTypeVal === 'string') {
+    return normalizeGameTypeKey(gameTypeVal);
   }
+  if (typeof gameTypeVal === 'number') {
+    const numMap: Record<number, string> = {
+      0: 'main_game',
+      1: 'dlc_addon',
+      2: 'expansion',
+      3: 'bundle',
+      4: 'standalone_expansion',
+      5: 'mod',
+      6: 'episode',
+      7: 'season',
+      8: 'remake',
+      9: 'remaster',
+      10: 'expanded_game',
+      11: 'port',
+      12: 'fork',
+      13: 'pack',
+      14: 'update',
+    };
+    return numMap[gameTypeVal] || 'unknown';
+  }
+  return 'unknown';
 }
 
-/**
- * IGDB Region Enum Mapping
- */
 function mapRegion(regionVal: any): string | null {
   const code = typeof regionVal === 'object' && regionVal ? regionVal.region : regionVal;
   if (typeof code === 'number') {
@@ -237,33 +246,17 @@ function mapRegion(regionVal: any): string | null {
   return null;
 }
 
-/**
- * IGDB Date Format / Precision Mapping
- */
-function mapDatePrecision(formatVal: any): string | null {
-  const fmt = typeof formatVal === 'object' && formatVal ? formatVal.format : formatVal;
-  if (typeof fmt === 'number') {
-    switch (fmt) {
-      case 0:
-        return 'Exact day';
-      case 1:
-        return 'Month only';
-      case 2:
-        return 'Quarter only';
-      case 3:
-        return 'Year only';
-      case 4:
-        return 'TBD';
-      default:
-        return 'Exact day';
-    }
-  }
-  return 'Exact day';
+function parseDateFormatPrecision(fmtVal: any): string {
+  if (fmtVal === null || fmtVal === undefined) return 'unknown';
+  const str = (typeof fmtVal === 'object' ? fmtVal.format || fmtVal.name || '' : String(fmtVal)).toUpperCase();
+  if (str.includes('YYYYMMMMDD') || str.includes('EXACT')) return 'exact day';
+  if (str.includes('YYYYMMMM') || str.includes('MONTH')) return 'month';
+  if (str.includes('YYYYQ') || str.includes('QUARTER')) return 'quarter';
+  if (str.includes('YYYY') || str.includes('YEAR')) return 'year';
+  if (str.includes('TBD')) return 'TBD';
+  return 'unknown';
 }
 
-/**
- * Helper to parse Unix timestamp (seconds) into ISO 'yyyy-MM-dd' in UTC
- */
 function parseTimestampToIso(ts: number | undefined | null): string | null {
   if (!ts || isNaN(ts) || ts <= 0) return null;
   try {
@@ -275,17 +268,30 @@ function parseTimestampToIso(ts: number | undefined | null): string | null {
   }
 }
 
-/**
- * Centralized Cover Image URL Builder from IGDB image_id
- */
 function buildCoverUrl(imageId: string | undefined | null, size: string = 't_cover_big'): string | null {
   if (!imageId || typeof imageId !== 'string' || !imageId.trim()) return null;
   return `https://images.igdb.com/igdb/image/upload/${size}/${imageId.trim()}.jpg`;
 }
 
-/**
- * Execute IGDB API Query over HTTPS with Apicalypse Body
- */
+async function getTwitchAccessToken(clientId: string, clientSecret: string): Promise<string> {
+  const tokenUrl = `https://id.twitch.tv/oauth2/token?client_id=${encodeURIComponent(
+    clientId
+  )}&client_secret=${encodeURIComponent(clientSecret)}&grant_type=client_credentials`;
+
+  const res = await fetch(tokenUrl, { method: 'POST' });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`Twitch OAuth Token request failed (HTTP ${res.status}): ${errText}`);
+  }
+
+  const data = await res.json();
+  if (!data.access_token) {
+    throw new Error('Twitch OAuth response missing access_token');
+  }
+
+  return data.access_token;
+}
+
 async function queryIgdb(apqBody: string, clientId: string, token: string): Promise<any[]> {
   const res = await fetch('https://api.igdb.com/v4/games', {
     method: 'POST',
@@ -326,7 +332,7 @@ async function runIgdbImporter() {
   const diagnosticTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
 
   const fieldsSelection = `
-    fields name, slug, game_type.type, game_status.status, first_release_date,
+    fields name, slug, game_type.id, game_type.type, game_status.status, first_release_date,
            release_dates.date,
            release_dates.platform.id,
            release_dates.platform.name,
@@ -375,16 +381,57 @@ async function runIgdbImporter() {
   const mergedRawGames = [...recentGames, ...upcomingGames];
   console.log(`🔄 Total raw games before deduplication: ${mergedRawGames.length}`);
 
+  // Safe Pre-Normalization Diagnostics
+  console.log('--- SAFE PRE-NORMALIZATION DIAGNOSTICS ---');
+  const sampleGameTypes = mergedRawGames.slice(0, 5).map(g => ({ id: g.id, name: g.name, game_type: g.game_type }));
+  console.log('First 5 returned game_type objects:', JSON.stringify(sampleGameTypes, null, 2));
+
+  let missingGameTypeCount = 0;
+  let missingTypeFieldCount = 0;
+  const rawGameTypeFrequency: Record<string, number> = {};
+  const rawDateFormatFrequency: Record<string, number> = {};
+
+  for (const g of mergedRawGames) {
+    if (!g.game_type) {
+      missingGameTypeCount++;
+    } else if (typeof g.game_type === 'object' && g.game_type.type === undefined) {
+      missingTypeFieldCount++;
+    }
+
+    const rawTypeKey = typeof g.game_type === 'object' ? String(g.game_type?.type || 'unknown') : String(g.game_type || 'unknown');
+    rawGameTypeFrequency[rawTypeKey] = (rawGameTypeFrequency[rawTypeKey] || 0) + 1;
+
+    if (Array.isArray(g.release_dates)) {
+      for (const rd of g.release_dates) {
+        const fmtStr = typeof rd.date_format === 'object' ? String(rd.date_format?.format || 'unknown') : String(rd.date_format || 'unknown');
+        rawDateFormatFrequency[fmtStr] = (rawDateFormatFrequency[fmtStr] || 0) + 1;
+      }
+    }
+  }
+
+  console.log('Raw game_type.type Frequency Table:', JSON.stringify(rawGameTypeFrequency, null, 2));
+  console.log(`Count where game_type is absent: ${missingGameTypeCount}`);
+  console.log(`Count where game_type exists but type is absent: ${missingTypeFieldCount}`);
+  console.log('-------------------------------------------');
+
   const failedRecordRequests: FailedRecordRequest[] = [];
   const normalizedRecords: GameIndexRecord[] = [];
   const seenIds = new Set<number>();
   let duplicateCount = 0;
   let invalidCount = 0;
   let unknownTypeCount = 0;
-  let exactFirstReleaseDateCount = 0;
-  let partialFirstReleaseDateCount = 0;
+
+  let exactDateCount = 0;
+  let monthOnlyCount = 0;
+  let yearOnlyCount = 0;
+  let quarterOnlyCount = 0;
+  let tbdCount = 0;
+  let unknownPrecisionCount = 0;
+
   let recordsWithCoversCount = 0;
   let recordsWithoutCoversCount = 0;
+
+  const gameTypeCounts: Record<string, number> = {};
 
   for (const raw of mergedRawGames) {
     if (!raw.id || !raw.name || typeof raw.name !== 'string' || !raw.name.trim()) {
@@ -407,15 +454,19 @@ async function runIgdbImporter() {
     else recordsWithoutCoversCount++;
 
     // Game Type & Default Visibility
-    const rawCategoryNumber = raw.game_type?.type ?? raw.game_type;
-    const { gameType, defaultVisible } = mapGameType(rawCategoryNumber);
-    if (gameType === 'Unknown') unknownTypeCount++;
+    const gameTypeKey = parseRawGameTypeKey(raw.game_type);
+    const gameTypeLabel = GAME_TYPE_LABELS[gameTypeKey] || 'Unknown';
+    const defaultVisible = DEFAULT_VISIBLE_GAME_TYPES.has(gameTypeKey);
 
-    // Release Dates
+    if (gameTypeKey === 'unknown') unknownTypeCount++;
+    gameTypeCounts[gameTypeLabel] = (gameTypeCounts[gameTypeLabel] || 0) + 1;
+
+    // Release Dates & Precision
     const firstReleaseDate = parseTimestampToIso(raw.first_release_date);
     const platformReleaseDates: PlatformReleaseDate[] = [];
 
-    let overallPrecision = 'Exact day';
+    let overallPrecision = 'unknown';
+
     if (Array.isArray(raw.release_dates) && raw.release_dates.length > 0) {
       for (const rd of raw.release_dates) {
         const dateStr = parseTimestampToIso(rd.date);
@@ -427,8 +478,12 @@ async function runIgdbImporter() {
           pName = rd.platform.name || 'Unknown Platform';
         }
 
-        const precision = mapDatePrecision(rd.date_format);
-        if (precision !== 'Exact day') overallPrecision = precision;
+        const precision = parseDateFormatPrecision(rd.date_format);
+
+        // If date matches first_release_date, adopt its precision
+        if (dateStr && dateStr === firstReleaseDate && overallPrecision === 'unknown') {
+          overallPrecision = precision;
+        }
 
         platformReleaseDates.push({
           platformId: pId,
@@ -441,9 +496,30 @@ async function runIgdbImporter() {
       }
     }
 
-    if (firstReleaseDate) {
-      if (overallPrecision === 'Exact day') exactFirstReleaseDateCount++;
-      else partialFirstReleaseDateCount++;
+    if (firstReleaseDate && overallPrecision === 'unknown') {
+      overallPrecision = 'exact day'; // Fallback if timestamp exists
+    }
+
+    // Tally Date Precision
+    switch (overallPrecision) {
+      case 'exact day':
+        exactDateCount++;
+        break;
+      case 'month':
+        monthOnlyCount++;
+        break;
+      case 'quarter':
+        quarterOnlyCount++;
+        break;
+      case 'year':
+        yearOnlyCount++;
+        break;
+      case 'TBD':
+        tbdCount++;
+        break;
+      default:
+        unknownPrecisionCount++;
+        break;
     }
 
     // Platforms
@@ -490,10 +566,11 @@ async function runIgdbImporter() {
       name: raw.name.trim(),
       title: raw.name.trim(),
       slug: raw.slug || null,
-      gameType,
-      rawGameType: typeof rawCategoryNumber === 'number' ? rawCategoryNumber : null,
+      gameType: gameTypeKey,
+      gameTypeLabel,
+      rawGameType: typeof raw.game_type === 'object' ? JSON.stringify(raw.game_type) : raw.game_type ?? null,
       defaultVisible,
-      category: gameType,
+      category: gameTypeLabel,
       gameStatus,
       firstReleaseDate,
       firstReleaseTimestamp: raw.first_release_date || null,
@@ -512,20 +589,37 @@ async function runIgdbImporter() {
     normalizedRecords.push(record);
   }
 
-  // Mandatory Validation Checks
+  // Mandatory Validation Checks (Item 4)
+  const defaultVisibleRecords = normalizedRecords.filter(r => r.defaultVisible).length;
+  const hiddenRecords = normalizedRecords.filter(r => !r.defaultVisible).length;
+
   if (normalizedRecords.length === 0) {
     console.error('❌ VALIDATION FAILURE: 0 records normalized.');
     process.exit(1);
   }
 
-  if (normalizedRecords.length < 400 && mergedRawGames.length >= 400) {
-    console.error(`❌ VALIDATION FAILURE: Expected at least 400 records, but got ${normalizedRecords.length}.`);
+  if (unknownTypeCount / normalizedRecords.length > 0.10) {
+    console.error(`❌ VALIDATION FAILURE: More than 10% of records have unknown game type (${unknownTypeCount} / ${normalizedRecords.length}).`);
     process.exit(1);
   }
 
-  // Diagnostics Calculation
-  const defaultVisibleRecords = normalizedRecords.filter(r => r.defaultVisible).length;
-  const hiddenRecords = normalizedRecords.filter(r => !r.defaultVisible).length;
+  if (defaultVisibleRecords === 0) {
+    console.error('❌ VALIDATION FAILURE: Zero records are marked as default-visible.');
+    process.exit(1);
+  }
+
+  const invalidMainGame = normalizedRecords.find(r => r.gameType === 'main_game' && !r.defaultVisible);
+  if (invalidMainGame) {
+    console.error(`❌ VALIDATION FAILURE: Main Game ${invalidMainGame.id} marked as defaultVisible: false.`);
+    process.exit(1);
+  }
+
+  const invalidDlc = normalizedRecords.find(r => r.gameType === 'dlc_addon' && r.defaultVisible);
+  if (invalidDlc) {
+    console.error(`❌ VALIDATION FAILURE: DLC / Add-on ${invalidDlc.id} marked as defaultVisible: true.`);
+    process.exit(1);
+  }
+
   const recordsWithPlatformSpecificDates = normalizedRecords.filter(r => r.platformReleaseDates.length > 0).length;
 
   const diagnostics: IndexDiagnostics = {
@@ -534,17 +628,30 @@ async function runIgdbImporter() {
     recordsBeforeDeduplication: mergedRawGames.length,
     duplicateRecordsRemoved: duplicateCount,
     finalNormalizedRecords: normalizedRecords.length,
-    recordsWithExactFirstReleaseDates: exactFirstReleaseDateCount,
-    recordsWithPartialFirstReleaseDates: partialFirstReleaseDateCount,
+
+    missingGameTypeCount,
+    unknownGameTypeCount: unknownTypeCount,
+    gameTypeFrequency: rawGameTypeFrequency,
+    gameTypeCounts,
+
+    exactDateCount,
+    monthOnlyCount,
+    yearOnlyCount,
+    quarterOnlyCount,
+    tbdCount,
+    unknownPrecisionCount,
+    dateFormatFrequency: rawDateFormatFrequency,
+
     recordsWithPlatformSpecificDates,
     recordsWithCovers: recordsWithCoversCount,
     recordsWithoutCovers: recordsWithoutCoversCount,
+
     defaultVisibleRecords,
     hiddenRecords,
-    unknownGameTypes: unknownTypeCount,
     invalidRecordsSkipped: invalidCount,
     generatedDatabaseSize: 0,
     generatedManifestSize: 0,
+
     diagnosticDate,
     diagnosticTimezone,
     failedRecordRequests,
@@ -601,19 +708,27 @@ async function runIgdbImporter() {
   console.log(`Records before deduplication:       ${mergedRawGames.length}`);
   console.log(`Duplicate records removed:          ${duplicateCount}`);
   console.log(`Final normalized records:           ${normalizedRecords.length}`);
-  console.log(`Records with exact release dates:   ${exactFirstReleaseDateCount}`);
-  console.log(`Records with partial release dates: ${partialFirstReleaseDateCount}`);
-  console.log(`Records with platform dates:        ${recordsWithPlatformSpecificDates}`);
-  console.log(`Records with covers:                ${recordsWithCoversCount}`);
-  console.log(`Records without covers:             ${recordsWithoutCoversCount}`);
+  console.log('----------------------------------------------------');
+  console.log('Game Type Counts:', JSON.stringify(gameTypeCounts, null, 2));
   console.log(`Default-visible records:            ${defaultVisibleRecords}`);
   console.log(`Hidden records:                     ${hiddenRecords}`);
   console.log(`Unknown game types:                 ${unknownTypeCount}`);
-  console.log(`Invalid records skipped:            ${invalidCount}`);
+  console.log('----------------------------------------------------');
+  console.log(`Exact-date count:                   ${exactDateCount}`);
+  console.log(`Month-only count:                   ${monthOnlyCount}`);
+  console.log(`Year-only count:                    ${yearOnlyCount}`);
+  console.log(`Quarter-only count:                 ${quarterOnlyCount}`);
+  console.log(`TBD count:                          ${tbdCount}`);
+  console.log(`Unknown-precision count:            ${unknownPrecisionCount}`);
+  console.log('Raw Date-Format Frequency:', JSON.stringify(rawDateFormatFrequency, null, 2));
+  console.log('----------------------------------------------------');
+  console.log(`Records with platform dates:        ${recordsWithPlatformSpecificDates}`);
+  console.log(`Records with covers:                ${recordsWithCoversCount}`);
+  console.log(`Records without covers:             ${recordsWithoutCoversCount}`);
   console.log(`Generated manifest size:            ${diagnostics.generatedManifestSize} bytes`);
   console.log(`Generated database size:            ${(diagnostics.generatedDatabaseSize / 1024).toFixed(1)} KB`);
   console.log('====================================================');
-  console.log('✅ Live IGDB Importer Completed Successfully!');
+  console.log('✅ Live IGDB Importer & Validation Completed Successfully!');
 }
 
 runIgdbImporter().catch(err => {

@@ -5,16 +5,12 @@ export interface ReferenceItem {
 
 export interface PlatformReleaseDate {
   platformId: number | null;
-  platformName: string | null;
-  regionId?: number | null;
-  regionName?: string | null;
-  region?: string | null;
-  status?: string | null;
-  datePrecision?: string | null;
+  platformName: string;
+  date: string | null;
   dateStr?: string | null;
-  date?: string | null;
-  timestamp?: number | null;
-  humanDate?: string | null;
+  region: string | null;
+  status: string | null;
+  datePrecision: string | null;
 }
 
 export type GameCategory =
@@ -38,30 +34,38 @@ export type GameCategory =
   | 'Unknown';
 
 export interface GameIndexRecord {
-  id: string; // e.g. "igdb:12345" or "398638"
+  id: string; // e.g. "igdb:12345"
   source?: 'igdb' | 'lizardbyte';
   sourceId?: number;
 
-  title?: string;
   name: string;
+  title?: string;
   slug?: string | null;
 
-  gameType?: string;
-  rawGameType?: number | null;
-  defaultVisible?: boolean;
+  gameType: string; // Stable key e.g. "main_game"
+  gameTypeLabel: string; // Display label e.g. "Main Game"
+  rawGameType?: string | number | null;
+  defaultVisible: boolean;
 
   firstReleaseDate: string | null;
   firstReleaseTimestamp?: number | null;
+  datePrecision: string | null; // "exact day" | "month" | "quarter" | "year" | "TBD" | "unknown"
 
   platformReleaseDates: PlatformReleaseDate[];
 
-  platforms: Array<ReferenceItem & { abbreviation?: string | null }>;
+  platforms: Array<{
+    id: number;
+    name: string;
+    abbreviation?: string | null;
+  }>;
+
   genres: ReferenceItem[];
 
   category?: GameCategory;
   rawCategory?: string | number | null;
 
   coverUrl: string | null;
+  coverImageId?: string | null;
   summary?: string | null;
   sourceRecordPath?: string;
 
@@ -75,6 +79,7 @@ export interface GameIndexRecord {
     [key: string]: string | undefined;
   };
 
+  gameStatus?: string | null;
   igdbUpdatedAt?: string | null;
 }
 
@@ -86,17 +91,28 @@ export interface FailedRecordRequest {
 }
 
 export interface IndexDiagnostics {
+  recentIgdbRecordsReceived?: number;
+  upcomingIgdbRecordsReceived?: number;
+  recordsBeforeDeduplication?: number;
+  duplicateRecordsRemoved?: number;
+
+  missingGameTypeCount?: number;
+  unknownGameTypeCount?: number;
+  gameTypeFrequency?: Record<string, number>;
+  gameTypeCounts?: Record<string, number>;
+
+  exactDateCount?: number;
+  monthOnlyCount?: number;
+  yearOnlyCount?: number;
+  quarterOnlyCount?: number;
+  tbdCount?: number;
+  unknownPrecisionCount?: number;
+  dateFormatFrequency?: Record<string, number>;
+
   bucketFilesProcessed?: number;
   bucketEntriesProcessed?: number;
   uniqueGameIdsFound?: number;
   duplicateEntriesRemoved?: number;
-
-  igdbGamesDownloaded?: number;
-  recordsNormalized?: number;
-  defaultVisibleCount?: number;
-  hiddenDlcCount?: number;
-  unknownGameTypesCount?: number;
-  invalidRecordsSkipped?: number;
 
   gameRecordsLoaded: number;
   validReleaseDatesCount: number;
@@ -106,22 +122,30 @@ export interface IndexDiagnostics {
   firstReleaseTodayCount: number;
   platformReleaseTodayCount: number;
 
+  recordsWithCovers?: number;
+  recordsWithoutCovers?: number;
+
+  defaultVisibleRecords?: number;
+  hiddenRecords?: number;
+  invalidRecordsSkipped?: number;
+  generatedDatabaseSize?: number;
+  generatedManifestSize?: number;
+
   diagnosticDate: string;
   diagnosticTimezone: string;
-
   failedRecordRequests: FailedRecordRequest[];
   indexGeneratedAt: string;
 }
 
 export interface IndexManifest {
-  source?: 'igdb' | 'lizardbyte';
+  source: 'igdb' | 'lizardbyte';
   version: number;
   schemaVersion: number;
   generatedAt: string;
   recordCount: number;
-  defaultVisibleCount?: number;
-  fileCount?: number;
-  files?: string[];
+  defaultVisibleCount: number;
+  fileCount: number;
+  files: string[];
   sourceCommit?: string;
   dataFile: string;
 }

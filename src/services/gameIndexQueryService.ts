@@ -41,7 +41,7 @@ export function getUserLocalDate(): { dateStr: string; timezone: string } {
  * Helper to map GameCategory/GameType to GameItem category union
  */
 function mapRecordCategoryToUiCategory(record: GameIndexRecord): 'Base Game' | 'DLC / Expansion' | 'Bundle' | 'Remake' | 'Mod' | undefined {
-  const typeStr = record.gameType || record.category || 'Main Game';
+  const typeStr = record.gameTypeLabel || record.gameType || record.category || 'Main Game';
   if (typeStr === 'Main Game' || typeStr === 'Base Game' || typeStr === 'Expanded Game' || typeStr === 'Port') return 'Base Game';
   if (typeStr.includes('DLC') || typeStr.includes('Expansion') || typeStr.includes('Pack')) return 'DLC / Expansion';
   if (typeStr.includes('Bundle')) return 'Bundle';
@@ -104,7 +104,7 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
     } else {
       // Mode 2: Games receiving a platform-specific release on selected date
       if (options.timeframe === 'day') {
-        return record.platformReleaseDates.some(p => p.date === userToday || p.dateStr === userToday);
+        return record.platformReleaseDates.some(p => (p.date && p.date === userToday) || (p.dateStr && p.dateStr === userToday));
       } else if (options.timeframe === 'week') {
         return record.platformReleaseDates.some(
           p => (p.date != null && p.date >= '2026-07-24' && p.date <= userToday) ||
@@ -125,7 +125,7 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
   // Step 2: Apply UI filters (category, genre, platform)
   const finalFilteredRecords = dateMatchedRecords.filter(record => {
     if (options.category && options.category !== 'All') {
-      const cat = record.gameType || record.category;
+      const cat = record.gameTypeLabel || record.gameType || record.category;
       if (options.category === 'Main Games' && cat !== 'Main Game' && cat !== 'Base Game') return false;
       if (options.category !== 'Main Games' && cat !== options.category) return false;
     }
