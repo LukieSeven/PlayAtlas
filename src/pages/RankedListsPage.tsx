@@ -1,39 +1,27 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { PageHeader } from '../components/layout/PageHeader';
-import { GameListGrid } from '../components/widgets/GameListGrid';
-import { Button } from '../components/ui/Button';
-import { Plus } from 'lucide-react';
-import { ShareListModal } from '../components/widgets/ShareListModal';
+import { UnavailableIntegrationNotice } from '../components/common/UnavailableIntegrationNotice';
+import { ListOrdered } from 'lucide-react';
 
 export const RankedListsPage: React.FC = () => {
-  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <PageHeader
         badge="RANKED LISTS"
-        title="Custom Ranked Top 10 Lists"
-        subtitle="Create, order, and share your personal Top 10 Game of the Year, All-Time Favorites, or genre rankings."
-        actions={
-          <Button variant="glow" size="md" icon={<Plus className="w-4 h-4" />}>
-            Create Ranked List
-          </Button>
-        }
+        title="Custom Ranked Game Lists"
+        subtitle="Create, rank, and curate custom video game lists and top 10 rankings."
       />
 
-      <GameListGrid
-        title="Top 10 Game of the Year (GOTY 2026)"
-        description="Ranked in order from #1 to #10 with ratings, developer info, and public share links."
-        badge="TOP 10 RANKED"
-        onShareClick={() => setIsShareModalOpen(true)}
-      />
-
-      <ShareListModal
-        isOpen={isShareModalOpen}
-        onClose={() => setIsShareModalOpen(false)}
-        listTitle="Top 10 Game of the Year (GOTY 2026)"
-        shareUrl="https://playatlas.app/share/goty-2026-top-10"
-      />
+      <div className="py-8">
+        <UnavailableIntegrationNotice
+          title="No Custom Lists Created Yet"
+          description="You have not created any custom ranked lists yet. The interactive list editor and curation canvas will be implemented in a future update."
+          icon={<ListOrdered className="w-6 h-6 text-amber-400" />}
+          futureRequirement="Interactive Custom List Engine"
+        />
+      </div>
     </div>
   );
 };
+
+export default RankedListsPage;

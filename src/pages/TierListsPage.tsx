@@ -1,45 +1,27 @@
 import React from 'react';
 import { PageHeader } from '../components/layout/PageHeader';
-import { Button } from '../components/ui/Button';
-import { Plus } from 'lucide-react';
-
-const tierRows = [
-  { rank: 'S Tier', color: 'bg-rose-500/20 text-rose-300 border-rose-500/40', games: ['Elden Ring', 'Baldur’s Gate 3'] },
-  { rank: 'A Tier', color: 'bg-amber-500/20 text-amber-300 border-amber-500/40', games: ['It Takes Two', 'Cyberpunk 2077'] },
-  { rank: 'B Tier', color: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40', games: ['Hades II', 'Helldivers 2'] },
-  { rank: 'C Tier', color: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40', games: ['Starfield'] },
-];
+import { UnavailableIntegrationNotice } from '../components/common/UnavailableIntegrationNotice';
+import { Layers } from 'lucide-react';
 
 export const TierListsPage: React.FC = () => {
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
       <PageHeader
-        badge="TIER LIST MAKER"
-        title="Custom Tier Lists"
-        subtitle="Rank your favorite gaming franchises, characters, or releases across S, A, B, C, and D tiers."
-        actions={
-          <Button variant="glow" size="md" icon={<Plus className="w-4 h-4" />}>
-            New Tier List
-          </Button>
-        }
+        badge="TIER LISTS"
+        title="Interactive Tier List Maker"
+        subtitle="Rank games from S-Tier to F-Tier using full catalog search and drag-and-drop ordering."
       />
 
-      <div className="space-y-4">
-        {tierRows.map((tier, idx) => (
-          <div key={idx} className="glass-panel rounded-2xl p-4 border border-slate-800 flex flex-col sm:flex-row items-center gap-4">
-            <div className={`w-24 shrink-0 p-4 rounded-xl text-center font-extrabold font-mono text-lg border ${tier.color}`}>
-              {tier.rank}
-            </div>
-            <div className="flex-1 flex flex-wrap items-center gap-3">
-              {tier.games.map((g, i) => (
-                <div key={i} className="px-4 py-2 rounded-xl bg-slate-900 border border-slate-800 font-semibold text-sm text-slate-200">
-                  {g}
-                </div>
-              ))}
-            </div>
-          </div>
-        ))}
+      <div className="py-8">
+        <UnavailableIntegrationNotice
+          title="No Tier Lists Created Yet"
+          description="You have not created any tier lists yet. The interactive tier-list canvas and image export tool will be implemented in a future update."
+          icon={<Layers className="w-6 h-6 text-rose-400" />}
+          futureRequirement="Interactive Tier List Canvas Engine"
+        />
       </div>
     </div>
   );
 };
+
+export default TierListsPage;

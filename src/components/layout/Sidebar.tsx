@@ -34,7 +34,7 @@ export const Sidebar: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const isDefaultSystemTab = (id: string) => {
-    return ['home', 'new-releases', 'upcoming', 'calendar', 'deals'].includes(id);
+    return ['home', 'new-releases', 'upcoming', 'calendar', 'discounts', 'deals'].includes(id);
   };
 
   return (
@@ -84,7 +84,7 @@ export const Sidebar: React.FC = () => {
             .map(item => (
               <div key={item.id} className="relative group flex items-center">
                 <NavLink
-                  to={item.path}
+                  to={item.path === '/deals' ? '/discounts' : item.path}
                   className={({ isActive }) =>
                     `flex-1 flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 ${
                       isActive
@@ -95,7 +95,7 @@ export const Sidebar: React.FC = () => {
                 >
                   <div className="flex items-center gap-2.5 truncate">
                     <span className="shrink-0">{iconMap[item.iconName] || <Bookmark className="w-4 h-4" />}</span>
-                    <span className="truncate">{item.label}</span>
+                    <span className="truncate">{item.id === 'deals' ? 'Discounts' : item.label}</span>
                   </div>
 
                   {item.badge && <Badge variant={item.badgeColor || 'indigo'}>{item.badge}</Badge>}

@@ -7,6 +7,7 @@ import { AddWidgetModal } from '../components/widgets/AddWidgetModal';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { UnavailableIntegrationNotice } from '../components/common/UnavailableIntegrationNotice';
 import { Plus, Share2, Flame, Rocket, Tag } from 'lucide-react';
 
 interface ActiveWidget {
@@ -19,7 +20,7 @@ interface ActiveWidget {
 const defaultSystemWidgets: ActiveWidget[] = [
   { id: 'w-countdown', type: 'spotlight_countdown', title: 'Major Upcoming Games Countdown Spotlight' },
   { id: 'w-new-releases', type: 'new_releases', title: 'New Releases & Trending Spotlight' },
-  { id: 'w-deals', type: 'deals_discounts', title: 'Games on Sale & Featured Discounts' },
+  { id: 'w-discounts', type: 'discounts', title: 'Games on Sale & Featured Discounts' },
 ];
 
 export const HomePage: React.FC = () => {
@@ -112,7 +113,7 @@ export const HomePage: React.FC = () => {
             );
           }
 
-          if (w.type === 'deals_discounts') {
+          if (w.type === 'discounts' || w.type === 'deals_discounts') {
             return (
               <section key={w.id} className="relative group">
                 <div className="flex items-center justify-between mb-3">
@@ -127,23 +128,11 @@ export const HomePage: React.FC = () => {
                     Remove Widget
                   </button>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <Card glass className="p-4 space-y-2">
-                    <Badge variant="rose">50% OFF</Badge>
-                    <h4 className="font-bold text-white">Cyberpunk 2077: Phantom Liberty</h4>
-                    <p className="text-xs text-slate-400">$14.99 • Steam & GOG</p>
-                  </Card>
-                  <Card glass className="p-4 space-y-2">
-                    <Badge variant="amber">33% OFF</Badge>
-                    <h4 className="font-bold text-white">Elden Ring</h4>
-                    <p className="text-xs text-slate-400">$39.99 • PlayStation Store</p>
-                  </Card>
-                  <Card glass className="p-4 space-y-2">
-                    <Badge variant="emerald">FREE WEEKEND</Badge>
-                    <h4 className="font-bold text-white">Helldivers 2</h4>
-                    <p className="text-xs text-slate-400">Play for Free on PC</p>
-                  </Card>
-                </div>
+                <UnavailableIntegrationNotice
+                  title="Discounts & Pricing Integration Unavailable"
+                  description="Discounts and pricing metrics will appear here after an external pricing provider is connected."
+                  icon={<Tag className="w-5 h-5 text-purple-400" />}
+                />
               </section>
             );
           }
@@ -175,7 +164,7 @@ export const HomePage: React.FC = () => {
               + Add Widget Slot
             </h3>
             <p className="text-xs text-slate-400 mt-0.5 max-w-sm">
-              Click to add a countdown timer, top 10 list, backlog tracker, or games on sale widget.
+              Click to add a countdown timer, top 10 list, backlog tracker, or discounts widget.
             </p>
           </div>
         </div>
@@ -197,3 +186,5 @@ export const HomePage: React.FC = () => {
     </div>
   );
 };
+
+export default HomePage;

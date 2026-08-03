@@ -7,7 +7,7 @@ import { HomePage } from './pages/HomePage';
 import { NewReleasesPage } from './pages/NewReleasesPage';
 import { UpcomingGamesPage } from './pages/UpcomingGamesPage';
 import { CalendarPage } from './pages/CalendarPage';
-import { DealsPage } from './pages/DealsPage';
+import { DiscountsPage } from './pages/DiscountsPage';
 import { RankedListsPage } from './pages/RankedListsPage';
 import { TierListsPage } from './pages/TierListsPage';
 import { CollectionsPage } from './pages/CollectionsPage';
@@ -27,7 +27,8 @@ export const App: React.FC = () => {
               <Route path="new-releases" element={<NewReleasesPage />} />
               <Route path="upcoming" element={<UpcomingGamesPage />} />
               <Route path="calendar" element={<CalendarPage />} />
-              <Route path="deals" element={<DealsPage />} />
+              <Route path="discounts" element={<DiscountsPage />} />
+              <Route path="deals" element={<Navigate to="/discounts" replace />} />
               <Route path="lists" element={<RankedListsPage />} />
               <Route path="tier-lists" element={<TierListsPage />} />
               <Route path="collections" element={<CollectionsPage />} />

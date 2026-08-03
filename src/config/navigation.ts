@@ -40,9 +40,9 @@ export const navigationConfig: NavSection[] = [
         iconName: 'CalendarDays',
       },
       {
-        id: 'deals',
-        label: 'Deals & Discounts',
-        path: '/deals',
+        id: 'discounts',
+        label: 'Discounts',
+        path: '/discounts',
         iconName: 'Tag',
       },
     ],

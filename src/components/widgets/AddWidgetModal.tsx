@@ -14,7 +14,7 @@ const availableWidgets = [
   { id: 'custom_list', title: 'Custom List Showcase', desc: 'Custom curated game list (e.g. Co-Op, Favorites).', icon: <Flame className="w-5 h-5 text-rose-400" /> },
   { id: 'backlog_tracker', title: 'Backlog & Playing Tracker', desc: 'Active play session and completion logger.', icon: <Gamepad2 className="w-5 h-5 text-cyan-400" /> },
   { id: 'games_calendar', title: 'Games Release Calendar', desc: 'Monthly release calendar overview.', icon: <CalendarDays className="w-5 h-5 text-emerald-400" /> },
-  { id: 'deals_discounts', title: 'Games on Sale & Discounts', desc: 'Discounted game deals widget.', icon: <Tag className="w-5 h-5 text-purple-400" /> },
+  { id: 'discounts', title: 'Games on Sale & Discounts', desc: 'Discounted game tracker widget.', icon: <Tag className="w-5 h-5 text-purple-400" /> },
 ];
 
 export const AddWidgetModal: React.FC<AddWidgetModalProps> = ({
