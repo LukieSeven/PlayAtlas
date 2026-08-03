@@ -8,6 +8,8 @@ import { getBasePathAwareUrl } from './catalogDataSource';
 import { CompactGameLookupRecord } from '../../scripts/build-browser-catalog';
 import { openIndexedDB } from './indexDbStorage';
 
+export type { CompactGameLookupRecord };
+
 export interface TokenManifestLookupFile {
   file: string;
   firstId: number;
@@ -78,8 +80,24 @@ export interface SearchPerformanceReport {
   cachedRepeatDownloadBytes: number;
 }
 
+export interface ProgressiveSearchOptions {
+  offset?: number;
+  limit?: number;
+}
+
+export interface ProgressiveSearchResult {
+  results: CompactGameLookupRecord[];
+  totalMatchingResults: number;
+  hasMore: boolean;
+  nextOffset: number;
+  report: SearchPerformanceReport;
+}
+
 const cachedTokenBuckets = new Map<string, Record<string, number[]>>();
 const cachedLookupFiles = new Map<string, CompactGameLookupRecord[]>();
+
+// Cached ranked search sessions by normalized query
+const searchSessionCacheMap = new Map<string, CompactGameLookupRecord[]>();
 
 let masterManifestCache: MasterBrowserManifest | null = null;
 let tokenManifestCache: TokenManifest | null = null;
@@ -104,6 +122,7 @@ export async function fetchMasterBrowserManifest(): Promise<MasterBrowserManifes
     console.log(`🔄 Catalog Build ID changed (${currentCatalogBuildId} -> ${buildId}). Evicting stale search & chunk caches...`);
     cachedTokenBuckets.clear();
     cachedLookupFiles.clear();
+    searchSessionCacheMap.clear();
     tokenManifestCache = null;
 
     try {
@@ -205,88 +224,138 @@ function stripLeadingArticle(str: string): string {
 }
 
 /**
- * Calculate ranking score according to strict priority order:
- * 1. Exact normalized title
- * 2. Exact title after ignoring leading 'The', 'A', 'An'
- * 3. Full normalized phrase match
- * 4. All query tokens matched in title order
- * 5. Title begins with the query
- * 6. Main/default-visible game
- * 7. Remaining token matches
+ * Game-type numerical priority mapping for deterministic ranking
  */
-export function calculateRankScore(
-  recordName: string,
-  normQuery: string,
-  tokens: string[],
-  defaultVisible: boolean
-): number {
-  const normTitle = normalizeSearchQuery(recordName);
-  const strippedTitle = stripLeadingArticle(normTitle);
-  const strippedQuery = stripLeadingArticle(normQuery);
-
-  let score = 0;
-
-  // 1. Exact normalized title match
-  if (normTitle === normQuery) {
-    score += 100000;
-  }
-  // 2. Exact title match after ignoring leading article (The / A / An)
-  else if (strippedTitle === strippedQuery) {
-    score += 80000;
-  }
-  // 3. Full normalized phrase match
-  else if (normTitle.includes(normQuery)) {
-    score += 50000;
-  }
-
-  // 4. All query tokens matched in title order
-  let inOrder = true;
-  let lastPos = -1;
-  for (const token of tokens) {
-    const pos = normTitle.indexOf(token);
-    if (pos === -1 || pos < lastPos) {
-      inOrder = false;
-      break;
-    }
-    lastPos = pos;
-  }
-  if (inOrder) {
-    score += 30000;
-  }
-
-  // 5. Title begins with the query (or stripped title begins with stripped query)
-  if (normTitle.startsWith(normQuery) || (strippedQuery && strippedTitle.startsWith(strippedQuery))) {
-    score += 15000;
-  }
-
-  // 6. Main / default-visible game
-  if (defaultVisible) {
-    score += 5000;
-  }
-
-  // 7. Tie-breaker: shorter titles rank higher for conciseness
-  score += Math.max(0, 1000 - normTitle.length);
-
-  return score;
+export function getGameTypePriority(gameType?: string): number {
+  if (!gameType) return 1;
+  const gt = gameType.toLowerCase();
+  if (gt === 'main_game') return 10;
+  if (gt === 'remake') return 9;
+  if (gt === 'remaster') return 8;
+  if (gt === 'expanded_game') return 7;
+  if (gt === 'standalone_expansion') return 6;
+  if (gt === 'port') return 5;
+  if (gt === 'expansion') return 4;
+  if (gt === 'dlc_addon') return 3;
+  if (gt === 'bundle' || gt === 'pack') return 2;
+  return 1;
 }
 
 /**
- * Progressive Batching Search Execution Engine with True Multi-Token Posting List Intersection
+ * Compares two records deterministically according to the strict 11-tier ranking rules:
+ * 1. Exact normalized title
+ * 2. Exact title ignoring leading 'The', 'A', 'An'
+ * 3. Title starts with complete search phrase
+ * 4. Complete phrase appears elsewhere in title
+ * 5. Query tokens appear in title order
+ * 6. Default-visible / main game
+ * 7. Game-type priority
+ * 8. Shorter title distance from query
+ * 9. Release year
+ * 10. Alphabetical normalized title
+ * 11. Numeric IGDB ID as final stable tie-breaker
+ */
+export function compareRecordsDeterministic(
+  a: CompactGameLookupRecord,
+  b: CompactGameLookupRecord,
+  normQuery: string,
+  tokens: string[]
+): number {
+  const normTitleA = normalizeSearchQuery(a.name);
+  const normTitleB = normalizeSearchQuery(b.name);
+
+  const strippedTitleA = stripLeadingArticle(normTitleA);
+  const strippedTitleB = stripLeadingArticle(normTitleB);
+  const strippedQuery = stripLeadingArticle(normQuery);
+
+  // Tier 1: Exact normalized title
+  const exactA = normTitleA === normQuery;
+  const exactB = normTitleB === normQuery;
+  if (exactA !== exactB) return exactA ? -1 : 1;
+
+  // Tier 2: Exact title ignoring leading article
+  const articleA = strippedTitleA === strippedQuery;
+  const articleB = strippedTitleB === strippedQuery;
+  if (articleA !== articleB) return articleA ? -1 : 1;
+
+  // Tier 3: Title starts with complete search phrase
+  const startsA = normTitleA.startsWith(normQuery) || (Boolean(strippedQuery) && strippedTitleA.startsWith(strippedQuery));
+  const startsB = normTitleB.startsWith(normQuery) || (Boolean(strippedQuery) && strippedTitleB.startsWith(strippedQuery));
+  if (startsA !== startsB) return startsA ? -1 : 1;
+
+  // Tier 4: Complete phrase appears elsewhere in title
+  const phraseA = normTitleA.includes(normQuery);
+  const phraseB = normTitleB.includes(normQuery);
+  if (phraseA !== phraseB) return phraseA ? -1 : 1;
+
+  // Tier 5: Query tokens appear in title order
+  const inOrderTokens = (normTitle: string) => {
+    let lastPos = -1;
+    for (const t of tokens) {
+      const pos = normTitle.indexOf(t);
+      if (pos === -1 || pos < lastPos) return false;
+      lastPos = pos;
+    }
+    return true;
+  };
+  const orderA = inOrderTokens(normTitleA);
+  const orderB = inOrderTokens(normTitleB);
+  if (orderA !== orderB) return orderA ? -1 : 1;
+
+  // Tier 6: Default-visible / main game
+  if (a.defaultVisible !== b.defaultVisible) return a.defaultVisible ? -1 : 1;
+
+  // Tier 7: Game-type priority
+  const prioA = getGameTypePriority(a.gameType);
+  const prioB = getGameTypePriority(b.gameType);
+  if (prioA !== prioB) return prioB - prioA;
+
+  // Tier 8: Shorter title distance from query
+  const distA = Math.abs(normTitleA.length - normQuery.length);
+  const distB = Math.abs(normTitleB.length - normQuery.length);
+  if (distA !== distB) return distA - distB;
+
+  // Tier 9: Release year descending
+  const yearA = a.year || 0;
+  const yearB = b.year || 0;
+  if (yearA !== yearB) return yearB - yearA;
+
+  // Tier 10: Alphabetical normalized title
+  const alphaComp = normTitleA.localeCompare(normTitleB);
+  if (alphaComp !== 0) return alphaComp;
+
+  // Tier 11: Numeric IGDB ID as final stable tie-breaker
+  return a.id - b.id;
+}
+
+/**
+ * Progressive Batching Search Execution Engine with Deterministic 11-Tier Ranking & Session Caching
  */
 export async function executeProgressiveTokenSearch(
   queryStr: string,
-  targetResultCount: number = 40
-): Promise<{
-  results: CompactGameLookupRecord[];
-  report: SearchPerformanceReport;
-}> {
+  options?: ProgressiveSearchOptions | number
+): Promise<ProgressiveSearchResult> {
   const startTime = Date.now();
+
+  let offset = 0;
+  let limit = 20;
+
+  if (typeof options === 'number') {
+    limit = options;
+  } else if (options && typeof options === 'object') {
+    if (typeof options.offset === 'number') offset = options.offset;
+    if (typeof options.limit === 'number') limit = options.limit;
+  }
+
   const tokens = tokenizeTitle(queryStr);
   const normQuery = normalizeSearchQuery(queryStr);
 
   if (tokens.length === 0) {
     return {
       results: [],
+      totalMatchingResults: 0,
+      hasMore: false,
+      nextOffset: 0,
       report: {
         query: queryStr,
         tokenBucketsDownloaded: 0,
@@ -295,6 +364,30 @@ export async function executeProgressiveTokenSearch(
         totalLookupBytesRequired: 0,
         numberResultsRanked: 0,
         timeToFirst20Ms: 0,
+        totalColdSearchDownloadBytes: 0,
+        cachedRepeatDownloadBytes: 0,
+      },
+    };
+  }
+
+  // --- CHECK SEARCH SESSION CACHE ---
+  if (searchSessionCacheMap.has(normQuery)) {
+    const fullRankedRecords = searchSessionCacheMap.get(normQuery)!;
+    const pageSlice = fullRankedRecords.slice(offset, offset + limit);
+
+    return {
+      results: pageSlice,
+      totalMatchingResults: fullRankedRecords.length,
+      hasMore: offset + pageSlice.length < fullRankedRecords.length,
+      nextOffset: offset + pageSlice.length,
+      report: {
+        query: queryStr,
+        tokenBucketsDownloaded: 0,
+        postingListIdCount: fullRankedRecords.length,
+        lookupFilesRequired: 0,
+        totalLookupBytesRequired: 0,
+        numberResultsRanked: fullRankedRecords.length,
+        timeToFirst20Ms: Date.now() - startTime,
         totalColdSearchDownloadBytes: 0,
         cachedRepeatDownloadBytes: 0,
       },
@@ -330,8 +423,12 @@ export async function executeProgressiveTokenSearch(
   // 2. TRUE MULTI-TOKEN INTERSECTION
   for (const t of tokens) {
     if (!postingsMap.has(t) || (postingsMap.get(t) || []).length === 0) {
+      searchSessionCacheMap.set(normQuery, []);
       return {
         results: [],
+        totalMatchingResults: 0,
+        hasMore: false,
+        nextOffset: 0,
         report: {
           query: queryStr,
           tokenBucketsDownloaded,
@@ -358,16 +455,11 @@ export async function executeProgressiveTokenSearch(
 
   const postingListIdCount = intersectedIds.length;
 
-  let candidateIds = intersectedIds;
-  if (candidateIds.length > 5000) {
-    candidateIds = candidateIds.slice(0, 5000);
-  }
-
-  // 3. Group Candidate IDs by Lookup File
+  // 3. Group Intersected Candidate IDs by Lookup File
   const fileToIdsMap = new Map<string, number[]>();
   const fileInfoMap = new Map<string, TokenManifestLookupFile>();
 
-  for (const id of candidateIds) {
+  for (const id of intersectedIds) {
     const fileInfo = findLookupFileForId(id, manifest.lookupFiles);
     if (fileInfo) {
       if (!fileToIdsMap.has(fileInfo.file)) {
@@ -378,17 +470,12 @@ export async function executeProgressiveTokenSearch(
     }
   }
 
-  // Sort lookup files by ID density descending
-  const sortedFiles = Array.from(fileToIdsMap.keys()).sort(
-    (a, b) => (fileToIdsMap.get(b)?.length || 0) - (fileToIdsMap.get(a)?.length || 0)
-  );
-
-  // 4. Progressive Batch Loading & Decompression of Compact Lookup Files
+  // 4. Batch Loading & Decompression of Compact Lookup Files for ALL intersected matches
   const loadedLookupRecords: CompactGameLookupRecord[] = [];
   let lookupFilesRequired = 0;
   let totalLookupBytesRequired = 0;
 
-  for (const relPath of sortedFiles) {
+  for (const relPath of fileToIdsMap.keys()) {
     const isCached = cachedLookupFiles.has(relPath);
     const fileRecords = await fetchLookupFile(relPath);
     const fileInfo = fileInfoMap.get(relPath);
@@ -404,28 +491,24 @@ export async function executeProgressiveTokenSearch(
         loadedLookupRecords.push(r);
       }
     }
-
-    if (loadedLookupRecords.length >= Math.max(targetResultCount * 3, 120)) {
-      break;
-    }
   }
 
-  // 5. Rank Loaded Results with Enhanced Priority Order
-  const rankedResults: Array<{ record: CompactGameLookupRecord; score: number }> = [];
+  // 5. Deterministically Rank All Intersected Results using the 11-Tier Ranker
+  loadedLookupRecords.sort((a, b) => compareRecordsDeterministic(a, b, normQuery, tokens));
 
-  for (const r of loadedLookupRecords) {
-    const score = calculateRankScore(r.name, normQuery, tokens, r.defaultVisible);
-    rankedResults.push({ record: r, score });
-  }
+  // Store complete ranked list in session cache
+  searchSessionCacheMap.set(normQuery, loadedLookupRecords);
 
-  rankedResults.sort((a, b) => b.score - a.score);
-  const finalResults = rankedResults.slice(0, targetResultCount).map(item => item.record);
+  const pageSlice = loadedLookupRecords.slice(offset, offset + limit);
 
   const timeToFirst20Ms = Date.now() - startTime;
   const totalColdSearchDownloadBytes = totalTokenBytesDownloaded + totalLookupBytesRequired;
 
   return {
-    results: finalResults,
+    results: pageSlice,
+    totalMatchingResults: postingListIdCount,
+    hasMore: offset + pageSlice.length < loadedLookupRecords.length,
+    nextOffset: offset + pageSlice.length,
     report: {
       query: queryStr,
       tokenBucketsDownloaded,

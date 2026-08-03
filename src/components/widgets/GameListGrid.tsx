@@ -1,17 +1,18 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import {
   Star,
   BookmarkPlus,
   RefreshCw,
   Search,
-  Loader2
+  Loader2,
+  ChevronDown
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { GameItem } from '../../types/game';
 import { AdvancedSearchFilter, FilterState } from './AdvancedSearchFilter';
-import { executeProgressiveTokenSearch } from '../../services/tokenSearchService';
+import { executeProgressiveTokenSearch, CompactGameLookupRecord } from '../../services/tokenSearchService';
 import { fetchGameDetailsForCompactRecords, normalizeEntityName } from '../../services/catalogDetailService';
 import { queryReleaseCatalog } from '../../services/releaseCatalogService';
 import { GameDetailModal } from './GameDetailModal';
@@ -49,12 +50,19 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   showRankNumbers = false, // Unranked discovery cards by default
 }) => {
   const [liveGames, setLiveGames] = useState<GameItem[]>(initialGames || []);
+  const [loadedCompactRecords, setLoadedCompactRecords] = useState<CompactGameLookupRecord[]>([]);
   const [loading, setLoading] = useState<boolean>(!initialGames || initialGames.length === 0);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searchTotalCount, setSearchTotalCount] = useState<number>(0);
+  const [hasMoreSearchHits, setHasMoreSearchHits] = useState<boolean>(false);
+  const [visibleClientCount, setVisibleClientCount] = useState<number>(20);
   const [viewMode, setViewMode] = useState<'grid' | 'cards' | 'list'>('grid');
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
   const [selectedGameForModal, setSelectedGameForModal] = useState<{ id: string; title: string } | null>(null);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const activeSearchQueryRef = useRef<string>('');
 
   // Permanently lock liveGames to initialGames when provided as props
   useEffect(() => {
@@ -64,12 +72,23 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
     }
   }, [initialGames]);
 
+  // Reset pagination and scroll to top whenever filters change
+  const handleFilterChange = (newFilters: FilterState) => {
+    setFilters(newFilters);
+    setVisibleClientCount(20);
+    if (containerRef.current) {
+      containerRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   // Fetch initial releases ONLY if no initialGames prop was provided and searchQuery is empty
   useEffect(() => {
     if ((!initialGames || initialGames.length === 0) && filters.searchQuery.trim().length === 0) {
       let isMounted = true;
       setLoading(true);
       setSearchError(null);
+      setHasMoreSearchHits(false);
+      setLoadedCompactRecords([]);
 
       queryReleaseCatalog({ viewType: 'first_release', timeframe: 'month' })
         .then(data => {
@@ -93,21 +112,25 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
     }
   }, [initialGames, filters.searchQuery]);
 
-  // Handle Live Token Search via Production IGDB Token Catalog
+  // Handle Live Token Search via Production IGDB Token Catalog (Initial Page 0..20)
   useEffect(() => {
     const trimmed = filters.searchQuery.trim();
+    activeSearchQueryRef.current = trimmed;
 
     if (trimmed.length >= 2) {
       let isMounted = true;
       setLoading(true);
       setSearchError(null);
+      setVisibleClientCount(20);
 
       const timer = setTimeout(() => {
-        executeProgressiveTokenSearch(trimmed, 40)
-          .then(async ({ results, report }) => {
-            if (!isMounted) return;
+        executeProgressiveTokenSearch(trimmed, { offset: 0, limit: 20 })
+          .then(async ({ results, totalMatchingResults, hasMore }) => {
+            if (!isMounted || activeSearchQueryRef.current !== trimmed) return;
 
-            setSearchTotalCount(report.postingListIdCount);
+            setSearchTotalCount(totalMatchingResults);
+            setHasMoreSearchHits(hasMore);
+            setLoadedCompactRecords(results);
 
             if (results.length === 0) {
               setLiveGames([]);
@@ -115,16 +138,16 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
               return;
             }
 
-            // Batch load full detail records for top compact search results
+            // Batch load full detail records for initial top compact search results
             const detailItems = await fetchGameDetailsForCompactRecords(results);
-            if (isMounted) {
+            if (isMounted && activeSearchQueryRef.current === trimmed) {
               setLiveGames(detailItems);
               setLoading(false);
             }
           })
           .catch(err => {
             console.error('Production IGDB token search error:', err);
-            if (isMounted) {
+            if (isMounted && activeSearchQueryRef.current === trimmed) {
               setSearchError(`Search error: ${err?.message || 'Failed to execute token search.'}`);
               setLiveGames([]);
               setLoading(false);
@@ -138,6 +161,53 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
       };
     }
   }, [filters.searchQuery]);
+
+  // Handle "Load 20 More" Button Click
+  const handleLoadMore = async () => {
+    const trimmed = filters.searchQuery.trim();
+
+    // If searching production catalog
+    if (trimmed.length >= 2 && hasMoreSearchHits && !loadingMore) {
+      setLoadingMore(true);
+      const currentOffset = loadedCompactRecords.length;
+
+      try {
+        const { results: nextCompactBatch, hasMore: newHasMore } = await executeProgressiveTokenSearch(trimmed, {
+          offset: currentOffset,
+          limit: 20,
+        });
+
+        if (activeSearchQueryRef.current !== trimmed) {
+          setLoadingMore(false);
+          return;
+        }
+
+        if (nextCompactBatch.length > 0) {
+          const newDetailItems = await fetchGameDetailsForCompactRecords(nextCompactBatch);
+
+          if (activeSearchQueryRef.current === trimmed) {
+            setLoadedCompactRecords(prev => [...prev, ...nextCompactBatch]);
+            setLiveGames(prevGames => {
+              const existingIds = new Set(prevGames.map(g => g.id));
+              const deduplicatedNewItems = newDetailItems.filter(item => !existingIds.has(item.id));
+              return [...prevGames, ...deduplicatedNewItems];
+            });
+            setHasMoreSearchHits(newHasMore);
+            setVisibleClientCount(prev => prev + 20);
+          }
+        } else {
+          setHasMoreSearchHits(false);
+        }
+      } catch (err) {
+        console.error('Failed to load more search results:', err);
+      } finally {
+        setLoadingMore(false);
+      }
+    } else {
+      // Local client-side pagination expansion
+      setVisibleClientCount(prev => prev + 20);
+    }
+  };
 
   // Extract unique criteria values for dropdown options - strictly string primitives
   const availableGenres = useMemo(() => {
@@ -244,20 +314,23 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   };
 
   const isSearching = filters.searchQuery.trim().length >= 2;
+  const effectiveTotalCount = isSearching ? searchTotalCount : filteredGames.length;
+  const currentDisplayedCount = Math.min(filteredGames.length, visibleClientCount);
+  const canLoadMore = isSearching ? (hasMoreSearchHits || currentDisplayedCount < filteredGames.length) : currentDisplayedCount < filteredGames.length;
 
   return (
-    <div className="space-y-4">
+    <div ref={containerRef} className="space-y-4">
       {/* 2-Tier Search & Filter Bar */}
       {showControls && (
         <AdvancedSearchFilter
           filters={filters}
-          onFilterChange={setFilters}
-          onResetFilters={() => setFilters(initialFilterState)}
+          onFilterChange={handleFilterChange}
+          onResetFilters={() => handleFilterChange(initialFilterState)}
           availableGenres={availableGenres}
           availableYears={availableYears}
           availableDevelopers={availableDevelopers}
           availablePlatforms={availablePlatforms}
-          totalResults={isSearching ? searchTotalCount : filteredGames.length}
+          totalResults={effectiveTotalCount}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
@@ -267,8 +340,8 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
       {isSearching && !loading && !searchError && (
         <div className="px-4 py-2 rounded-xl bg-slate-900/80 border border-indigo-500/30 flex items-center justify-between text-xs font-mono text-slate-300">
           <span>
-            Showing <strong className="text-indigo-400 font-extrabold">{Math.min(filteredGames.length, 20)}</strong> of{' '}
-            <strong className="text-cyan-400 font-extrabold">{searchTotalCount.toLocaleString()}</strong> matching games
+            Showing <strong className="text-indigo-400 font-extrabold">{currentDisplayedCount}</strong> of{' '}
+            <strong className="text-cyan-400 font-extrabold">{effectiveTotalCount.toLocaleString()}</strong> matching games
           </span>
           <span className="text-[10px] text-slate-500 uppercase tracking-wider">Production IGDB Search</span>
         </div>
@@ -300,7 +373,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
             <h4 className="text-lg font-bold text-white">No games match your search criteria</h4>
             <p className="text-xs text-slate-400 mt-1">Try searching for a different title or resetting your filters.</p>
           </div>
-          <Button variant="glow" size="sm" icon={<RefreshCw className="w-4 h-4" />} onClick={() => setFilters(initialFilterState)}>
+          <Button variant="glow" size="sm" icon={<RefreshCw className="w-4 h-4" />} onClick={() => handleFilterChange(initialFilterState)}>
             Reset All Filters
           </Button>
         </Card>
@@ -308,10 +381,10 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
       {/* Error-Bounded Search Result Cards */}
       {!loading && !searchError && filteredGames.length > 0 && (
-        <SearchErrorBoundary onReset={() => setFilters(initialFilterState)}>
+        <SearchErrorBoundary onReset={() => handleFilterChange(initialFilterState)}>
           {viewMode === 'grid' && (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-              {filteredGames.slice(0, 20).map((game, index) => {
+              {filteredGames.slice(0, visibleClientCount).map((game, index) => {
                 const safeTitle = typeof game.title === 'string' ? game.title : normalizeEntityName(game.title, 'Untitled Game');
                 const safeDeveloper = typeof game.developer === 'string' ? game.developer : normalizeEntityName(game.developer, 'Unknown Developer');
                 const safeSummary = typeof game.summary === 'string' ? game.summary : 'No summary available.';
@@ -386,7 +459,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
           {viewMode === 'cards' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {filteredGames.slice(0, 20).map((game, index) => {
+              {filteredGames.slice(0, visibleClientCount).map((game, index) => {
                 const safeTitle = typeof game.title === 'string' ? game.title : normalizeEntityName(game.title, 'Untitled Game');
                 const safeDeveloper = typeof game.developer === 'string' ? game.developer : normalizeEntityName(game.developer, 'Unknown Developer');
                 const safeSummary = typeof game.summary === 'string' ? game.summary : 'No summary available.';
@@ -439,7 +512,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
           {viewMode === 'list' && (
             <div className="space-y-2">
-              {filteredGames.slice(0, 20).map((game, index) => {
+              {filteredGames.slice(0, visibleClientCount).map((game, index) => {
                 const safeTitle = typeof game.title === 'string' ? game.title : normalizeEntityName(game.title, 'Untitled Game');
                 const safeDeveloper = typeof game.developer === 'string' ? game.developer : normalizeEntityName(game.developer, 'Unknown Developer');
                 const safeGenres = Array.isArray(game.genres)
@@ -482,6 +555,26 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
               })}
             </div>
           )}
+
+          {/* Expandable Result Pagination Footer */}
+          <div className="mt-8 pt-6 border-t border-slate-800/60 flex flex-col items-center justify-center space-y-3">
+            {canLoadMore ? (
+              <Button
+                variant="glow"
+                size="md"
+                disabled={loadingMore}
+                icon={loadingMore ? <Loader2 className="w-4 h-4 animate-spin" /> : <ChevronDown className="w-4 h-4" />}
+                onClick={handleLoadMore}
+                className="px-8 font-semibold"
+              >
+                {loadingMore ? 'Loading More...' : 'Load 20 More'}
+              </Button>
+            ) : (
+              <span className="text-xs font-mono text-slate-400 px-4 py-2 rounded-xl bg-slate-900/60 border border-slate-800">
+                All {effectiveTotalCount.toLocaleString()} matching games displayed
+              </span>
+            )}
+          </div>
         </SearchErrorBoundary>
       )}
 
