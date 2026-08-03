@@ -2,6 +2,7 @@ import { normalizeScore, normalizeExternalGameScore, normalizePersonalScore } fr
 import { normalizeGameType, shouldShowGameTypeBadge, getGameTypeLabel } from '../src/services/gameTypePresentationService';
 import { getPlatformFamily, getPlatformAbbreviation, groupPlatformsByFamily } from '../src/services/platformTaxonomyService';
 import { mapToGameCardViewModel } from '../src/mappers/gameCardViewModelMapper';
+import { NEW_RELEASES_DATABASE } from '../src/services/mainstreamGames';
 
 function runPersonalDataUnitTests() {
   console.log('🧪 Running Personal Game Core & Universal Actions Unit Tests...');
@@ -34,7 +35,16 @@ function runPersonalDataUnitTests() {
   const clampedRating = normalizePersonalScore(15);
   assert(clampedRating.ratingValue === 10, 'Out of bounds rating clamps to 10');
 
-  // 2. Platform Taxonomy Tests
+  // 2. Fable Catalog Record Score Regression Test (No 85 fallback)
+  const fableRecord = NEW_RELEASES_DATABASE.find(g => g.title === 'Fable');
+  assert(Boolean(fableRecord), 'Fable catalog record exists in database');
+  if (fableRecord) {
+    const fableVm = mapToGameCardViewModel(fableRecord);
+    assert(fableVm.externalScore.displayString !== '85', 'Fable record VM does NOT display hardcoded 85 score');
+    assert(fableVm.externalScore.displayString === '9.1 / 10', 'Fable record VM displays real score 9.1 / 10');
+  }
+
+  // 3. Platform Taxonomy Tests
   assert(getPlatformFamily(6) === 'pc', 'ID 6 maps to pc family');
   assert(getPlatformFamily(167) === 'playstation', 'ID 167 (PS5) maps to playstation family');
   assert(getPlatformFamily(169) === 'xbox', 'ID 169 (Xbox Series X) maps to xbox family');
@@ -46,9 +56,9 @@ function runPersonalDataUnitTests() {
   const grouped = groupPlatformsByFamily([6, 167, 169, 130]);
   assert(grouped.pc.includes(6) && grouped.playstation.includes(167) && grouped.nintendo.includes(130), 'groupPlatformsByFamily correctly groups multiple platforms');
 
-  // 3. Game Type Presentation Tests
+  // 4. Game Type Presentation Tests
   const mainGameType = normalizeGameType('main_game');
-  assert(mainGameType === 'main_game' && shouldShowGameTypeBadge('main_game') === false, 'Main Game hides type badge');
+  assert(mainGameType === 'main_game' && shouldShowGameTypeBadge('main_game') === false, 'Main Game hides type badge (No Base Game badge on compact cards)');
 
   const dlcType = normalizeGameType('dlc_addon');
   assert(dlcType === 'dlc_addon' && shouldShowGameTypeBadge('dlc_addon') === true, 'DLC shows type badge');
@@ -56,7 +66,7 @@ function runPersonalDataUnitTests() {
   const modType = normalizeGameType('romhack');
   assert(modType === 'community_modification' && getGameTypeLabel('community_modification') === 'Community Mod / ROM Hack', 'ROM hacks map to Community Mod badge');
 
-  // 4. Game Card View Model Mapper Tests
+  // 5. Game Card View Model Mapper Tests (Compact Card Content Bounds)
   const mockCatalogGame = {
     id: 1020,
     name: 'Super Mario World',
@@ -71,6 +81,7 @@ function runPersonalDataUnitTests() {
   assert(vm.title === 'Super Mario World', 'View model title is Super Mario World');
   assert(vm.releaseYearDisplay === '1990', 'Release year display is 1990');
   assert(vm.externalScore.displayString === 'Not Rated', 'External score is Not Rated without rating data');
+  assert(vm.shouldShowGameTypeBadge === false, 'Compact card hides badge for normal main games');
 
   console.log(`----------------------------------------------------`);
   console.log(`📊 Personal Game Core Test Results: ${passed} passed, ${failed} failed.`);

@@ -73,7 +73,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold themed-heading">{title}</h2>
-            {description && <p className="text-xs text-[var(--text-muted)] mt-0.5">{description}</p>}
+            {description && <p className="text-xs text-[var(--text-secondary)] mt-0.5">{description}</p>}
           </div>
           {onShareClick && (
             <button
@@ -86,17 +86,17 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         </div>
       )}
 
-      {/* Filter and Control Bar */}
-      <div className="themed-panel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-[var(--panel-border)] shadow-md">
+      {/* Solid High-Contrast Filter and Control Bar */}
+      <div className="themed-panel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-[var(--panel-border)] shadow-md bg-[#fefcf6]">
         {/* Left Side Filters */}
         <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
           {/* Platform Taxonomy Filter */}
           <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+            <Filter className="w-3.5 h-3.5 text-[var(--primary-action)]" />
             <select
               value={selectedPlatformFamily}
               onChange={e => setSelectedPlatformFamily(e.target.value)}
-              className="themed-input px-3 py-1.5 rounded-xl text-xs font-bold"
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584] focus:ring-2 focus:ring-[var(--focus-ring)]"
             >
               <option value="all">All Platform Families</option>
               {platformFamilies.map(fam => (
@@ -111,7 +111,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
           <select
             value={selectedCategory}
             onChange={e => setSelectedCategory(e.target.value)}
-            className="themed-input px-3 py-1.5 rounded-xl text-xs font-bold"
+            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584] focus:ring-2 focus:ring-[var(--focus-ring)]"
           >
             <option value="all">All Game Types</option>
             <option value="main_game">Main Games Only</option>
@@ -119,6 +119,10 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
             <option value="pack">Packs & Expansions</option>
             <option value="mod">Mods & ROM Hacks</option>
           </select>
+
+          <span className="text-xs font-mono font-bold text-[#0f2b48]">
+            Showing {sortedGames.length} games
+          </span>
         </div>
 
         {/* Right Side Sorting & Layout Toggle */}
@@ -128,7 +132,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as any)}
-              className="themed-input px-3 py-1.5 rounded-xl text-xs font-bold"
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584] focus:ring-2 focus:ring-[var(--focus-ring)]"
             >
               <option value="relevance">Search Relevance</option>
               <option value="name">Alphabetical (A-Z)</option>
@@ -138,11 +142,11 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
           </div>
 
           {/* Grid / List Mode Controls */}
-          <div className="flex items-center bg-[rgba(0,0,0,0.1)] p-0.5 rounded-xl border border-[var(--panel-border)]">
+          <div className="flex items-center bg-[#ece4d0] p-0.5 rounded-xl border border-[#c8b584]">
             <button
               onClick={() => setViewMode('grid')}
               className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'grid' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                viewMode === 'grid' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[#0f2b48] hover:bg-white/50'
               }`}
               title="Grid View"
             >
@@ -151,7 +155,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
             <button
               onClick={() => setViewMode('list')}
               className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'list' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                viewMode === 'list' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[#0f2b48] hover:bg-white/50'
               }`}
               title="List View"
             >
@@ -165,14 +169,14 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
       {isLoading ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-pulse">
           {Array.from({ length: 10 }).map((_, i) => (
-            <div key={i} className="aspect-[3/4] themed-panel rounded-2xl bg-slate-800/40" />
+            <div key={i} className="aspect-[3/4] themed-panel rounded-2xl bg-slate-200/50" />
           ))}
         </div>
       ) : sortedGames.length === 0 ? (
-        <div className="themed-panel p-12 text-center rounded-3xl space-y-3 border border-[var(--panel-border)]">
-          <ShieldAlert className="w-10 h-10 mx-auto text-amber-500 opacity-60" />
+        <div className="themed-panel p-12 text-center rounded-3xl space-y-3 border border-[var(--panel-border)] bg-[#fefcf6]">
+          <ShieldAlert className="w-10 h-10 mx-auto text-amber-600 opacity-80" />
           <h3 className="text-base font-bold themed-heading">No Matching Games Found</h3>
-          <p className="text-xs text-[var(--text-muted)] max-w-sm mx-auto">
+          <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto font-medium">
             Try resetting platform or category filters to view more titles in the Play Atlas catalog.
           </p>
         </div>

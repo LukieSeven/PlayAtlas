@@ -8,7 +8,27 @@
   --sidebar-text: #f1f5f9;
   --sidebar-muted-text: #94a3b8;
   --sidebar-active-bg: linear-gradient(135deg, rgba(43, 122, 148, 0.45) 0%, rgba(54, 110, 87, 0.45) 100%);
-  --header-bg: rgba(245, 240, 225, 0.94);
+  --header-bg: #f5f0e1;
+  
+  /* Semantic Light Surface & Contrast Pairs */
+  --surface-light: #fefcf6;
+  --surface-light-elevated: #ffffff;
+  --surface-light-text: #0f2b48;
+  --surface-light-muted: #475569;
+  
+  /* Semantic Dark Surface & Contrast Pairs */
+  --surface-dark: #0d1b2a;
+  --surface-dark-elevated: #162a40;
+  --surface-dark-text: #f8fafc;
+  --surface-dark-muted: #94a3b8;
+
+  /* Input & Control Surfaces */
+  --input-surface: #ffffff;
+  --input-border: #b8c7d9;
+  --input-text: #0f2b48;
+  --dropdown-surface: #fefcf6;
+  --dropdown-text: #0f2b48;
+
   --paper-base: #f7f4ea;
   --paper-highlight: #fefcf5;
   --paper-texture-url: url('/branding/watercolor-parchment-base.webp');
@@ -31,30 +51,33 @@
   --ornament-opacity: 0.4;
   --panel-paper-color: #fefcf6;
   --panel-texture-opacity: 0.25;
-  --panel-bg: rgba(254, 252, 246, 0.95);
-  --panel-elevated-bg: rgba(255, 255, 255, 0.97);
-  --panel-border: rgba(212, 175, 55, 0.45);
+  
+  /* Solid High-Contrast Surfaces */
+  --panel-bg: #fefcf6;
+  --panel-elevated-bg: #ffffff;
+  --panel-border: #c8b584;
   --sidebar-edge-primary: #d4af37;
   --sidebar-edge-secondary: #1b5e75;
+  
   --text-primary: #0f2b48;
-  --text-secondary: #2b4c6f;
-  --text-muted: #64748b;
+  --text-secondary: #1b3a5c;
+  --text-muted: #475569;
   --heading-color: #0c1e36;
-  --primary-action: #2b7a94;
-  --primary-action-hover: #1b5e75;
-  --accent-color: #d4af37;
-  --focus-ring: rgba(212, 175, 55, 0.5);
-  --input-bg: #fefcf6;
-  --input-border: rgba(43, 122, 148, 0.35);
-  --badge-bg: rgba(54, 110, 87, 0.18);
+  
+  --primary-action: #1b5e75;
+  --primary-action-hover: #0f3c4d;
+  --accent-color: #b89228;
+  --focus-ring: rgba(184, 146, 40, 0.5);
+  
+  --badge-bg: rgba(27, 94, 117, 0.12);
   --badge-text: #1b5e75;
-  --overlay-bg: rgba(12, 22, 38, 0.75);
-  --status-success: #366e57;
-  --status-warning: #d4af37;
-  --status-danger: #c53030;
+  --overlay-bg: rgba(12, 22, 38, 0.85);
+  --status-success: #2d6a4f;
+  --status-warning: #b89228;
+  --status-danger: #991b1b;
   --font-heading: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --shadow-style: 0 10px 25px -5px rgba(15, 43, 72, 0.12), 0 0 12px rgba(212, 175, 55, 0.18);
+  --shadow-style: 0 4px 20px rgba(15, 43, 72, 0.12);
   --border-radius: 1rem;
   --texture-opacity: 0.35;
 }
@@ -180,7 +203,7 @@
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.4);
 }
 
-/* UI Components & Surface Styling */
+/* UI Components & Solid Surface Styling */
 .themed-sidebar {
   background-color: var(--sidebar-bg);
   color: var(--sidebar-text);
@@ -193,8 +216,7 @@
   background-color: var(--header-bg);
   color: var(--text-primary);
   border-bottom: 1px solid var(--panel-border);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 2px 10px rgba(15, 43, 72, 0.08);
   position: relative;
   z-index: 20;
 }
@@ -209,7 +231,6 @@
   box-shadow: var(--shadow-style);
   color: var(--text-primary);
   position: relative;
-  backdrop-filter: blur(8px);
 }
 
 .themed-card {
@@ -222,32 +243,31 @@
   box-shadow: var(--shadow-style);
   color: var(--text-primary);
   transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-  backdrop-filter: blur(8px);
 }
 
 .themed-card-hover:hover {
   transform: translateY(-2px);
-  border-color: var(--accent-color);
-  box-shadow: 0 12px 30px -5px rgba(212, 175, 55, 0.3);
+  border-color: var(--primary-action);
+  box-shadow: 0 8px 25px -4px rgba(27, 94, 117, 0.25);
 }
 
 .themed-input {
-  background-color: var(--input-bg);
+  background-color: var(--input-surface);
   border: 1px solid var(--input-border);
-  color: var(--text-primary);
+  color: var(--input-text);
   border-radius: var(--border-radius);
 }
 
 .themed-input:focus {
   outline: none;
-  border-color: var(--accent-color);
+  border-color: var(--primary-action);
   box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
 .themed-button-primary {
   background-color: var(--primary-action);
   color: #ffffff;
-  border: 1px solid var(--accent-color);
+  border: 1px solid var(--primary-action);
   border-radius: calc(var(--border-radius) * 0.75);
   font-weight: 700;
   transition: background-color 0.2s ease, transform 0.15s ease;
