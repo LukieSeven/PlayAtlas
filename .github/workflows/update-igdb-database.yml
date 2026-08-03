@@ -143,7 +143,8 @@ jobs:
 
                 if [ -n "${MANIFEST_PATH}" ]; then
                   CATALOG_ROOT="$(dirname "${MANIFEST_PATH}")"
-                  echo "Detected Release catalog root: ${CATALOG_ROOT}"
+                  echo "Candidate catalog root: ${CATALOG_ROOT}"
+                  printf 'Candidate root shell-escaped: %q\n' "${CATALOG_ROOT}"
 
                   RECORD_COUNT="$(jq -r '.catalogRecordCount // .recordCount // 0' "${MANIFEST_PATH}")"
                   CHUNK_COUNT="$(jq -r '.fullCatalog.chunkCount // (.chunks | length) // 0' "${MANIFEST_PATH}")"
@@ -248,11 +249,14 @@ jobs:
               exit 1
             fi
 
+            echo "Candidate catalog root: ${CATALOG_ROOT}"
+            printf 'Candidate root shell-escaped: %q\n' "${CATALOG_ROOT}"
+
             mkdir -p generated/browser-catalog-restored
             cp -a "$CATALOG_ROOT/." generated/browser-catalog-restored/
           fi
 
-          echo "⚙️ Rebuilding browser catalog with corrected SHA-256 token index from ${generated/browser-catalog-restored}..."
+          echo "⚙️ Rebuilding browser catalog with corrected SHA-256 token index from generated/browser-catalog-restored..."
           IGDB_FULL_CATALOG_DIR=generated/browser-catalog-restored PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-rebuilt npm run build:browser-catalog
 
           echo "BROWSER_CATALOG_DIR=generated/browser-catalog-rebuilt" >> "${GITHUB_ENV}"
