@@ -563,34 +563,9 @@ async function runBrowserCatalogBuilder() {
   const releaseManifestPath = path.join(releasesDir, 'release_manifest.json');
   fs.writeFileSync(releaseManifestPath, JSON.stringify(releaseManifest, null, 2), 'utf-8');
 
-  // --- BUILD 4: MASTER ZIP ARCHIVE (Offloaded to release-assets/) ---
-  console.log('📦 Generating Master ZIP Archive (generated/release-assets/play-atlas-full-catalog.zip)...');
-  const zipPath = path.join(releaseAssetsDir, 'play-atlas-full-catalog.zip');
+  // --- WRITE MASTER BROWSER CATALOG MANIFEST FIRST ---
+  const catalogBuildId = `build-${Date.now()}`;
 
-  await new Promise<void>((resolve, reject) => {
-    const outputStream = fs.createWriteStream(zipPath);
-    const archive = archiver('zip', { zlib: { level: 9 } });
-
-    outputStream.on('close', () => resolve());
-    archive.on('error', err => reject(err));
-
-    archive.pipe(outputStream);
-    archive.directory(searchDir, 'search');
-    archive.directory(releasesDir, 'releases');
-    archive.directory(chunksDir, 'chunks');
-    archive.directory(metadataDir, 'metadata');
-    archive.finalize();
-  });
-
-  const zipBuffer = fs.readFileSync(zipPath);
-  const zipSha256 = computeSha256(zipBuffer);
-  fs.writeFileSync(`${zipPath}.sha256`, zipSha256, 'utf-8');
-
-  console.log(`✅ Master ZIP Archive created in release-assets: ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
-
-  const catalogBuildId = `build-${Date.now()}-${zipSha256.slice(0, 8)}`;
-
-  // --- BUILD 5: MASTER BROWSER CATALOG MANIFEST ---
   const outputBrowserManifest = {
     source: 'igdb',
     schemaVersion: 2,
@@ -612,14 +587,42 @@ async function runBrowserCatalogBuilder() {
 
     optionalArchive: {
       file: 'https://github.com/LukieSeven/PlayAtlas/releases/download/v1.0.0-catalog/play-atlas-full-catalog.zip',
-      byteSize: zipBuffer.length,
-      sha256: zipSha256,
+      byteSize: 0,
+      sha256: '',
       format: 'zip',
     },
   };
 
   const outputBrowserManifestPath = path.join(outputDir, 'browser_catalog_manifest.json');
   fs.writeFileSync(outputBrowserManifestPath, JSON.stringify(outputBrowserManifest, null, 2), 'utf-8');
+
+  // --- BUILD 4: MASTER ZIP ARCHIVE FROM COMPLETE OUTPUT DIR ROOT ---
+  console.log('📦 Generating Root-Normalized Master ZIP Archive (generated/release-assets/play-atlas-full-catalog.zip)...');
+  const zipPath = path.join(releaseAssetsDir, 'play-atlas-full-catalog.zip');
+
+  await new Promise<void>((resolve, reject) => {
+    const outputStream = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    outputStream.on('close', () => resolve());
+    archive.on('error', err => reject(err));
+
+    archive.pipe(outputStream);
+    // Archive contents of outputDir directly at the ZIP root (false parameter prevents outer directory nesting)
+    archive.directory(outputDir, false);
+    archive.finalize();
+  });
+
+  const zipBuffer = fs.readFileSync(zipPath);
+  const zipSha256 = computeSha256(zipBuffer);
+  fs.writeFileSync(`${zipPath}.sha256`, zipSha256, 'utf-8');
+
+  // Update manifest optionalArchive metadata with actual ZIP size and hash
+  outputBrowserManifest.optionalArchive.byteSize = zipBuffer.length;
+  outputBrowserManifest.optionalArchive.sha256 = zipSha256;
+  fs.writeFileSync(outputBrowserManifestPath, JSON.stringify(outputBrowserManifest, null, 2), 'utf-8');
+
+  console.log(`✅ Master Root-Normalized ZIP Archive created: ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
 
   // Measure exact published catalog size (compressed bytes on disk in outputDir)
   const publishedCatalogBytes =

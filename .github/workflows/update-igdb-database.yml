@@ -259,34 +259,79 @@ jobs:
           echo "⚙️ Rebuilding browser catalog with corrected SHA-256 token index from generated/browser-catalog-restored..."
           IGDB_FULL_CATALOG_DIR=generated/browser-catalog-restored PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-rebuilt npm run build:browser-catalog
 
-      - name: Verify Rebuilt Browser Catalog (Deploy Existing Mode)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
-        run: npm run verify:browser-catalog -- generated/browser-catalog-rebuilt
+      # --- 4. STEP 2: VERIFY REBUILT CATALOG ---
+      - name: Verify Rebuilt Browser Catalog
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
+        run: |
+          AUTHORITATIVE_CATALOG_DIR=""
+          if [ -d "generated/browser-catalog-rebuilt" ]; then
+            AUTHORITATIVE_CATALOG_DIR="generated/browser-catalog-rebuilt"
+          elif [ -d "generated/browser-catalog-test" ]; then
+            AUTHORITATIVE_CATALOG_DIR="generated/browser-catalog-test"
+          fi
+          echo "Verifying rebuilt catalog in ${AUTHORITATIVE_CATALOG_DIR}..."
+          npm run verify:browser-catalog -- "${AUTHORITATIVE_CATALOG_DIR}"
 
-      # --- 4. COMMON RELEASE ASSET UPLOAD & PAGES DEPLOYMENT ---
-      - name: Update GitHub Release Asset with Rebuilt Corrected Archive
+      # --- 5. STEP 3 & 4 & 5: CREATE ROOT-NORMALIZED ZIP & VERIFY EXTRACTED ARCHIVE ---
+      - name: Create and Locally Verify Master ZIP Archive Layout
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
+        run: |
+          AUTHORITATIVE_CATALOG_DIR=""
+          if [ -d "generated/browser-catalog-rebuilt" ]; then
+            AUTHORITATIVE_CATALOG_DIR="generated/browser-catalog-rebuilt"
+          elif [ -d "generated/browser-catalog-test" ]; then
+            AUTHORITATIVE_CATALOG_DIR="generated/browser-catalog-test"
+          fi
+
+          ZIP_PATH="${GITHUB_WORKSPACE}/generated/release-assets/play-atlas-full-catalog.zip"
+          rm -f "${ZIP_PATH}" "${ZIP_PATH}.sha256"
+          mkdir -p "$(dirname "${ZIP_PATH}")"
+
+          echo "📦 Packaging root-normalized ZIP from ${AUTHORITATIVE_CATALOG_DIR}..."
+          (
+            cd "${AUTHORITATIVE_CATALOG_DIR}"
+            zip -q -r "${ZIP_PATH}" .
+          )
+
+          sha256sum "${ZIP_PATH}" | cut -d' ' -f1 > "${ZIP_PATH}.sha256"
+
+          echo "🔍 Top 40 ZIP archive entries:"
+          unzip -Z1 "${ZIP_PATH}" | head -n 40
+
+          TEST_DIR="${RUNNER_TEMP:-/tmp}/test-release-unzip"
+          rm -rf "${TEST_DIR}"
+          mkdir -p "${TEST_DIR}"
+
+          echo "📦 Extracting ZIP to test directory for verification: ${TEST_DIR}"
+          unzip -q "${ZIP_PATH}" -d "${TEST_DIR}"
+
+          test -f "${TEST_DIR}/browser_catalog_manifest.json"
+          test -d "${TEST_DIR}/chunks"
+          test -d "${TEST_DIR}/search"
+          test -d "${TEST_DIR}/releases"
+
+          echo "✅ Root layout check passed. Verifying extracted ZIP content..."
+          npm run verify:browser-catalog -- "${TEST_DIR}"
+
+      # --- 6. STEP 6: UPLOAD RELEASE ASSET ONLY AFTER LOCAL ZIP VERIFICATION PASSES ---
+      - name: Upload Verified Master Archive to GitHub Release
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          ZIP_SRC="generated/release-assets"
-          if [ -d "generated/browser-catalog-rebuilt" ] && [ -f "$ZIP_SRC/play-atlas-full-catalog.zip" ]; then
-            echo "📦 Publishing corrected master ZIP archive asset to GitHub Release v1.0.0-catalog..."
+          ZIP_PATH="${GITHUB_WORKSPACE}/generated/release-assets/play-atlas-full-catalog.zip"
+          if [ -f "${ZIP_PATH}" ]; then
+            echo "📦 Publishing verified master ZIP archive asset to GitHub Release v1.0.0-catalog..."
             if gh release view v1.0.0-catalog --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
-              gh release upload v1.0.0-catalog "$ZIP_SRC/play-atlas-full-catalog.zip" "$ZIP_SRC/play-atlas-full-catalog.zip.sha256" --clobber --repo "${GITHUB_REPOSITORY}"
+              gh release upload v1.0.0-catalog "${ZIP_PATH}" "${ZIP_PATH}.sha256" --clobber --repo "${GITHUB_REPOSITORY}"
             else
-              gh release create v1.0.0-catalog "$ZIP_SRC/play-atlas-full-catalog.zip" "$ZIP_SRC/play-atlas-full-catalog.zip.sha256" --title "Play Atlas Catalog v1.0.0" --notes "Complete Play Atlas IGDB catalog." --target "${GITHUB_SHA}" --repo "${GITHUB_REPOSITORY}"
+              gh release create v1.0.0-catalog "${ZIP_PATH}" "${ZIP_PATH}.sha256" --title "Play Atlas Catalog v1.0.0" --notes "Complete Play Atlas IGDB catalog." --target "${GITHUB_SHA}" --repo "${GITHUB_REPOSITORY}"
             fi
-
-            echo "🔍 Verifying newly uploaded Release archive in clean test directory..."
-            TEST_UNZIP_DIR="${RUNNER_TEMP:-/tmp}/test-release-unzip"
-            rm -rf "${TEST_UNZIP_DIR}"
-            mkdir -p "${TEST_UNZIP_DIR}"
-            unzip -q "$ZIP_SRC/play-atlas-full-catalog.zip" -d "${TEST_UNZIP_DIR}"
-            npm run verify:browser-catalog -- "${TEST_UNZIP_DIR}"
+            gh release view v1.0.0-catalog --repo "${GITHUB_REPOSITORY}"
           fi
 
-      - name: Prepare Clean Build Output for Pages Deployment
+      # --- 7. STEP 7 & 8: COPY SINGLE AUTHORITATIVE SOURCE TO DIST/DATA AND VERIFY ---
+      - name: Prepare Clean Build Output & Verify Pages Payload
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         run: |
           npm run build
@@ -325,6 +370,7 @@ jobs:
           echo "🔍 Running verifier against final dist/data payload..."
           npm run verify:browser-catalog -- dist/data
 
+      # --- 8. MEASURE PAGES CEILING & DEPLOY ---
       - name: Measure Exact Published Deployment Size & Enforce 900 MB Ceiling
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         run: |
