@@ -96,7 +96,7 @@ jobs:
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         run: npm run verify:browser-catalog generated/browser-catalog-test
 
-      # --- 3. DEPLOY EXISTING MODE EXECUTION (Controlled Unified Restoration Step) ---
+      # --- 3. DEPLOY EXISTING MODE EXECUTION (With Priority Selection & Completeness Check) ---
       - name: Restore Existing Catalog
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
         shell: bash
@@ -132,46 +132,48 @@ jobs:
               generated/release-download/play-atlas-full-catalog.zip \
               -d generated/browser-catalog-restored
 
-            echo "RESTORE_SOURCE=release" >> "${GITHUB_ENV}"
-            echo "BROWSER_CATALOG_DIR=generated/browser-catalog-restored" >> "${GITHUB_ENV}"
+            RESTORE_SOURCE="v1.0.0-catalog release"
+            ARTIFACT_NAME="play-atlas-full-catalog.zip"
+            ARTIFACT_ID="release-asset"
           else
-            echo "⚠️ Release v1.0.0-catalog does not exist. Searching retained workflow artifacts..."
+            echo "⚠️ Release v1.0.0-catalog does not exist. Searching retained artifacts using priority order..."
 
-            ARTIFACT_DATA="$(
-              gh api \
-                "repos/${GH_REPO}/actions/artifacts?per_page=100" \
-                --paginate \
-                --jq '
-                  [
-                    .artifacts[]
-                    | select(.expired == false)
-                    | select(
-                        (.name | startswith("play-atlas-browser-catalog-"))
-                        or (.name | startswith("igdb-full-catalog-"))
-                        or (.name | startswith("play-atlas-published-pages-"))
-                        or (.name | startswith("igdb-test-database-"))
-                      )
-                  ]
-                  | sort_by(.created_at)
-                  | reverse
-                  | .[0]
-                  | {
-                      id: .id,
-                      name: .name,
-                      created_at: .created_at
-                    }
-                '
-            )"
+            find_artifact_by_prefix() {
+              PREFIX="$1"
+              gh api "repos/${GH_REPO}/actions/artifacts?per_page=100" --paginate --jq "
+                [
+                  .artifacts[]
+                  | select(.expired == false)
+                  | select(.name | startswith(\"${PREFIX}\"))
+                ]
+                | sort_by(.created_at)
+                | reverse
+                | .[0] // empty
+              "
+            }
+
+            # Priority 1: play-atlas-browser-catalog-*
+            ARTIFACT_DATA="$(find_artifact_by_prefix "play-atlas-browser-catalog-")"
+
+            # Priority 2: igdb-full-catalog-*
+            if [[ -z "${ARTIFACT_DATA}" || "${ARTIFACT_DATA}" == "null" ]]; then
+              ARTIFACT_DATA="$(find_artifact_by_prefix "igdb-full-catalog-")"
+            fi
+
+            # Priority 3: play-atlas-published-pages-*
+            if [[ -z "${ARTIFACT_DATA}" || "${ARTIFACT_DATA}" == "null" ]]; then
+              ARTIFACT_DATA="$(find_artifact_by_prefix "play-atlas-published-pages-")"
+            fi
 
             ARTIFACT_ID="$(jq -r '.id // empty' <<< "${ARTIFACT_DATA}")"
             ARTIFACT_NAME="$(jq -r '.name // empty' <<< "${ARTIFACT_DATA}")"
 
-            if [[ -z "${ARTIFACT_ID}" || -z "${ARTIFACT_NAME}" ]]; then
-              echo "::error::No suitable non-expired catalog Release or Actions artifact exists."
+            if [[ -z "${ARTIFACT_ID}" || "${ARTIFACT_ID}" == "null" || -z "${ARTIFACT_NAME}" || "${ARTIFACT_NAME}" == "null" ]]; then
+              echo "::error::No suitable non-expired production catalog Release or Actions artifact exists."
               exit 1
             fi
 
-            echo "Selected artifact:"
+            echo "Selected Priority Artifact:"
             echo "  ID: ${ARTIFACT_ID}"
             echo "  Name: ${ARTIFACT_NAME}"
 
@@ -187,28 +189,61 @@ jobs:
               generated/restored-artifact/artifact.zip \
               -d generated/restored-artifact/content
 
-            # Inspect extracted content
             if [ -f "generated/restored-artifact/content/browser_catalog_manifest.json" ]; then
               echo "📦 Restored complete compressed browser catalog."
               mkdir -p generated/browser-catalog-restored
               cp -r generated/restored-artifact/content/* generated/browser-catalog-restored/
+              RESTORE_SOURCE="browser-catalog artifact"
             elif [ -f "generated/restored-artifact/content/data/browser_catalog_manifest.json" ]; then
               echo "📦 Restored published pages data catalog."
               mkdir -p generated/browser-catalog-restored
               cp -r generated/restored-artifact/content/data/* generated/browser-catalog-restored/
+              RESTORE_SOURCE="published-pages artifact"
             elif [ -f "generated/restored-artifact/content/game_index_manifest.json" ]; then
               echo "📦 Restored raw full catalog. Rebuilding compressed browser catalog..."
               mkdir -p generated/igdb-full-restored
               cp -r generated/restored-artifact/content/* generated/igdb-full-restored/
               IGDB_FULL_CATALOG_DIR=generated/igdb-full-restored PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-restored npm run build:browser-catalog
+              RESTORE_SOURCE="raw full-catalog artifact"
             else
               echo "::error::Unrecognized directory structure in restored artifact."
               exit 1
             fi
-
-            echo "RESTORE_SOURCE=artifact" >> "${GITHUB_ENV}"
-            echo "BROWSER_CATALOG_DIR=generated/browser-catalog-restored" >> "${GITHUB_ENV}"
           fi
+
+          # --- VALIDATE CATALOG COMPLETENESS & RECORD COUNT ---
+          REC_COUNT=0
+          CHUNK_COUNT=0
+
+          if [ -f "generated/browser-catalog-restored/browser_catalog_manifest.json" ]; then
+            REC_COUNT=$(jq -r '.catalogRecordCount // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)
+            CHUNK_COUNT=$(jq -r '.fullCatalog.chunkCount // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)
+          elif [ -f "generated/igdb-full-restored/game_index_manifest.json" ]; then
+            REC_COUNT=$(jq -r '.recordCount // 0' generated/igdb-full-restored/game_index_manifest.json)
+            CHUNK_COUNT=$(jq -r '.chunks | length // 0' generated/igdb-full-restored/game_index_manifest.json)
+          fi
+
+          echo "===================================================="
+          echo "📊 RESTORED CATALOG DIAGNOSTIC SUMMARY"
+          echo "===================================================="
+          echo "Selected Artifact Name:      ${ARTIFACT_NAME}"
+          echo "Selected Artifact ID:        ${ARTIFACT_ID}"
+          echo "Restored Catalog Type:       ${RESTORE_SOURCE}"
+          echo "Restored Record Count:       ${REC_COUNT}"
+          echo "Restored Detail Chunk Count: ${CHUNK_COUNT}"
+          echo "===================================================="
+
+          if [ "$REC_COUNT" -lt 300000 ]; then
+            echo "::error::Restored record count (${REC_COUNT}) is below required 300,000 threshold! Aborting deployment."
+            exit 1
+          fi
+
+          if [ "$CHUNK_COUNT" -lt 100 ]; then
+            echo "::error::Restored chunk count (${CHUNK_COUNT}) is below required 100 chunks threshold! Aborting deployment."
+            exit 1
+          fi
+
+          echo "BROWSER_CATALOG_DIR=generated/browser-catalog-restored" >> "${GITHUB_ENV}"
 
       - name: Verify Restored Browser Catalog (Deploy Existing Mode)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
