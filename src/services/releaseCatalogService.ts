@@ -121,9 +121,28 @@ export function calculateDynamicDateRange(timeframe: string, todayStr: string): 
 export async function fetchReleaseManifest(): Promise<ReleaseCatalogManifest> {
   if (cachedManifest) return cachedManifest;
 
-  const url = getBasePathAwareUrl('data/release_catalog_manifest.json');
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Failed to fetch release manifest: ${res.statusText}`);
+  let relManifestPath = 'releases/release_manifest.json';
+
+  try {
+    const browserManifestUrl = getBasePathAwareUrl('data/browser_catalog_manifest.json');
+    const bRes = await fetch(browserManifestUrl);
+    if (bRes.ok) {
+      const bData = await bRes.json();
+      if (bData && typeof bData.releaseManifest === 'string' && bData.releaseManifest.trim()) {
+        relManifestPath = bData.releaseManifest.trim();
+      }
+    }
+  } catch {
+    // Non-critical fallback to releases/release_manifest.json
+  }
+
+  const manifestUrl = getBasePathAwareUrl(`data/${relManifestPath}`);
+  const res = await fetch(manifestUrl);
+
+  if (!res.ok) {
+    throw new Error(`Failed to fetch release manifest at ${manifestUrl}: HTTP ${res.status} ${res.statusText || 'Not Found'}`);
+  }
+
   cachedManifest = await res.json();
   return cachedManifest!;
 }

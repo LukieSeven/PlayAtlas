@@ -2,9 +2,10 @@ import {
   getDynamicLocalDate,
   calculateDynamicDateRange,
   convertReleaseRecordToGameItem,
-} from '../src/utils/../services/releaseCatalogService';
+  fetchReleaseManifest,
+} from '../src/services/releaseCatalogService';
 
-function runReleaseCatalogRegressionTests() {
+async function runReleaseCatalogRegressionTests() {
   console.log('🧪 Running Release Catalog Regression Tests...');
   let passed = 0;
   let failed = 0;
@@ -79,6 +80,54 @@ function runReleaseCatalogRegressionTests() {
   assertEqual(gameItem.title, 'A Maze in Labyrinth', 'Converter maps title correctly');
   assertEqual(gameItem.releaseDate, '2026-08-03', 'Converter maps releaseDate correctly');
 
+  // 5. Release Manifest Path & Fallback URL Verification
+  const originalFetch = globalThis.fetch;
+  const requestedUrls: string[] = [];
+
+  try {
+    globalThis.fetch = (async (input: RequestInfo | URL) => {
+      const urlStr = String(input);
+      requestedUrls.push(urlStr);
+
+      if (urlStr.includes('browser_catalog_manifest.json')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({ releaseManifest: 'releases/release_manifest.json' }),
+        } as Response;
+      }
+
+      if (urlStr.includes('releases/release_manifest.json')) {
+        return {
+          ok: true,
+          status: 200,
+          json: async () => ({
+            schemaVersion: 1,
+            generatedAt: '2026-08-03T00:00:00Z',
+            recordCount: 1500,
+            partitionCount: 4,
+            partitions: [],
+          }),
+        } as Response;
+      }
+
+      return {
+        ok: false,
+        status: 404,
+        statusText: 'Not Found',
+        json: async () => ({}),
+      } as Response;
+    }) as typeof globalThis.fetch;
+
+    const manifest = await fetchReleaseManifest();
+    assert(manifest.recordCount === 1500, 'fetchReleaseManifest successfully loads release manifest');
+    assert(requestedUrls.some(u => u.includes('data/browser_catalog_manifest.json')), 'fetchReleaseManifest checks browser_catalog_manifest.json');
+    assert(requestedUrls.some(u => u.includes('data/releases/release_manifest.json')), 'fetchReleaseManifest loads releases/release_manifest.json');
+    assert(!requestedUrls.some(u => u.includes('release_catalog_manifest.json')), 'fetchReleaseManifest NEVER requests obsolete release_catalog_manifest.json');
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+
   console.log(`----------------------------------------------------`);
   console.log(`📊 Release Catalog Regression Test Results: ${passed} passed, ${failed} failed.`);
   console.log(`----------------------------------------------------`);
@@ -88,4 +137,7 @@ function runReleaseCatalogRegressionTests() {
   }
 }
 
-runReleaseCatalogRegressionTests();
+runReleaseCatalogRegressionTests().catch(err => {
+  console.error('❌ Release Catalog Regression Test Failed:', err);
+  process.exit(1);
+});
