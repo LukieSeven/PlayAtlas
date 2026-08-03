@@ -37,23 +37,15 @@ export function tokenizeTitle(title: string | null | undefined): string[] {
 }
 
 /**
- * Synchronous SHA-256 bucket key helper for Node.js build scripts
- */
-export function getTokenBucketKeySync(token: string): string {
-  const clean = token.trim().toLowerCase();
-  try {
-    const nodeCrypto = require('crypto');
-    return nodeCrypto.createHash('sha256').update(clean).digest('hex').slice(0, 2);
-  } catch {
-    return '00';
-  }
-}
-
-/**
- * Get 2-character hex bucket key (00 to ff) for a token using browser-safe Web Crypto API
+ * Get 2-character hex bucket key (00 to ff) for a token using browser-safe Web Crypto API.
+ * Never silently returns a fallback bucket key. Throws if hashing fails.
  */
 export async function getTokenBucketKey(token: string): Promise<string> {
   const clean = token.trim().toLowerCase();
+  if (!clean) {
+    throw new Error('Cannot compute token bucket key for empty token.');
+  }
+
   const bytes = new TextEncoder().encode(clean);
 
   if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle) {
@@ -62,9 +54,7 @@ export async function getTokenBucketKey(token: string): Promise<string> {
     return firstByte.toString(16).padStart(2, '0');
   }
 
-  const nodeCrypto = await import('crypto');
-  const hash = nodeCrypto.createHash('sha256').update(clean).digest('hex');
-  return hash.slice(0, 2);
+  throw new Error('Web Crypto API (globalThis.crypto.subtle) is unavailable in this environment.');
 }
 
 export function getReleaseYearKey(firstReleaseDate: string | null | undefined): string {

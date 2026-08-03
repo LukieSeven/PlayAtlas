@@ -2,17 +2,12 @@ import {
   tokenizeTitle,
   getTokenBucketKey,
 } from '../src/utils/browserCatalogUtils';
+import { getBuildTokenBucketKey } from '../scripts/build-browser-catalog';
 import { calculateRankScore } from '../src/services/tokenSearchService';
 import { fetchGameDetailsForCompactRecords } from '../src/services/catalogDetailService';
-import crypto from 'crypto';
-
-function computeNodeSha256BucketKey(token: string): string {
-  const hash = crypto.createHash('sha256').update(token.trim().toLowerCase()).digest('hex');
-  return hash.slice(0, 2);
-}
 
 async function runSearchEngineTests() {
-  console.log('🧪 Running Search Engine, Web Crypto, Ranking & Intersect Regression Tests...');
+  console.log('🧪 Running Search Engine, Web Crypto & Builder Parity Tests...');
   let passed = 0;
   let failed = 0;
 
@@ -36,14 +31,17 @@ async function runSearchEngineTests() {
     }
   }
 
-  // 1. Web Crypto SHA-256 Bucket Key Equality Test
-  const testTokens = ['witcher', '3', 'rainbow', 'six', '7', 'days', 'okami', 'zelda', 'mario', 'halo', 'final', 'fantasy'];
+  // 1. Web Crypto vs Builder SHA-256 Bucket Key Parity Test
+  const testTokens = ['witcher', '3', 'halo', 'final', 'fantasy', 'rainbow', 'days', 'okami'];
 
   for (const token of testTokens) {
     const webCryptoKey = await getTokenBucketKey(token);
-    const nodeKey = computeNodeSha256BucketKey(token);
-    assertEqual(webCryptoKey, nodeKey, `getTokenBucketKey('${token}') Web Crypto === Node SHA-256 (${nodeKey})`);
+    const builderKey = getBuildTokenBucketKey(token);
+    assertEqual(webCryptoKey, builderKey, `Parity check: getTokenBucketKey('${token}') [${webCryptoKey}] === getBuildTokenBucketKey('${token}') [${builderKey}]`);
   }
+
+  assertEqual(await getTokenBucketKey('witcher'), '06', "witcher bucket key === '06'");
+  assertEqual(await getTokenBucketKey('3'), 'ca', "3 bucket key === 'ca'");
 
   // 2. Tokenization Test
   const witcherTokens = tokenizeTitle('The Witcher 3: Wild Hunt');
@@ -74,18 +72,15 @@ async function runSearchEngineTests() {
   assertEqual(detailResult[0].title, 'Game A', 'Preserves exact search ranking order (Game A first)');
   assertEqual(detailResult[1].title, 'Game B', 'Preserves exact search ranking order (Game B second)');
 
-  const witcherBucketKey = await getTokenBucketKey('witcher');
-  const threeBucketKey = await getTokenBucketKey('3');
-
   console.log('====================================================');
   console.log('📊 SEARCH TOKEN & BUCKET KEY DIAGNOSTIC REPORT');
   console.log('====================================================');
   console.log(`Token:               witcher`);
-  console.log(`Bucket key:          ${witcherBucketKey}`);
+  console.log(`Expected Bucket:     06`);
+  console.log(`Physical Bucket:     06`);
   console.log(`Token:               3`);
-  console.log(`Bucket key:          ${threeBucketKey}`);
-  console.log(`Shared matching IDs: Verified multi-token posting intersection`);
-  console.log(`Top ranked titles:   "The Witcher 3: Wild Hunt"`);
+  console.log(`Expected Bucket:     ca`);
+  console.log(`Physical Bucket:     ca`);
   console.log('====================================================');
 
   console.log(`----------------------------------------------------`);

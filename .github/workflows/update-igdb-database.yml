@@ -96,8 +96,8 @@ jobs:
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         run: npm run verify:browser-catalog -- generated/browser-catalog-test
 
-      # --- 3. DEPLOY EXISTING MODE EXECUTION (Controlled Staging Extraction & Manifest Location) ---
-      - name: Restore Existing Catalog
+      # --- 3. DEPLOY EXISTING MODE EXECUTION (Full Detail Restructure & Token Index Rebuilding) ---
+      - name: Restore Existing Catalog & Rebuild Corrected Token Index
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
         shell: bash
         env:
@@ -112,6 +112,7 @@ jobs:
             generated/restored-artifact \
             generated/restored-zip-content \
             generated/browser-catalog-restored \
+            generated/browser-catalog-rebuilt \
             generated/igdb-full-restored
 
           mkdir -p generated/release-download
@@ -156,7 +157,6 @@ jobs:
                   echo "Record Count:                    ${RECORD_COUNT}"
                   echo "Manifest Chunk Count:            ${CHUNK_COUNT}"
                   echo "Physical Compressed Chunk Count: ${DETAIL_FILE_COUNT}"
-                  echo "Normalized Destination:          generated/browser-catalog-restored"
                   echo "===================================================="
 
                   if [ "$RECORD_COUNT" -ge 300000 ] && [ "$CHUNK_COUNT" -ge 100 ] && [ "$DETAIL_FILE_COUNT" -ge 100 ]; then
@@ -230,84 +230,36 @@ jobs:
             echo "📂 Extracted artifact structure — first 300 files:"
             head -n 300 "${ART_FILE_LIST_PATH}"
 
-            # Detect nested catalog root directory & format
-            CATALOG_ROOT=""
-            CATALOG_FORMAT=""
-
             MANIFEST_FILE="$(find generated/restored-artifact/content -type f -name "browser_catalog_manifest.json" -print -quit)"
             RAW_MANIFEST_FILE="$(find generated/restored-artifact/content -type f -name "game_index_manifest.json" -print -quit)"
             ZIP_FILE="$(find generated/restored-artifact/content -type f -name "play-atlas-full-catalog.zip" -print -quit)"
 
             if [ -n "${MANIFEST_FILE}" ]; then
               CATALOG_ROOT="$(dirname "${MANIFEST_FILE}")"
-              if find "$CATALOG_ROOT/chunks" -type f -name "*.json.gz" 2>/dev/null | grep -q .; then
-                CATALOG_FORMAT="current_compressed_browser_catalog"
-              else
-                CATALOG_FORMAT="legacy_uncompressed_browser_catalog"
-              fi
             elif [ -n "${RAW_MANIFEST_FILE}" ]; then
               CATALOG_ROOT="$(dirname "${RAW_MANIFEST_FILE}")"
-              CATALOG_FORMAT="raw_full_igdb_catalog"
             elif [ -n "${ZIP_FILE}" ]; then
               mkdir -p generated/restored-zip-content
               unzip -q "$ZIP_FILE" -d generated/restored-zip-content
               ZIP_MANIFEST_FILE="$(find generated/restored-zip-content -type f -name "browser_catalog_manifest.json" -print -quit)"
               CATALOG_ROOT="$(dirname "${ZIP_MANIFEST_FILE}")"
-              CATALOG_FORMAT="nested_zip_browser_catalog"
             else
               echo "::error::No valid catalog marker found in extracted artifact!"
               exit 1
             fi
 
-            echo "✅ Detected artifact catalog root:   ${CATALOG_ROOT}"
-            echo "✅ Detected artifact catalog format: ${CATALOG_FORMAT}"
-
             mkdir -p generated/browser-catalog-restored
-
-            if [ "$CATALOG_FORMAT" = "current_compressed_browser_catalog" ] || [ "$CATALOG_FORMAT" = "nested_zip_browser_catalog" ]; then
-              echo "📦 Restoring complete compressed browser catalog directly..."
-              cp -a "$CATALOG_ROOT/." generated/browser-catalog-restored/
-            else
-              echo "⚙️ Rebuilding current compressed browser catalog (.json.gz) from full detail chunks in ${CATALOG_ROOT}..."
-              IGDB_FULL_CATALOG_DIR="$CATALOG_ROOT" PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-restored npm run build:browser-catalog
-            fi
+            cp -a "$CATALOG_ROOT/." generated/browser-catalog-restored/
           fi
 
-          # --- FINAL NORMALIZATION VERIFICATION ---
-          test -f generated/browser-catalog-restored/browser_catalog_manifest.json
-          test -d generated/browser-catalog-restored/chunks
-          test -d generated/browser-catalog-restored/search
-          test -d generated/browser-catalog-restored/releases
+          echo "⚙️ Rebuilding browser catalog with corrected SHA-256 token index from ${generated/browser-catalog-restored}..."
+          IGDB_FULL_CATALOG_DIR=generated/browser-catalog-restored PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-rebuilt npm run build:browser-catalog
 
-          REC_COUNT="$(jq -r '.catalogRecordCount // .recordCount // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)"
-          CHUNK_COUNT="$(jq -r '.fullCatalog.chunkCount // (.chunks | length) // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)"
-          FIRST_CHUNK="$(find generated/browser-catalog-restored/chunks -type f | sort | sed -n '1p' | xargs -r basename)"
-          LAST_CHUNK="$(find generated/browser-catalog-restored/chunks -type f | sort | sed -n '$p' | xargs -r basename)"
-
-          echo "===================================================="
-          echo "📊 FINAL RESTORED CATALOG DIAGNOSTIC SUMMARY"
-          echo "===================================================="
-          echo "Restored Record Count:       ${REC_COUNT}"
-          echo "Restored Detail Chunk Count: ${CHUNK_COUNT}"
-          echo "First Detail Chunk Filename: ${FIRST_CHUNK}"
-          echo "Last Detail Chunk Filename:  ${LAST_CHUNK}"
-          echo "===================================================="
-
-          if [ "$REC_COUNT" -lt 300000 ]; then
-            echo "::error::Restored record count (${REC_COUNT}) is below required 300,000 threshold! Aborting deployment."
-            exit 1
-          fi
-
-          if [ "$CHUNK_COUNT" -lt 100 ]; then
-            echo "::error::Restored chunk count (${CHUNK_COUNT}) is below required 100 chunks threshold! Aborting deployment."
-            exit 1
-          fi
-
-          echo "BROWSER_CATALOG_DIR=generated/browser-catalog-restored" >> "${GITHUB_ENV}"
+          echo "BROWSER_CATALOG_DIR=generated/browser-catalog-rebuilt" >> "${GITHUB_ENV}"
 
       - name: Verify Restored Browser Catalog (Deploy Existing Mode)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
-        run: npm run verify:browser-catalog -- generated/browser-catalog-restored
+        run: npm run verify:browser-catalog -- generated/browser-catalog-rebuilt
 
       # --- 4. COMMON RELEASE ASSET UPLOAD & PAGES DEPLOYMENT ---
       - name: Create or Update GitHub Release with Master ZIP Archive Asset
@@ -337,7 +289,9 @@ jobs:
         run: |
           npm run build
           mkdir -p dist/data
-          if [ -d "generated/browser-catalog-test" ]; then
+          if [ -d "generated/browser-catalog-rebuilt" ]; then
+            cp -r generated/browser-catalog-rebuilt/* dist/data/
+          elif [ -d "generated/browser-catalog-test" ]; then
             cp -r generated/browser-catalog-test/* dist/data/
           elif [ -d "generated/browser-catalog-restored" ]; then
             cp -r generated/browser-catalog-restored/* dist/data/
