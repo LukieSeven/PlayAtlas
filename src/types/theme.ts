@@ -31,6 +31,8 @@ export interface ThemeTokens {
   // Paper & Watercolor Texture System Tokens
   paperBase: string;
   paperHighlight: string;
+  paperTextureUrl?: string;
+  paperTextureOpacity: number;
   paperGrainOpacity: number;
   washBlue: string;
   washTeal: string;

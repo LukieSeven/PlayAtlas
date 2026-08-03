@@ -4,7 +4,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
   watercolor_atlas: {
     presetKey: 'watercolor_atlas',
     name: 'Watercolor Atlas (Default)',
-    description: 'Fantasy cartography featuring warm parchment paper, organic ocean-blue & sea-green watercolor washes, uneven pigment pooling, deep navy ink, and compass gold accents.',
+    description: 'Fantasy cartography featuring authentic parchment paper texture, organic ocean-blue & sea-green watercolor washes, uneven pigment pooling, deep navy ink, and compass gold accents.',
     
     appBackground: '#f5f0e1',               // Warm Parchment Base
     appBackgroundSecondary: '#ece4d0',      // Aged Parchment Shadow
@@ -14,28 +14,30 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     sidebarActiveBackground: 'linear-gradient(135deg, rgba(43, 122, 148, 0.45) 0%, rgba(54, 110, 87, 0.45) 100%)',
     headerBackground: 'rgba(245, 240, 225, 0.92)', // Parchment Translucent Header
     
-    // Paper & Watercolor Texture System
+    // Official Parchment Paper Asset & Watercolor System
     paperBase: '#f7f4ea',
     paperHighlight: '#fefcf5',
-    paperGrainOpacity: 0.22,
+    paperTextureUrl: '/branding/watercolor-parchment-base.webp',
+    paperTextureOpacity: 0.85,
+    paperGrainOpacity: 0.25,
     washBlue: '#2b7a94',
     washTeal: '#1b5e75',
     washGreen: '#366e57',
     washNavy: '#0f2b48',
-    washOpacity: 0.38,
-    pigmentEdgeOpacity: 0.45,
+    washOpacity: 0.75, // Increased by 70% from initial deployed strength
+    pigmentEdgeOpacity: 0.55,
     atlasLineColor: '#2b4c6f',
-    atlasLineOpacity: 0.18,
+    atlasLineOpacity: 0.35,
     routeLineColor: '#d4af37',
-    routeLineOpacity: 0.35,
+    routeLineOpacity: 0.45,
     ornamentColor: '#d4af37',
-    ornamentOpacity: 0.3,
+    ornamentOpacity: 0.4,
     panelPaperColor: '#fefcf6',
-    panelTextureOpacity: 0.15,
+    panelTextureOpacity: 0.2,
 
-    panelBackground: '#fefcf6',              // Light Parchment Surface
-    panelElevatedBackground: '#ffffff',      // Pure Parchment Card
-    panelBorder: 'rgba(212, 175, 55, 0.4)',  // Fine Muted Gold Border
+    panelBackground: 'rgba(254, 252, 246, 0.92)',
+    panelElevatedBackground: 'rgba(255, 255, 255, 0.95)',
+    panelBorder: 'rgba(212, 175, 55, 0.45)',
     
     textPrimary: '#0f2b48',                  // Deep Navy Ink Primary
     textSecondary: '#2b4c6f',                // Muted Ocean Navy
@@ -48,8 +50,8 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     focusRing: 'rgba(212, 175, 55, 0.5)',
     
     inputBackground: '#fefcf6',
-    inputBorder: 'rgba(43, 122, 148, 0.3)',
-    badgeBackground: 'rgba(54, 110, 87, 0.15)', // Sea Green Badge
+    inputBorder: 'rgba(43, 122, 148, 0.35)',
+    badgeBackground: 'rgba(54, 110, 87, 0.18)', // Sea Green Badge
     badgeText: '#1b5e75',                    // Ocean Blue Badge Text
     overlayBackground: 'rgba(12, 22, 38, 0.75)',
     
@@ -60,9 +62,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     headingFontFamily: "'Cinzel', 'Playfair Display', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
     
-    shadow: '0 10px 25px -5px rgba(15, 43, 72, 0.1), 0 0 10px rgba(212, 175, 55, 0.15)',
+    shadow: '0 10px 25px -5px rgba(15, 43, 72, 0.12), 0 0 12px rgba(212, 175, 55, 0.18)',
     cornerRadius: '1rem',
-    textureOpacity: 0.25,
+    textureOpacity: 0.35,
     decorativeMotif: 'cartographic',
     isDark: false,
   },
@@ -81,6 +83,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     paperBase: '#030712',
     paperHighlight: '#0f172a',
+    paperTextureOpacity: 0.0,
     paperGrainOpacity: 0.0,
     washBlue: '#0ea5e9',
     washTeal: '#0284c7',
@@ -145,6 +148,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     paperBase: '#f8fafc',
     paperHighlight: '#ffffff',
+    paperTextureOpacity: 0.0,
     paperGrainOpacity: 0.05,
     washBlue: '#1e40af',
     washTeal: '#047857',
@@ -209,6 +213,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     paperBase: '#090514',
     paperHighlight: '#160d29',
+    paperTextureOpacity: 0.0,
     paperGrainOpacity: 0.0,
     washBlue: '#ec4899',
     washTeal: '#06b6d4',
@@ -273,6 +278,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     paperBase: '#18120c',
     paperHighlight: '#261c14',
+    paperTextureOpacity: 0.0,
     paperGrainOpacity: 0.1,
     washBlue: '#d97706',
     washTeal: '#b45309',
@@ -337,6 +343,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     paperBase: '#061a12',
     paperHighlight: '#0d2d20',
+    paperTextureOpacity: 0.0,
     paperGrainOpacity: 0.15,
     washBlue: '#059669',
     washTeal: '#10b981',

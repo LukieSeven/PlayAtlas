@@ -60,9 +60,20 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--header-bg', tokens.headerBackground);
   root.style.setProperty('--panel-border', tokens.panelBorder);
 
-  // Apply Paper & Watercolor Texture System Tokens
+  // Apply Official Parchment Paper Asset & Texture System Variables
+  const activePaperTextureUrl = (accessibility.disableTextures || accessibility.plainBackgroundMode || !tokens.paperTextureUrl)
+    ? 'none'
+    : `url("${tokens.paperTextureUrl}")`;
+
+  const activePaperTextureOpacity = (accessibility.disableTextures || accessibility.plainBackgroundMode)
+    ? 0
+    : tokens.paperTextureOpacity;
+
   root.style.setProperty('--paper-base', tokens.paperBase);
   root.style.setProperty('--paper-highlight', tokens.paperHighlight);
+  root.style.setProperty('--paper-texture-url', activePaperTextureUrl);
+  root.style.setProperty('--paper-texture-opacity', activePaperTextureOpacity.toString());
+
   root.style.setProperty('--wash-blue', tokens.washBlue);
   root.style.setProperty('--wash-teal', tokens.washTeal);
   root.style.setProperty('--wash-green', tokens.washGreen);

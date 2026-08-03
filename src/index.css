@@ -11,7 +11,9 @@
   --header-bg: rgba(245, 240, 225, 0.92);
   --paper-base: #f7f4ea;
   --paper-highlight: #fefcf5;
-  --paper-grain-opacity: 0.35;
+  --paper-texture-url: url('/branding/watercolor-parchment-base.webp');
+  --paper-texture-opacity: 0.85;
+  --paper-grain-opacity: 0.25;
   --wash-blue: #2b7a94;
   --wash-teal: #1b5e75;
   --wash-green: #366e57;
@@ -81,7 +83,7 @@
   transition-duration: 0.001ms !important;
 }
 
-/* Semantic Application Shell with Multi-Layered Organic Watercolor System */
+/* Semantic Application Shell with Layered Parchment & Watercolor System */
 .themed-app-shell {
   background-color: var(--app-bg);
   color: var(--text-primary);
@@ -89,18 +91,24 @@
   overflow: hidden;
 }
 
-/* Layer 1 - Fine Noise Paper Grain Texture directly on App Shell */
+/* Layer 1 & 2 - Authentic Parchment Paper Texture & Noise Grain Overlay */
 .themed-app-shell::before {
   content: '';
   position: absolute;
   inset: 0;
-  background-image: url('/branding/watercolor-paper-grain.svg');
-  opacity: var(--paper-grain-opacity);
+  background-image: 
+    var(--paper-texture-url),
+    url('/branding/watercolor-paper-grain.svg');
+  background-position: center center, center center;
+  background-repeat: repeat, repeat;
+  background-size: 600px 600px, 200px 200px;
+  opacity: var(--paper-texture-opacity);
   pointer-events: none;
   z-index: 0;
+  mix-blend-mode: multiply;
 }
 
-/* Layer 2 & 3 - Organic Watercolor Pigment Washes & Tide Marks directly on App Shell */
+/* Layer 3 & 4 - Organic Watercolor Pigment Washes & Tide Marks */
 .themed-app-shell::after {
   content: '';
   position: absolute;
@@ -115,9 +123,10 @@
   pointer-events: none;
   z-index: 0;
   transition: opacity 0.25s ease;
+  mix-blend-mode: multiply;
 }
 
-/* Layer 4 - Cartographic Atlas Contour & Dotted Route Overlay Container */
+/* Layer 5 - Cartographic Atlas Contour & Dotted Route Overlay Container */
 .cartographic-bg-overlay {
   position: absolute;
   inset: 0;
@@ -155,6 +164,9 @@
 
 .themed-panel {
   background-color: var(--panel-bg);
+  background-image: var(--paper-texture-url);
+  background-size: 500px 500px;
+  background-repeat: repeat;
   border: 1px solid var(--panel-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-style);
@@ -165,6 +177,9 @@
 
 .themed-card {
   background-color: var(--panel-elevated-bg);
+  background-image: var(--paper-texture-url);
+  background-size: 450px 450px;
+  background-repeat: repeat;
   border: 1px solid var(--panel-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-style);
