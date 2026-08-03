@@ -6,8 +6,10 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build:igdb-test": "tsx scripts/build-igdb-index.ts",
     "test": "tsx tests/normalization.test.ts",
+    "build:igdb-test": "IGDB_IMPORT_MODE=test tsx scripts/build-igdb-index.ts",
+    "build:igdb-full": "IGDB_IMPORT_MODE=full tsx scripts/build-igdb-index.ts",
+    "verify:igdb-full": "tsx scripts/verify-igdb-catalog.ts generated/igdb-full-test",
     "lint": "eslint .",
     "preview": "vite preview"
   },
