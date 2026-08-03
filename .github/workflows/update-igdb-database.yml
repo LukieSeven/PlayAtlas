@@ -96,7 +96,7 @@ jobs:
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         run: npm run verify:browser-catalog generated/browser-catalog-test
 
-      # --- 3. DEPLOY EXISTING MODE EXECUTION (With Priority Selection & Completeness Check) ---
+      # --- 3. DEPLOY EXISTING MODE EXECUTION (Recursive Structure Detection & Legacy Chunk Rebuilding) ---
       - name: Restore Existing Catalog
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
         shell: bash
@@ -109,6 +109,7 @@ jobs:
           rm -rf \
             generated/release-download \
             generated/restored-artifact \
+            generated/restored-zip-content \
             generated/browser-catalog-restored \
             generated/igdb-full-restored
 
@@ -135,6 +136,8 @@ jobs:
             RESTORE_SOURCE="v1.0.0-catalog release"
             ARTIFACT_NAME="play-atlas-full-catalog.zip"
             ARTIFACT_ID="release-asset"
+            CATALOG_ROOT="generated/browser-catalog-restored"
+            CATALOG_FORMAT="v1.0.0-catalog release zip"
           else
             echo "⚠️ Release v1.0.0-catalog does not exist. Searching retained artifacts using priority order..."
 
@@ -177,60 +180,85 @@ jobs:
             echo "  ID: ${ARTIFACT_ID}"
             echo "  Name: ${ARTIFACT_NAME}"
 
-            mkdir -p generated/restored-artifact
+            mkdir -p generated/restored-artifact/content
 
             gh api \
               -H "Accept: application/vnd.github+json" \
               "repos/${GH_REPO}/actions/artifacts/${ARTIFACT_ID}/zip" \
               > generated/restored-artifact/artifact.zip
 
-            mkdir -p generated/restored-artifact/content
             unzip -q \
               generated/restored-artifact/artifact.zip \
               -d generated/restored-artifact/content
 
-            if [ -f "generated/restored-artifact/content/browser_catalog_manifest.json" ]; then
-              echo "📦 Restored complete compressed browser catalog."
-              mkdir -p generated/browser-catalog-restored
-              cp -r generated/restored-artifact/content/* generated/browser-catalog-restored/
-              RESTORE_SOURCE="browser-catalog artifact"
-            elif [ -f "generated/restored-artifact/content/data/browser_catalog_manifest.json" ]; then
-              echo "📦 Restored published pages data catalog."
-              mkdir -p generated/browser-catalog-restored
-              cp -r generated/restored-artifact/content/data/* generated/browser-catalog-restored/
-              RESTORE_SOURCE="published-pages artifact"
-            elif [ -f "generated/restored-artifact/content/game_index_manifest.json" ]; then
-              echo "📦 Restored raw full catalog. Rebuilding compressed browser catalog..."
-              mkdir -p generated/igdb-full-restored
-              cp -r generated/restored-artifact/content/* generated/igdb-full-restored/
-              IGDB_FULL_CATALOG_DIR=generated/igdb-full-restored PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-restored npm run build:browser-catalog
-              RESTORE_SOURCE="raw full-catalog artifact"
+            echo "📂 Extracted artifact structure (top 300 files):"
+            find generated/restored-artifact/content -maxdepth 7 -type f | sort | head -n 300
+
+            echo "🔍 Searching recursively for catalog marker files..."
+            find generated/restored-artifact/content -type f \( -name "browser_catalog_manifest.json" -o -name "game_index_manifest.json" -o -name "play-atlas-full-catalog.zip" -o -name "game_index_0001.json" -o -name "game_index_0001.json.gz" \) -print
+
+            # Detect nested catalog root directory & format
+            CATALOG_ROOT=""
+            CATALOG_FORMAT=""
+
+            if find generated/restored-artifact/content -name "browser_catalog_manifest.json" | grep -q .; then
+              MANIFEST_FILE=$(find generated/restored-artifact/content -name "browser_catalog_manifest.json" | head -n 1)
+              CATALOG_ROOT=$(dirname "$MANIFEST_FILE")
+
+              if find "$CATALOG_ROOT/chunks" -name "*.json.gz" 2>/dev/null | grep -q .; then
+                CATALOG_FORMAT="current_compressed_browser_catalog"
+              else
+                CATALOG_FORMAT="legacy_uncompressed_browser_catalog"
+              fi
+            elif find generated/restored-artifact/content -name "game_index_manifest.json" | grep -q .; then
+              MANIFEST_FILE=$(find generated/restored-artifact/content -name "game_index_manifest.json" | head -n 1)
+              CATALOG_ROOT=$(dirname "$MANIFEST_FILE")
+              CATALOG_FORMAT="raw_full_igdb_catalog"
+            elif find generated/restored-artifact/content -name "play-atlas-full-catalog.zip" | grep -q .; then
+              ZIP_FILE=$(find generated/restored-artifact/content -name "play-atlas-full-catalog.zip" | head -n 1)
+              mkdir -p generated/restored-zip-content
+              unzip -q "$ZIP_FILE" -d generated/restored-zip-content
+              MANIFEST_FILE=$(find generated/restored-zip-content -name "browser_catalog_manifest.json" | head -n 1)
+              CATALOG_ROOT=$(dirname "$MANIFEST_FILE")
+              CATALOG_FORMAT="nested_zip_browser_catalog"
             else
-              echo "::error::Unrecognized directory structure in restored artifact."
+              echo "::error::No valid catalog marker found in extracted artifact!"
               exit 1
             fi
+
+            echo "✅ Detected catalog root:   ${CATALOG_ROOT}"
+            echo "✅ Detected catalog format: ${CATALOG_FORMAT}"
+
+            mkdir -p generated/browser-catalog-restored
+
+            if [ "$CATALOG_FORMAT" = "current_compressed_browser_catalog" ] || [ "$CATALOG_FORMAT" = "nested_zip_browser_catalog" ]; then
+              echo "📦 Restoring complete compressed browser catalog directly..."
+              cp -r "$CATALOG_ROOT"/* generated/browser-catalog-restored/
+            else
+              echo "⚙️ Rebuilding current compressed browser catalog (.json.gz) from full detail chunks in ${CATALOG_ROOT}..."
+              IGDB_FULL_CATALOG_DIR="$CATALOG_ROOT" PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-restored npm run build:browser-catalog
+            fi
+
+            RESTORE_SOURCE="${CATALOG_FORMAT}"
           fi
 
-          # --- VALIDATE CATALOG COMPLETENESS & RECORD COUNT ---
-          REC_COUNT=0
-          CHUNK_COUNT=0
-
-          if [ -f "generated/browser-catalog-restored/browser_catalog_manifest.json" ]; then
-            REC_COUNT=$(jq -r '.catalogRecordCount // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)
-            CHUNK_COUNT=$(jq -r '.fullCatalog.chunkCount // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)
-          elif [ -f "generated/igdb-full-restored/game_index_manifest.json" ]; then
-            REC_COUNT=$(jq -r '.recordCount // 0' generated/igdb-full-restored/game_index_manifest.json)
-            CHUNK_COUNT=$(jq -r '.chunks | length // 0' generated/igdb-full-restored/game_index_manifest.json)
-          fi
+          # --- VALIDATE CATALOG COMPLETENESS & PRINT DIAGNOSTIC REPORT ---
+          REC_COUNT=$(jq -r '.catalogRecordCount // .recordCount // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)
+          CHUNK_COUNT=$(jq -r '.fullCatalog.chunkCount // (.chunks | length) // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)
+          FIRST_CHUNK=$(find generated/browser-catalog-restored/chunks -type f | sort | head -n 1 | xargs -r basename)
+          LAST_CHUNK=$(find generated/browser-catalog-restored/chunks -type f | sort | tail -n 1 | xargs -r basename)
 
           echo "===================================================="
           echo "📊 RESTORED CATALOG DIAGNOSTIC SUMMARY"
           echo "===================================================="
           echo "Selected Artifact Name:      ${ARTIFACT_NAME}"
           echo "Selected Artifact ID:        ${ARTIFACT_ID}"
-          echo "Restored Catalog Type:       ${RESTORE_SOURCE}"
+          echo "Detected Nested Root:        ${CATALOG_ROOT}"
+          echo "Detected Catalog Format:     ${CATALOG_FORMAT}"
           echo "Restored Record Count:       ${REC_COUNT}"
           echo "Restored Detail Chunk Count: ${CHUNK_COUNT}"
+          echo "First Detail Chunk Filename: ${FIRST_CHUNK}"
+          echo "Last Detail Chunk Filename:  ${LAST_CHUNK}"
           echo "===================================================="
 
           if [ "$REC_COUNT" -lt 300000 ]; then

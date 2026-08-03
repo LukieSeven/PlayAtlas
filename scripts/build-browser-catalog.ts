@@ -102,17 +102,42 @@ async function runBrowserCatalogBuilder() {
     process.exit(1);
   }
 
-  const manifestPath = path.join(inputDir, 'game_index_manifest.json');
-  if (!fs.existsSync(manifestPath)) {
-    console.error(`❌ ERROR: Input manifest missing: ${manifestPath}`);
-    process.exit(1);
+  // Detect input chunk list dynamically (supports raw IGDB manifest, browser catalog manifest, or chunks/ directory)
+  const inputChunkFiles: string[] = [];
+
+  const rawManifestPath = path.join(inputDir, 'game_index_manifest.json');
+  const inputBrowserManifestPath = path.join(inputDir, 'browser_catalog_manifest.json');
+  const chunksSubdirPath = path.join(inputDir, 'chunks');
+
+  if (fs.existsSync(rawManifestPath)) {
+    const rawManifest = JSON.parse(fs.readFileSync(rawManifestPath, 'utf-8'));
+    for (const c of rawManifest.chunks || []) {
+      inputChunkFiles.push(path.join(inputDir, path.basename(c.file)));
+    }
+  } else if (fs.existsSync(inputBrowserManifestPath)) {
+    const bManifest = JSON.parse(fs.readFileSync(inputBrowserManifestPath, 'utf-8'));
+    for (const c of bManifest.fullCatalog?.chunks || []) {
+      const relFile = c.file;
+      const candidate1 = path.join(inputDir, relFile);
+      const candidate2 = path.join(inputDir, path.basename(relFile));
+      if (fs.existsSync(candidate1)) inputChunkFiles.push(candidate1);
+      else if (fs.existsSync(candidate2)) inputChunkFiles.push(candidate2);
+    }
+  } else if (fs.existsSync(chunksSubdirPath)) {
+    const files = fs.readdirSync(chunksSubdirPath).filter(f => f.startsWith('game_index_')).sort();
+    for (const f of files) {
+      inputChunkFiles.push(path.join(chunksSubdirPath, f));
+    }
+  } else {
+    // Direct chunk search in inputDir
+    const files = fs.readdirSync(inputDir).filter(f => f.startsWith('game_index_')).sort();
+    for (const f of files) {
+      inputChunkFiles.push(path.join(inputDir, f));
+    }
   }
 
-  const inputManifest = JSON.parse(fs.readFileSync(manifestPath, 'utf-8'));
-  const inputChunks: any[] = inputManifest.chunks || [];
-
-  if (inputChunks.length === 0) {
-    console.error(`❌ ERROR: No chunks listed in input manifest.`);
+  if (inputChunkFiles.length === 0) {
+    console.error(`❌ ERROR: No full-detail chunk files found in input directory: ${inputDir}`);
     process.exit(1);
   }
 
@@ -157,21 +182,32 @@ async function runBrowserCatalogBuilder() {
   let totalCatalogUncompressedBytes = 0;
   let totalCatalogCompressedBytes = 0;
 
-  console.log(`📦 Processing & Gzipping ${inputChunks.length} full detail chunks...`);
+  console.log(`📦 Processing & Gzipping ${inputChunkFiles.length} full detail chunks...`);
 
-  for (let cIdx = 0; cIdx < inputChunks.length; cIdx++) {
-    const chunkInfo = inputChunks[cIdx];
+  for (let cIdx = 0; cIdx < inputChunkFiles.length; cIdx++) {
+    const chunkInputPath = inputChunkFiles[cIdx];
     const chunkNumericId = cIdx + 1; // 1-indexed chunk number
-    const chunkFilename = `${path.basename(chunkInfo.file, '.json')}.json.gz`;
-    const chunkInputPath = path.join(inputDir, path.basename(chunkInfo.file));
+
+    let baseName = path.basename(chunkInputPath);
+    if (baseName.endsWith('.json.gz')) baseName = baseName.slice(0, -8);
+    else if (baseName.endsWith('.json')) baseName = baseName.slice(0, -5);
+
+    const chunkFilename = `${baseName}.json.gz`;
 
     if (!fs.existsSync(chunkInputPath)) {
       console.error(`❌ ERROR: Chunk file missing: ${chunkInputPath}`);
       process.exit(1);
     }
 
-    const rawChunkContent = fs.readFileSync(chunkInputPath);
-    const records: any[] = JSON.parse(rawChunkContent.toString('utf-8'));
+    const rawBuffer = fs.readFileSync(chunkInputPath);
+    let records: any[];
+
+    if (chunkInputPath.endsWith('.gz')) {
+      const decompressed = zlib.gunzipSync(rawBuffer);
+      records = JSON.parse(decompressed.toString('utf-8'));
+    } else {
+      records = JSON.parse(rawBuffer.toString('utf-8'));
+    }
 
     const { compressedBuffer, uncompressedByteSize } = compressGzip(records);
     const chunkSha256 = computeSha256(compressedBuffer);
@@ -232,8 +268,8 @@ async function runBrowserCatalogBuilder() {
 
       if (Array.isArray(record.platformReleaseDates)) {
         for (const prd of record.platformReleaseDates) {
-          const pId = prd.platformId || (typeof prd.platform === 'number' ? prd.platform : null);
-          const dStr = prd.date || prd.dateStr || null;
+          const pId = prd.platformId || prd.p || (typeof prd.platform === 'number' ? prd.platform : null);
+          const dStr = prd.date || prd.d || prd.dateStr || null;
           if (pId && dStr) {
             compactPlatformReleaseDates.push({ p: pId, d: dStr });
           }
@@ -536,7 +572,7 @@ async function runBrowserCatalogBuilder() {
   console.log(`✅ Master ZIP Archive created in release-assets: ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
 
   // --- BUILD 5: MASTER BROWSER CATALOG MANIFEST ---
-  const browserCatalogManifest = {
+  const outputBrowserManifest = {
     source: 'igdb',
     schemaVersion: 2,
     generatedAt: new Date().toISOString(),
@@ -562,8 +598,8 @@ async function runBrowserCatalogBuilder() {
     },
   };
 
-  const browserManifestPath = path.join(outputDir, 'browser_catalog_manifest.json');
-  fs.writeFileSync(browserManifestPath, JSON.stringify(browserCatalogManifest, null, 2), 'utf-8');
+  const outputBrowserManifestPath = path.join(outputDir, 'browser_catalog_manifest.json');
+  fs.writeFileSync(outputBrowserManifestPath, JSON.stringify(outputBrowserManifest, null, 2), 'utf-8');
 
   // Measure exact published catalog size (compressed bytes on disk in outputDir)
   const publishedCatalogBytes =
