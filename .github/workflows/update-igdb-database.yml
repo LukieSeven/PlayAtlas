@@ -19,12 +19,15 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Run Normalization Unit Tests
+        run: npm test
+
       - name: Run Live 500-Record IGDB Importer
         env:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
           IGDB_IMPORT_LIMIT: 500
-        run: npx tsx scripts/build-igdb-index.ts
+        run: npm run build:igdb-test
 
       - name: Run Production Build Validation
         run: npm run build

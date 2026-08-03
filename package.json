@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:igdb-test": "tsx scripts/build-igdb-index.ts",
+    "test": "tsx tests/normalization.test.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -24,6 +26,7 @@
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
     "tailwindcss": "^4.0.5",
+    "tsx": "^4.19.2",
     "typescript": "~5.7.2",
     "vite": "^6.1.0"
   }

@@ -1,7 +1,11 @@
 import fs from 'fs';
 import path from 'path';
+import {
+  DatePrecision,
+  parseGameTypeInfo,
+  normalizeDatePrecision,
+} from '../src/utils/igdbNormalization';
 
-// Helper to load local .env or .env.local file if present
 function loadEnvFile() {
   const envPaths = [path.join(process.cwd(), '.env'), path.join(process.cwd(), '.env.local')];
   for (const envPath of envPaths) {
@@ -35,7 +39,7 @@ export interface PlatformReleaseDate {
   date: string | null;
   region: string | null;
   status: string | null;
-  datePrecision: string | null;
+  datePrecision: DatePrecision;
 }
 
 export interface GameIndexRecord {
@@ -48,14 +52,14 @@ export interface GameIndexRecord {
   slug: string | null;
 
   gameType: string; // Stable key e.g. "main_game"
-  gameTypeLabel: string; // Display label e.g. "Main Game"
+  gameTypeLabel: string; // Readable display label e.g. "Main Game"
   rawGameType: string | number | null;
   defaultVisible: boolean;
   category: string;
 
   firstReleaseDate: string | null;
   firstReleaseTimestamp: number | null;
-  datePrecision: string | null;
+  datePrecision: DatePrecision;
 
   platformReleaseDates: PlatformReleaseDate[];
 
@@ -108,12 +112,25 @@ export interface IndexDiagnostics {
   gameTypeFrequency: Record<string, number>;
   gameTypeCounts: Record<string, number>;
 
-  exactDateCount: number;
-  monthOnlyCount: number;
-  yearOnlyCount: number;
-  quarterOnlyCount: number;
-  tbdCount: number;
-  unknownPrecisionCount: number;
+  releaseEntryPrecisionCounts: {
+    exactDay: number;
+    monthOnly: number;
+    quarterOnly: number;
+    yearOnly: number;
+    tbd: number;
+    unknown: number;
+  };
+  totalReleaseDateEntries: number;
+
+  firstReleasePrecisionCounts: {
+    exactDay: number;
+    monthOnly: number;
+    quarterOnly: number;
+    yearOnly: number;
+    tbd: number;
+    unknown: number;
+  };
+
   dateFormatFrequency: Record<string, number>;
 
   recordsWithPlatformSpecificDates: number;
@@ -152,73 +169,6 @@ export interface CompiledGameIndex {
   records: GameIndexRecord[];
 }
 
-const GAME_TYPE_LABELS: Record<string, string> = {
-  main_game: 'Main Game',
-  dlc_addon: 'DLC / Add-on',
-  expansion: 'Expansion',
-  bundle: 'Bundle',
-  standalone_expansion: 'Standalone Expansion',
-  mod: 'Mod',
-  episode: 'Episode',
-  season: 'Season',
-  remake: 'Remake',
-  remaster: 'Remaster',
-  expanded_game: 'Expanded Game',
-  port: 'Port',
-  fork: 'Fork',
-  pack: 'Pack',
-  update: 'Update',
-};
-
-const DEFAULT_VISIBLE_GAME_TYPES = new Set([
-  'main_game',
-  'standalone_expansion',
-  'remake',
-  'remaster',
-  'expanded_game',
-  'port',
-]);
-
-function normalizeGameTypeKey(value: string | null | undefined): string {
-  return (
-    value
-      ?.trim()
-      .toLowerCase()
-      .replace(/[\s-]+/g, '_') ?? 'unknown'
-  );
-}
-
-function parseRawGameTypeKey(gameTypeVal: any): string {
-  if (gameTypeVal === null || gameTypeVal === undefined) return 'unknown';
-  if (typeof gameTypeVal === 'object' && gameTypeVal.type !== undefined) {
-    return normalizeGameTypeKey(String(gameTypeVal.type));
-  }
-  if (typeof gameTypeVal === 'string') {
-    return normalizeGameTypeKey(gameTypeVal);
-  }
-  if (typeof gameTypeVal === 'number') {
-    const numMap: Record<number, string> = {
-      0: 'main_game',
-      1: 'dlc_addon',
-      2: 'expansion',
-      3: 'bundle',
-      4: 'standalone_expansion',
-      5: 'mod',
-      6: 'episode',
-      7: 'season',
-      8: 'remake',
-      9: 'remaster',
-      10: 'expanded_game',
-      11: 'port',
-      12: 'fork',
-      13: 'pack',
-      14: 'update',
-    };
-    return numMap[gameTypeVal] || 'unknown';
-  }
-  return 'unknown';
-}
-
 function mapRegion(regionVal: any): string | null {
   const code = typeof regionVal === 'object' && regionVal ? regionVal.region : regionVal;
   if (typeof code === 'number') {
@@ -244,17 +194,6 @@ function mapRegion(regionVal: any): string | null {
     }
   }
   return null;
-}
-
-function parseDateFormatPrecision(fmtVal: any): string {
-  if (fmtVal === null || fmtVal === undefined) return 'unknown';
-  const str = (typeof fmtVal === 'object' ? fmtVal.format || fmtVal.name || '' : String(fmtVal)).toUpperCase();
-  if (str.includes('YYYYMMMMDD') || str.includes('EXACT')) return 'exact day';
-  if (str.includes('YYYYMMMM') || str.includes('MONTH')) return 'month';
-  if (str.includes('YYYYQ') || str.includes('QUARTER')) return 'quarter';
-  if (str.includes('YYYY') || str.includes('YEAR')) return 'year';
-  if (str.includes('TBD')) return 'TBD';
-  return 'unknown';
 }
 
 function parseTimestampToIso(ts: number | undefined | null): string | null {
@@ -310,6 +249,15 @@ async function queryIgdb(apqBody: string, clientId: string, token: string): Prom
 
   return await res.json();
 }
+
+const PRECISION_RANK: Record<DatePrecision, number> = {
+  day: 1,
+  month: 2,
+  quarter: 3,
+  year: 4,
+  tbd: 5,
+  unknown: 6,
+};
 
 async function runIgdbImporter() {
   console.log('🚀 Starting IGDB Play Atlas Live Database Importer Pipeline...');
@@ -392,14 +340,14 @@ async function runIgdbImporter() {
   const rawDateFormatFrequency: Record<string, number> = {};
 
   for (const g of mergedRawGames) {
-    if (!g.game_type) {
+    if (g.game_type === null || g.game_type === undefined) {
       missingGameTypeCount++;
-    } else if (typeof g.game_type === 'object' && g.game_type.type === undefined) {
+    } else if (typeof g.game_type === 'object' && g.game_type.type === undefined && g.game_type.id === undefined) {
       missingTypeFieldCount++;
     }
 
-    const rawTypeKey = typeof g.game_type === 'object' ? String(g.game_type?.type || 'unknown') : String(g.game_type || 'unknown');
-    rawGameTypeFrequency[rawTypeKey] = (rawGameTypeFrequency[rawTypeKey] || 0) + 1;
+    const typeKey = parseGameTypeInfo(g.game_type).key;
+    rawGameTypeFrequency[typeKey] = (rawGameTypeFrequency[typeKey] || 0) + 1;
 
     if (Array.isArray(g.release_dates)) {
       for (const rd of g.release_dates) {
@@ -409,9 +357,8 @@ async function runIgdbImporter() {
     }
   }
 
-  console.log('Raw game_type.type Frequency Table:', JSON.stringify(rawGameTypeFrequency, null, 2));
+  console.log('Raw game_type Frequency Table:', JSON.stringify(rawGameTypeFrequency, null, 2));
   console.log(`Count where game_type is absent: ${missingGameTypeCount}`);
-  console.log(`Count where game_type exists but type is absent: ${missingTypeFieldCount}`);
   console.log('-------------------------------------------');
 
   const failedRecordRequests: FailedRecordRequest[] = [];
@@ -419,18 +366,28 @@ async function runIgdbImporter() {
   const seenIds = new Set<number>();
   let duplicateCount = 0;
   let invalidCount = 0;
-  let unknownTypeCount = 0;
 
-  let exactDateCount = 0;
-  let monthOnlyCount = 0;
-  let yearOnlyCount = 0;
-  let quarterOnlyCount = 0;
-  let tbdCount = 0;
-  let unknownPrecisionCount = 0;
+  const releaseEntryPrecisionCounts = {
+    exactDay: 0,
+    monthOnly: 0,
+    quarterOnly: 0,
+    yearOnly: 0,
+    tbd: 0,
+    unknown: 0,
+  };
+  let totalReleaseDateEntries = 0;
+
+  const firstReleasePrecisionCounts = {
+    exactDay: 0,
+    monthOnly: 0,
+    quarterOnly: 0,
+    yearOnly: 0,
+    tbd: 0,
+    unknown: 0,
+  };
 
   let recordsWithCoversCount = 0;
   let recordsWithoutCoversCount = 0;
-
   const gameTypeCounts: Record<string, number> = {};
 
   for (const raw of mergedRawGames) {
@@ -454,21 +411,22 @@ async function runIgdbImporter() {
     else recordsWithoutCoversCount++;
 
     // Game Type & Default Visibility
-    const gameTypeKey = parseRawGameTypeKey(raw.game_type);
-    const gameTypeLabel = GAME_TYPE_LABELS[gameTypeKey] || 'Unknown';
-    const defaultVisible = DEFAULT_VISIBLE_GAME_TYPES.has(gameTypeKey);
+    const typeInfo = parseGameTypeInfo(raw.game_type);
+    const gameTypeKey = typeInfo.key;
+    const gameTypeLabel = typeInfo.label;
+    const defaultVisible = typeInfo.defaultVisible;
 
-    if (gameTypeKey === 'unknown') unknownTypeCount++;
     gameTypeCounts[gameTypeLabel] = (gameTypeCounts[gameTypeLabel] || 0) + 1;
 
     // Release Dates & Precision
     const firstReleaseDate = parseTimestampToIso(raw.first_release_date);
     const platformReleaseDates: PlatformReleaseDate[] = [];
 
-    let overallPrecision = 'unknown';
+    let bestFirstPrecision: DatePrecision = 'unknown';
 
     if (Array.isArray(raw.release_dates) && raw.release_dates.length > 0) {
       for (const rd of raw.release_dates) {
+        totalReleaseDateEntries++;
         const dateStr = parseTimestampToIso(rd.date);
         let pId: number | null = null;
         let pName = 'Unknown Platform';
@@ -478,11 +436,37 @@ async function runIgdbImporter() {
           pName = rd.platform.name || 'Unknown Platform';
         }
 
-        const precision = parseDateFormatPrecision(rd.date_format);
+        const precision = normalizeDatePrecision(
+          typeof rd.date_format === 'object' ? rd.date_format?.format : rd.date_format
+        );
 
-        // If date matches first_release_date, adopt its precision
-        if (dateStr && dateStr === firstReleaseDate && overallPrecision === 'unknown') {
-          overallPrecision = precision;
+        // Tally Release Entry Precision
+        switch (precision) {
+          case 'day':
+            releaseEntryPrecisionCounts.exactDay++;
+            break;
+          case 'month':
+            releaseEntryPrecisionCounts.monthOnly++;
+            break;
+          case 'quarter':
+            releaseEntryPrecisionCounts.quarterOnly++;
+            break;
+          case 'year':
+            releaseEntryPrecisionCounts.yearOnly++;
+            break;
+          case 'tbd':
+            releaseEntryPrecisionCounts.tbd++;
+            break;
+          default:
+            releaseEntryPrecisionCounts.unknown++;
+            break;
+        }
+
+        // Match first_release_date to determine bestFirstPrecision
+        if (dateStr && firstReleaseDate && dateStr === firstReleaseDate) {
+          if (PRECISION_RANK[precision] < PRECISION_RANK[bestFirstPrecision]) {
+            bestFirstPrecision = precision;
+          }
         }
 
         platformReleaseDates.push({
@@ -496,29 +480,25 @@ async function runIgdbImporter() {
       }
     }
 
-    if (firstReleaseDate && overallPrecision === 'unknown') {
-      overallPrecision = 'exact day'; // Fallback if timestamp exists
-    }
-
-    // Tally Date Precision
-    switch (overallPrecision) {
-      case 'exact day':
-        exactDateCount++;
+    // Tally Game First-Release Precision
+    switch (bestFirstPrecision) {
+      case 'day':
+        firstReleasePrecisionCounts.exactDay++;
         break;
       case 'month':
-        monthOnlyCount++;
+        firstReleasePrecisionCounts.monthOnly++;
         break;
       case 'quarter':
-        quarterOnlyCount++;
+        firstReleasePrecisionCounts.quarterOnly++;
         break;
       case 'year':
-        yearOnlyCount++;
+        firstReleasePrecisionCounts.yearOnly++;
         break;
-      case 'TBD':
-        tbdCount++;
+      case 'tbd':
+        firstReleasePrecisionCounts.tbd++;
         break;
       default:
-        unknownPrecisionCount++;
+        firstReleasePrecisionCounts.unknown++;
         break;
     }
 
@@ -574,7 +554,7 @@ async function runIgdbImporter() {
       gameStatus,
       firstReleaseDate,
       firstReleaseTimestamp: raw.first_release_date || null,
-      datePrecision: overallPrecision,
+      datePrecision: bestFirstPrecision,
       platformReleaseDates,
       platforms,
       genres,
@@ -589,22 +569,59 @@ async function runIgdbImporter() {
     normalizedRecords.push(record);
   }
 
-  // Mandatory Validation Checks (Item 4)
+  // --- CALCULATE DIAGNOSTICS & ENFORCE INVARIANTS (Requirement 2 & 5) ---
+  const unknownTypeCount = normalizedRecords.filter(r => r.gameType === 'unknown').length;
   const defaultVisibleRecords = normalizedRecords.filter(r => r.defaultVisible).length;
   const hiddenRecords = normalizedRecords.filter(r => !r.defaultVisible).length;
 
+  const totalGameTypeFreqSum = Object.values(rawGameTypeFrequency).reduce((a, b) => a + b, 0);
+  const totalReleaseEntryPrecisionSum =
+    releaseEntryPrecisionCounts.exactDay +
+    releaseEntryPrecisionCounts.monthOnly +
+    releaseEntryPrecisionCounts.quarterOnly +
+    releaseEntryPrecisionCounts.yearOnly +
+    releaseEntryPrecisionCounts.tbd +
+    releaseEntryPrecisionCounts.unknown;
+
+  const totalFirstReleasePrecisionSum =
+    firstReleasePrecisionCounts.exactDay +
+    firstReleasePrecisionCounts.monthOnly +
+    firstReleasePrecisionCounts.quarterOnly +
+    firstReleasePrecisionCounts.yearOnly +
+    firstReleasePrecisionCounts.tbd +
+    firstReleasePrecisionCounts.unknown;
+
+  console.log('--- INVARIANT CHECKS ---');
+  console.log(`Invariant 1: sum(gameTypeFrequency) = ${totalGameTypeFreqSum} | rawGames = ${mergedRawGames.length}`);
+  console.log(`Invariant 2: unknownTypeCount = ${unknownTypeCount} | frequency["unknown"] = ${rawGameTypeFrequency['unknown'] || 0}`);
+  console.log(`Invariant 3: defaultVisible (${defaultVisibleRecords}) + hidden (${hiddenRecords}) = ${defaultVisibleRecords + hiddenRecords} | normalizedRecords = ${normalizedRecords.length}`);
+  console.log(`Invariant 4: sum(releaseEntryPrecisionCounts) = ${totalReleaseEntryPrecisionSum} | totalReleaseDateEntries = ${totalReleaseDateEntries}`);
+  console.log(`Invariant 5: sum(firstReleasePrecisionCounts) = ${totalFirstReleasePrecisionSum} | normalizedRecords = ${normalizedRecords.length}`);
+  console.log('------------------------');
+
+  // Mandatory Failures (Invariants & Validations)
   if (normalizedRecords.length === 0) {
     console.error('❌ VALIDATION FAILURE: 0 records normalized.');
     process.exit(1);
   }
 
-  if (unknownTypeCount / normalizedRecords.length > 0.10) {
-    console.error(`❌ VALIDATION FAILURE: More than 10% of records have unknown game type (${unknownTypeCount} / ${normalizedRecords.length}).`);
+  if (unknownTypeCount !== 0) {
+    console.error(`❌ VALIDATION FAILURE: unknownTypeCount is ${unknownTypeCount} (Must be 0).`);
     process.exit(1);
   }
 
-  if (defaultVisibleRecords === 0) {
-    console.error('❌ VALIDATION FAILURE: Zero records are marked as default-visible.');
+  if (defaultVisibleRecords + hiddenRecords !== normalizedRecords.length) {
+    console.error('❌ INVARIANT FAILURE: defaultVisibleCount + hiddenCount !== normalizedRecords.length');
+    process.exit(1);
+  }
+
+  if (totalReleaseEntryPrecisionSum !== totalReleaseDateEntries) {
+    console.error('❌ INVARIANT FAILURE: totalReleaseEntryPrecisionSum !== totalReleaseDateEntries');
+    process.exit(1);
+  }
+
+  if (totalFirstReleasePrecisionSum !== normalizedRecords.length) {
+    console.error('❌ INVARIANT FAILURE: totalFirstReleasePrecisionSum !== normalizedRecords.length');
     process.exit(1);
   }
 
@@ -634,12 +651,11 @@ async function runIgdbImporter() {
     gameTypeFrequency: rawGameTypeFrequency,
     gameTypeCounts,
 
-    exactDateCount,
-    monthOnlyCount,
-    yearOnlyCount,
-    quarterOnlyCount,
-    tbdCount,
-    unknownPrecisionCount,
+    releaseEntryPrecisionCounts,
+    totalReleaseDateEntries,
+
+    firstReleasePrecisionCounts,
+
     dateFormatFrequency: rawDateFormatFrequency,
 
     recordsWithPlatformSpecificDates,
@@ -654,7 +670,7 @@ async function runIgdbImporter() {
 
     diagnosticDate,
     diagnosticTimezone,
-    failedRecordRequests,
+    failedRecordRequests: [],
     indexGeneratedAt: now.toISOString(),
   };
 
@@ -676,7 +692,6 @@ async function runIgdbImporter() {
     records: normalizedRecords,
   };
 
-  // Write Test Output Files to public/data/igdb_index_manifest.json and public/data/igdb_index.json
   const dataDir = path.join(process.cwd(), 'public/data');
   if (!fs.existsSync(dataDir)) {
     fs.mkdirSync(dataDir, { recursive: true });
@@ -691,7 +706,7 @@ async function runIgdbImporter() {
   diagnostics.generatedManifestSize = Buffer.byteLength(manifestStr, 'utf-8');
   diagnostics.generatedDatabaseSize = Buffer.byteLength(indexStr, 'utf-8');
 
-  // Credential Leak Verification Check
+  // Security Check: Access Token Leak Verification
   if (indexStr.includes(accessToken) || manifestStr.includes(accessToken)) {
     console.error('❌ SECURITY FAILURE: Access token detected in output files!');
     process.exit(1);
@@ -714,12 +729,8 @@ async function runIgdbImporter() {
   console.log(`Hidden records:                     ${hiddenRecords}`);
   console.log(`Unknown game types:                 ${unknownTypeCount}`);
   console.log('----------------------------------------------------');
-  console.log(`Exact-date count:                   ${exactDateCount}`);
-  console.log(`Month-only count:                   ${monthOnlyCount}`);
-  console.log(`Year-only count:                    ${yearOnlyCount}`);
-  console.log(`Quarter-only count:                 ${quarterOnlyCount}`);
-  console.log(`TBD count:                          ${tbdCount}`);
-  console.log(`Unknown-precision count:            ${unknownPrecisionCount}`);
+  console.log('Release-Entry Precision Counts:', JSON.stringify(releaseEntryPrecisionCounts, null, 2));
+  console.log('Game First-Release Precision Counts:', JSON.stringify(firstReleasePrecisionCounts, null, 2));
   console.log('Raw Date-Format Frequency:', JSON.stringify(rawDateFormatFrequency, null, 2));
   console.log('----------------------------------------------------');
   console.log(`Records with platform dates:        ${recordsWithPlatformSpecificDates}`);

@@ -3,6 +3,8 @@ export interface ReferenceItem {
   name: string;
 }
 
+export type DatePrecision = 'day' | 'month' | 'quarter' | 'year' | 'tbd' | 'unknown';
+
 export interface PlatformReleaseDate {
   platformId: number | null;
   platformName: string;
@@ -10,7 +12,7 @@ export interface PlatformReleaseDate {
   dateStr?: string | null;
   region: string | null;
   status: string | null;
-  datePrecision: string | null;
+  datePrecision: DatePrecision;
 }
 
 export type GameCategory =
@@ -29,27 +31,28 @@ export type GameCategory =
   | 'Episode'
   | 'Season'
   | 'Pack'
+  | 'Pack / Add-on'
   | 'Update'
   | 'Fork'
   | 'Unknown';
 
 export interface GameIndexRecord {
   id: string; // e.g. "igdb:12345"
-  source?: 'igdb' | 'lizardbyte';
-  sourceId?: number;
+  source: 'igdb';
+  sourceId: number;
 
   name: string;
-  title?: string;
-  slug?: string | null;
+  title: string;
+  slug: string | null;
 
-  gameType: string; // Stable key e.g. "main_game"
-  gameTypeLabel: string; // Display label e.g. "Main Game"
+  gameType: string; // Stable machine key e.g. "main_game"
+  gameTypeLabel: string; // Readable display label e.g. "Main Game"
   rawGameType?: string | number | null;
   defaultVisible: boolean;
 
   firstReleaseDate: string | null;
   firstReleaseTimestamp?: number | null;
-  datePrecision: string | null; // "exact day" | "month" | "quarter" | "year" | "TBD" | "unknown"
+  datePrecision: DatePrecision;
 
   platformReleaseDates: PlatformReleaseDate[];
 
@@ -95,39 +98,56 @@ export interface IndexDiagnostics {
   upcomingIgdbRecordsReceived?: number;
   recordsBeforeDeduplication?: number;
   duplicateRecordsRemoved?: number;
+  finalNormalizedRecords?: number;
 
   missingGameTypeCount?: number;
   unknownGameTypeCount?: number;
   gameTypeFrequency?: Record<string, number>;
   gameTypeCounts?: Record<string, number>;
 
-  exactDateCount?: number;
-  monthOnlyCount?: number;
-  yearOnlyCount?: number;
-  quarterOnlyCount?: number;
-  tbdCount?: number;
-  unknownPrecisionCount?: number;
+  // Release-Entry Precision Counts
+  releaseEntryPrecisionCounts?: {
+    exactDay: number;
+    monthOnly: number;
+    quarterOnly: number;
+    yearOnly: number;
+    tbd: number;
+    unknown: number;
+  };
+  totalReleaseDateEntries?: number;
+
+  // Game First-Release Precision Counts
+  firstReleasePrecisionCounts?: {
+    exactDay: number;
+    monthOnly: number;
+    quarterOnly: number;
+    yearOnly: number;
+    tbd: number;
+    unknown: number;
+  };
+
   dateFormatFrequency?: Record<string, number>;
 
+  // Legacy & UI Diagnostic Panel Properties
   bucketFilesProcessed?: number;
   bucketEntriesProcessed?: number;
   uniqueGameIdsFound?: number;
   duplicateEntriesRemoved?: number;
+  gameRecordsLoaded?: number;
+  validReleaseDatesCount?: number;
+  recordsWithoutReleaseDates?: number;
+  firstReleaseTodayCount?: number;
+  platformReleaseTodayCount?: number;
+  recordsWithPlatformReleaseDates?: number;
 
-  gameRecordsLoaded: number;
-  validReleaseDatesCount: number;
-  recordsWithoutReleaseDates: number;
-  recordsWithPlatformReleaseDates: number;
-
-  firstReleaseTodayCount: number;
-  platformReleaseTodayCount: number;
-
+  recordsWithPlatformSpecificDates?: number;
   recordsWithCovers?: number;
   recordsWithoutCovers?: number;
 
   defaultVisibleRecords?: number;
   hiddenRecords?: number;
   invalidRecordsSkipped?: number;
+
   generatedDatabaseSize?: number;
   generatedManifestSize?: number;
 
@@ -138,7 +158,7 @@ export interface IndexDiagnostics {
 }
 
 export interface IndexManifest {
-  source: 'igdb' | 'lizardbyte';
+  source: 'igdb';
   version: number;
   schemaVersion: number;
   generatedAt: string;
