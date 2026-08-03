@@ -1,9 +1,10 @@
-import React, { useSyncExternalStore } from 'react';
+import React from 'react';
 import { GameCardViewModel, mapToGameCardViewModel } from '../../mappers/gameCardViewModelMapper';
 import { UniversalActionMenu } from './UniversalActionMenu';
 import { Badge } from '../ui/Badge';
 import { getGameTypeBadgeVariant } from '../../services/gameTypePresentationService';
 import { personalGameStore } from '../../services/personalGameStore';
+import { usePersonalGameRecord } from '../../hooks/usePersonalGameRecord';
 import { Gamepad2, Bookmark, Star } from 'lucide-react';
 
 interface GameCardProps {
@@ -22,11 +23,8 @@ export const GameCard: React.FC<GameCardProps> = ({
   // Map raw catalog record if viewModel is not directly provided
   const vm: GameCardViewModel = providedViewModel || mapToGameCardViewModel(game);
 
-  // Subscribe to live PersonalGameStore so card indicators update instantly
-  const personalRecord = useSyncExternalStore(
-    cb => personalGameStore.subscribe(cb),
-    () => personalGameStore.getRecord(vm.gameId) || personalGameStore.getRecord(`igdb_${vm.numericId}`)
-  );
+  // Subscribe to live PersonalGameStore ONLY for this specific game ID
+  const personalRecord = usePersonalGameRecord(vm.gameId);
 
   // Re-calculate VM with live personal store data
   const liveVm = mapToGameCardViewModel(game || vm);
@@ -85,6 +83,7 @@ export const GameCard: React.FC<GameCardProps> = ({
             gameTitle={liveVm.title}
             coverUrl={liveVm.coverUrl}
             releaseYear={liveVm.releaseYearDisplay !== 'TBA' ? parseInt(liveVm.releaseYearDisplay, 10) : undefined}
+            personalRecord={personalRecord}
           />
         </div>
 

@@ -3,8 +3,9 @@ import { normalizeGameType, shouldShowGameTypeBadge, getGameTypeLabel } from '..
 import { getPlatformFamily, getPlatformAbbreviation, groupPlatformsByFamily } from '../src/services/platformTaxonomyService';
 import { mapToGameCardViewModel } from '../src/mappers/gameCardViewModelMapper';
 import { NEW_RELEASES_DATABASE } from '../src/services/mainstreamGames';
+import { personalGameStore, normalizePersonalGameId } from '../src/services/personalGameStore';
 
-function runPersonalDataUnitTests() {
+async function runPersonalDataUnitTests() {
   console.log('🧪 Running Personal Game Core & Universal Actions Unit Tests...');
   let passed = 0;
   let failed = 0;
@@ -16,6 +17,16 @@ function runPersonalDataUnitTests() {
     } else {
       failed++;
       console.error(`  ❌ FAIL: ${testName}`);
+    }
+  }
+
+  function assertEqual(actual: any, expected: any, testName: string) {
+    if (actual === expected) {
+      passed++;
+      console.log(`  ✅ PASS: ${testName}`);
+    } else {
+      failed++;
+      console.error(`  ❌ FAIL: ${testName} (Expected: ${expected}, Actual: ${actual})`);
     }
   }
 
@@ -83,35 +94,49 @@ function runPersonalDataUnitTests() {
   assert(vm.externalScore.displayString === 'Not Rated', 'External score is Not Rated without rating data');
   assert(vm.shouldShowGameTypeBadge === false, 'Compact card hides badge for normal main games');
 
-  // 6. NewReleasesPage Architectural Regression Tests
-  // Simulate release feed zero-results and error state guarantees
-  const mockFeedState = {
-    loading: false,
-    error: 'Failed to communicate with release catalog partition service.',
-    games: [],
-    searchQuery: '',
-  };
+  // 6. Canonical ID Normalization Tests
+  assertEqual(normalizePersonalGameId(12345), 'igdb_12345', 'Normalizes numeric ID 12345 to igdb_12345');
+  assertEqual(normalizePersonalGameId('12345'), 'igdb_12345', 'Normalizes string "12345" to igdb_12345');
+  assertEqual(normalizePersonalGameId('igdb:12345'), 'igdb_12345', 'Normalizes "igdb:12345" to igdb_12345');
+  assertEqual(normalizePersonalGameId('igdb_12345'), 'igdb_12345', 'Normalizes "igdb_12345" to igdb_12345');
 
-  // State 1: Search and filter controls must always remain accessible during release load errors
-  const filterControlsVisibleOnError = true;
-  assert(filterControlsVisibleOnError === true, 'NewReleasesPage renders search/filter controls after a release-load error');
+  // 7. Scoped Per-Game Store Subscription Tests
+  await personalGameStore.init();
 
-  // State 2: Release errors must NOT display the legitimate zero-results message
-  const isMisleadingZeroResultsDisplayed = mockFeedState.error === null && mockFeedState.games.length === 0;
-  assert(isMisleadingZeroResultsDisplayed === false, 'Release errors do not display the legitimate zero-results message');
+  let gameAEvents = 0;
+  let gameBEvents = 0;
+  let globalEvents = 0;
 
-  // State 3: Full catalog search must operate independently of zero daily releases
-  mockFeedState.searchQuery = 'Witcher';
-  const fullCatalogSearchActive = mockFeedState.searchQuery.length >= 2;
-  assert(fullCatalogSearchActive === true, 'Full catalog search remains available with zero daily releases');
+  const unsubscribeA = personalGameStore.subscribeToGame(99901, () => { gameAEvents++; });
+  const unsubscribeB = personalGameStore.subscribeToGame(99902, () => { gameBEvents++; });
+  const unsubscribeGlobal = personalGameStore.subscribe(() => { globalEvents++; });
 
-  // State 4: Clearing search restores release feed view
-  mockFeedState.searchQuery = '';
-  const feedRestored = mockFeedState.searchQuery === '';
-  assert(feedRestored === true, 'Clearing search restores release results');
+  await personalGameStore.setInterestStatus(99901, 'wanted');
+  assertEqual(gameAEvents, 1, 'Updating game 99901 triggers listener for game 99901');
+  assertEqual(gameBEvents, 0, 'Updating game 99901 DOES NOT trigger listener for unrelated game 99902');
+  assertEqual(globalEvents, 1, 'Updating game 99901 triggers global listener once');
 
-  // State 5: Shared GameCard and UniversalActionMenu remain wired
-  assert(typeof mapToGameCardViewModel === 'function', 'Shared GameCard view model mapper and UniversalActionMenu remain wired');
+  // 8. Immutable Update & Empty Record Deletion Tests
+  const recordA = personalGameStore.getRecord(99901);
+  assert(Boolean(recordA && recordA.interestStatus === 'wanted'), 'Record 99901 has interestStatus wanted');
+
+  // Removing interest status when no other data exists should clean up empty record
+  await personalGameStore.setInterestStatus(99901, undefined);
+  const cleanedRecord = personalGameStore.getRecord(99901);
+  assert(cleanedRecord === undefined, 'Removing interest status when no other data exists deletes empty record');
+
+  // Record with rating preserved when interest status removed
+  await personalGameStore.setUserRating(99902, 9.0);
+  await personalGameStore.setInterestStatus(99902, 'wanted');
+  await personalGameStore.setInterestStatus(99902, undefined);
+  const preservedRecord = personalGameStore.getRecord(99902);
+  assert(Boolean(preservedRecord && preservedRecord.userRating === 9.0), 'Removing interest status preserves record if user rating exists');
+
+  // Clean up test subscriptions
+  unsubscribeA();
+  unsubscribeB();
+  unsubscribeGlobal();
+  await personalGameStore.removePersonalRecord(99902);
 
   console.log(`----------------------------------------------------`);
   console.log(`📊 Personal Game Core Test Results: ${passed} passed, ${failed} failed.`);
@@ -122,4 +147,7 @@ function runPersonalDataUnitTests() {
   }
 }
 
-runPersonalDataUnitTests();
+runPersonalDataUnitTests().catch(err => {
+  console.error('❌ Personal Data Test Failed:', err);
+  process.exit(1);
+});

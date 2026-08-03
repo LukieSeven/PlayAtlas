@@ -1,4 +1,4 @@
-import React, { useState, useSyncExternalStore } from 'react';
+import React, { useState } from 'react';
 import {
   MoreVertical,
   CheckCircle2,
@@ -9,7 +9,8 @@ import {
   X
 } from 'lucide-react';
 import { personalGameStore } from '../../services/personalGameStore';
-import { OwnershipType, PhysicalCondition, PlayStatus, InterestStatus } from '../../types/personal';
+import { usePersonalGameRecord } from '../../hooks/usePersonalGameRecord';
+import { OwnershipType, PhysicalCondition, PlayStatus, InterestStatus, PersonalGameRecord } from '../../types/personal';
 
 interface UniversalActionMenuProps {
   gameId: string | number;
@@ -17,6 +18,7 @@ interface UniversalActionMenuProps {
   coverUrl?: string;
   releaseYear?: number;
   className?: string;
+  personalRecord?: PersonalGameRecord;
 }
 
 export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
@@ -25,16 +27,15 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
   coverUrl,
   releaseYear,
   className = '',
+  personalRecord: providedPersonalRecord,
 }) => {
   const strId = String(gameId);
   const [isOpen, setIsOpen] = useState(false);
   const [isOwnershipModalOpen, setIsOwnershipModalOpen] = useState(false);
 
-  // Subscribe to live PersonalGameStore updates
-  const personalRecord = useSyncExternalStore(
-    cb => personalGameStore.subscribe(cb),
-    () => personalGameStore.getRecord(strId) || personalGameStore.getRecord(`igdb_${strId}`)
-  );
+  // Subscribe to per-game store updates ONLY if parent did not already supply the record prop
+  const hookRecord = usePersonalGameRecord(providedPersonalRecord ? null : gameId);
+  const personalRecord = providedPersonalRecord || hookRecord;
 
   // Ownership form state
   const [platformId, setPlatformId] = useState<number>(6); // Default PC

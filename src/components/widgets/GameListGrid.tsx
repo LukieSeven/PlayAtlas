@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Filter, SortAsc, LayoutGrid, List as ListIcon, ShieldAlert } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Filter, SortAsc, LayoutGrid, List as ListIcon, ShieldAlert, ChevronDown } from 'lucide-react';
 import { CompactGameLookupRecord } from '../../types/catalog';
 import { normalizeGameTypeCategory } from '../../utils/gameTypeUtils';
 import { GameCard } from '../common/GameCard';
@@ -9,6 +9,7 @@ interface GameListGridProps {
   games?: CompactGameLookupRecord[];
   totalMatches?: number;
   onSelectGame?: (gameId: number, name: string) => void;
+  onVisibleGamesChange?: (visibleGames: CompactGameLookupRecord[]) => void;
   isLoading?: boolean;
   title?: string;
   description?: string;
@@ -19,6 +20,7 @@ interface GameListGridProps {
 export const GameListGrid: React.FC<GameListGridProps> = ({
   games = [],
   onSelectGame,
+  onVisibleGamesChange,
   isLoading = false,
   title,
   description,
@@ -28,6 +30,14 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'yearAsc' | 'yearDesc'>('relevance');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  
+  // Real Incremental Rendering State (Initial batch: 40)
+  const [visibleCount, setVisibleCount] = useState<number>(40);
+
+  // Reset visibleCount to 40 whenever input games, filters, or sorting change
+  useEffect(() => {
+    setVisibleCount(40);
+  }, [games, selectedPlatformFamily, selectedCategory, sortBy]);
 
   // Filter games dynamically using PlatformTaxonomyService
   const filteredGames = useMemo(() => {
@@ -63,6 +73,18 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         return list; // Retain deterministic search ranking order
     }
   }, [filteredGames, sortBy]);
+
+  // Real Incremental Slice (only mounts visible cards)
+  const visibleGames = useMemo(() => {
+    return sortedGames.slice(0, visibleCount);
+  }, [sortedGames, visibleCount]);
+
+  // Notify parent of visible games change for targeted batch hydration
+  useEffect(() => {
+    if (onVisibleGamesChange) {
+      onVisibleGamesChange(visibleGames);
+    }
+  }, [visibleGames, onVisibleGamesChange]);
 
   const platformFamilies = getAllFamilies();
 
@@ -121,7 +143,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
           </select>
 
           <span className="text-xs font-mono font-bold text-[#0f2b48]">
-            Showing {sortedGames.length} games
+            Showing {visibleGames.length} of {sortedGames.length.toLocaleString()} games
           </span>
         </div>
 
@@ -181,10 +203,26 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
           </p>
         </div>
       ) : (
-        <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4' : 'space-y-3'}>
-          {sortedGames.map(game => (
-            <GameCard key={game.id} game={game} onSelect={onSelectGame} />
-          ))}
+        <div className="space-y-6">
+          <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4' : 'space-y-3'}>
+            {visibleGames.map(game => (
+              <GameCard key={game.id} game={game} onSelect={onSelectGame} />
+            ))}
+          </div>
+
+          {/* Load 20 More Button */}
+          {visibleCount < sortedGames.length && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setVisibleCount(prev => prev + 20)}
+                className="px-6 py-2.5 rounded-2xl bg-[var(--primary-action)] hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
+              >
+                <span>Load 20 More</span>
+                <ChevronDown className="w-4 h-4" />
+                <span className="text-[10px] opacity-80 font-mono">({sortedGames.length - visibleCount} remaining)</span>
+              </button>
+            </div>
+          )}
         </div>
       )}
     </div>
