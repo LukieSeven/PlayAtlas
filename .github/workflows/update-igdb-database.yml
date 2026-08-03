@@ -96,50 +96,118 @@ jobs:
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         run: npm run verify:browser-catalog generated/browser-catalog-test
 
-      # --- 3. DEPLOY EXISTING MODE EXECUTION (With Resilient Release / Artifact Fallback) ---
-      - name: Restore Catalog Asset from Release or Artifact (Deploy Existing Mode)
+      # --- 3. DEPLOY EXISTING MODE EXECUTION (Controlled Unified Restoration Step) ---
+      - name: Restore Existing Catalog
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
+        shell: bash
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
         run: |
+          set -euo pipefail
+
+          rm -rf \
+            generated/release-download \
+            generated/restored-artifact \
+            generated/browser-catalog-restored \
+            generated/igdb-full-restored
+
           mkdir -p generated/release-download
-          mkdir -p generated/browser-catalog-restored
 
-          echo "🔍 Checking for existing GitHub Release v1.0.0-catalog..."
-          if gh release view v1.0.0-catalog --repo ${{ github.repository }} >/dev/null 2>&1; then
-            echo "✅ GitHub Release v1.0.0-catalog found. Downloading ZIP asset..."
-            gh release download v1.0.0-catalog --pattern "play-atlas-full-catalog.zip" --dir generated/release-download --repo ${{ github.repository }}
-            unzip -o generated/release-download/play-atlas-full-catalog.zip -d generated/browser-catalog-restored
+          echo "🔍 Checking for GitHub Release v1.0.0-catalog..."
+
+          if gh release view v1.0.0-catalog --repo "${GH_REPO}" >/dev/null 2>&1; then
+            echo "✅ Release v1.0.0-catalog exists. Downloading catalog archive..."
+
+            gh release download v1.0.0-catalog \
+              --repo "${GH_REPO}" \
+              --pattern "play-atlas-full-catalog.zip" \
+              --dir generated/release-download
+
+            test -f generated/release-download/play-atlas-full-catalog.zip
+
+            mkdir -p generated/browser-catalog-restored
+
+            unzip -q \
+              generated/release-download/play-atlas-full-catalog.zip \
+              -d generated/browser-catalog-restored
+
+            echo "RESTORE_SOURCE=release" >> "${GITHUB_ENV}"
+            echo "BROWSER_CATALOG_DIR=generated/browser-catalog-restored" >> "${GITHUB_ENV}"
           else
-            echo "⚠️ Release v1.0.0-catalog not found. Searching retained GitHub Action artifacts..."
-            ARTIFACT_INFO=$(gh api repos/${{ github.repository }}/actions/artifacts --jq '.artifacts[] | select(.expired == false and (.name | startswith("play-atlas-browser-catalog") or startswith("igdb-full-catalog") or startswith("play-atlas-published-pages"))) | [.id, .name, .workflow_run.id] | @tsv' | head -n 1)
+            echo "⚠️ Release v1.0.0-catalog does not exist. Searching retained workflow artifacts..."
 
-            if [ -z "$ARTIFACT_INFO" ]; then
-              echo "❌ ERROR: No valid GitHub Release or retained Actions artifact found to restore catalog!"
+            ARTIFACT_DATA="$(
+              gh api \
+                "repos/${GH_REPO}/actions/artifacts?per_page=100" \
+                --paginate \
+                --jq '
+                  [
+                    .artifacts[]
+                    | select(.expired == false)
+                    | select(
+                        (.name | startswith("play-atlas-browser-catalog-"))
+                        or (.name | startswith("igdb-full-catalog-"))
+                        or (.name | startswith("play-atlas-published-pages-"))
+                        or (.name | startswith("igdb-test-database-"))
+                      )
+                  ]
+                  | sort_by(.created_at)
+                  | reverse
+                  | .[0]
+                  | {
+                      id: .id,
+                      name: .name,
+                      created_at: .created_at
+                    }
+                '
+            )"
+
+            ARTIFACT_ID="$(jq -r '.id // empty' <<< "${ARTIFACT_DATA}")"
+            ARTIFACT_NAME="$(jq -r '.name // empty' <<< "${ARTIFACT_DATA}")"
+
+            if [[ -z "${ARTIFACT_ID}" || -z "${ARTIFACT_NAME}" ]]; then
+              echo "::error::No suitable non-expired catalog Release or Actions artifact exists."
               exit 1
             fi
 
-            ART_ID=$(echo "$ARTIFACT_INFO" | cut -f1)
-            ART_NAME=$(echo "$ARTIFACT_INFO" | cut -f2)
-            RUN_ID=$(echo "$ARTIFACT_INFO" | cut -f3)
+            echo "Selected artifact:"
+            echo "  ID: ${ARTIFACT_ID}"
+            echo "  Name: ${ARTIFACT_NAME}"
 
-            echo "📦 Restoring artifact: $ART_NAME (ID: $ART_ID, Run: $RUN_ID)..."
             mkdir -p generated/restored-artifact
-            gh run download $RUN_ID --name "$ART_NAME" --dir generated/restored-artifact --repo ${{ github.repository }}
 
-            if [ -f "generated/restored-artifact/game_index_manifest.json" ]; then
-              echo "📦 Restored raw full catalog. Rebuilding compressed browser catalog..."
-              IGDB_FULL_CATALOG_DIR=generated/restored-artifact PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-restored npm run build:browser-catalog
-            elif [ -f "generated/restored-artifact/browser_catalog_manifest.json" ]; then
-              echo "📦 Restored compressed browser catalog."
-              cp -r generated/restored-artifact/* generated/browser-catalog-restored/
-            elif [ -f "generated/restored-artifact/data/browser_catalog_manifest.json" ]; then
+            gh api \
+              -H "Accept: application/vnd.github+json" \
+              "repos/${GH_REPO}/actions/artifacts/${ARTIFACT_ID}/zip" \
+              > generated/restored-artifact/artifact.zip
+
+            mkdir -p generated/restored-artifact/content
+            unzip -q \
+              generated/restored-artifact/artifact.zip \
+              -d generated/restored-artifact/content
+
+            # Inspect extracted content
+            if [ -f "generated/restored-artifact/content/browser_catalog_manifest.json" ]; then
+              echo "📦 Restored complete compressed browser catalog."
+              mkdir -p generated/browser-catalog-restored
+              cp -r generated/restored-artifact/content/* generated/browser-catalog-restored/
+            elif [ -f "generated/restored-artifact/content/data/browser_catalog_manifest.json" ]; then
               echo "📦 Restored published pages data catalog."
-              cp -r generated/restored-artifact/data/* generated/browser-catalog-restored/
+              mkdir -p generated/browser-catalog-restored
+              cp -r generated/restored-artifact/content/data/* generated/browser-catalog-restored/
+            elif [ -f "generated/restored-artifact/content/game_index_manifest.json" ]; then
+              echo "📦 Restored raw full catalog. Rebuilding compressed browser catalog..."
+              mkdir -p generated/igdb-full-restored
+              cp -r generated/restored-artifact/content/* generated/igdb-full-restored/
+              IGDB_FULL_CATALOG_DIR=generated/igdb-full-restored PLAY_ATLAS_BROWSER_DATA_DIR=generated/browser-catalog-restored npm run build:browser-catalog
             else
-              echo "❌ ERROR: Unrecognized directory structure in restored artifact."
+              echo "::error::Unrecognized directory structure in restored artifact."
               exit 1
             fi
+
+            echo "RESTORE_SOURCE=artifact" >> "${GITHUB_ENV}"
+            echo "BROWSER_CATALOG_DIR=generated/browser-catalog-restored" >> "${GITHUB_ENV}"
           fi
 
       - name: Verify Restored Browser Catalog (Deploy Existing Mode)
@@ -161,12 +229,12 @@ jobs:
 
           if [ -n "$ZIP_SRC" ]; then
             echo "📦 Publishing master ZIP archive asset to GitHub Release v1.0.0-catalog..."
-            if gh release view v1.0.0-catalog --repo ${{ github.repository }} >/dev/null 2>&1; then
-              gh release upload v1.0.0-catalog "$ZIP_SRC/play-atlas-full-catalog.zip" "$ZIP_SRC/play-atlas-full-catalog.zip.sha256" --clobber --repo ${{ github.repository }}
+            if gh release view v1.0.0-catalog --repo "${GITHUB_REPOSITORY}" >/dev/null 2>&1; then
+              gh release upload v1.0.0-catalog "$ZIP_SRC/play-atlas-full-catalog.zip" "$ZIP_SRC/play-atlas-full-catalog.zip.sha256" --clobber --repo "${GITHUB_REPOSITORY}"
             else
-              gh release create v1.0.0-catalog "$ZIP_SRC/play-atlas-full-catalog.zip" "$ZIP_SRC/play-atlas-full-catalog.zip.sha256" --title "Play Atlas Catalog v1.0.0" --notes "Complete Play Atlas IGDB catalog." --target "${{ github.sha }}" --repo ${{ github.repository }}
+              gh release create v1.0.0-catalog "$ZIP_SRC/play-atlas-full-catalog.zip" "$ZIP_SRC/play-atlas-full-catalog.zip.sha256" --title "Play Atlas Catalog v1.0.0" --notes "Complete Play Atlas IGDB catalog." --target "${GITHUB_SHA}" --repo "${GITHUB_REPOSITORY}"
             fi
-            gh release view v1.0.0-catalog --repo ${{ github.repository }}
+            gh release view v1.0.0-catalog --repo "${GITHUB_REPOSITORY}"
           fi
 
       - name: Prepare Build Output for Pages Deployment
