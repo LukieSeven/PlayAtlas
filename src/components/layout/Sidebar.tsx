@@ -35,7 +35,7 @@ export const Sidebar: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const isDefaultSystemTab = (id: string) => {
-    return ['home', 'new-releases', 'upcoming', 'calendar', 'discounts', 'deals', 'settings'].includes(id);
+    return ['home', 'my-games', 'new-releases', 'upcoming', 'calendar', 'discounts', 'deals', 'settings'].includes(id);
   };
 
   return (

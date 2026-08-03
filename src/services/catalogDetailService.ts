@@ -362,6 +362,21 @@ export async function fetchGameDetailsForCompactRecords(
   return resultGameItems;
 }
 
+/**
+ * Converts a PersonalGameRecord into a CompactGameLookupRecord for card rendering and batch hydration
+ */
+export function convertPersonalRecordToCompact(rec: any): CompactGameLookupRecord {
+  const numericId = rec.numericId || parseInt(String(rec.gameId).replace(/\D/g, ''), 10) || 0;
+  return {
+    id: numericId,
+    name: rec.catalogSnapshot?.name || `Game #${numericId}`,
+    year: rec.catalogSnapshot?.releaseYear || undefined,
+    coverUrl: rec.catalogSnapshot?.coverUrl || undefined,
+    gameType: 'main_game',
+    defaultVisible: true,
+  };
+}
+
 const hydratedRecordsCache = new Map<number, CompactGameLookupRecord>();
 
 /**

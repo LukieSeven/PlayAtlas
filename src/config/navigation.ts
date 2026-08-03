@@ -15,6 +15,19 @@ export const navigationConfig: NavSection[] = [
     ],
   },
   {
+    title: 'Personal Library',
+    items: [
+      {
+        id: 'my-games',
+        label: 'My Games',
+        path: '/my-games',
+        iconName: 'Gamepad2',
+        badge: 'LIBRARY',
+        badgeColor: 'indigo',
+      },
+    ],
+  },
+  {
     title: 'Discovery Feeds',
     items: [
       {

@@ -1,0 +1,798 @@
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import {
+  Gamepad2,
+  Package,
+  Clock,
+  Bookmark,
+  Trophy,
+  Heart,
+  XCircle,
+  Search,
+  SortAsc,
+  LayoutGrid,
+  List as ListIcon,
+  ShieldAlert,
+  ChevronDown,
+  Download,
+  Edit3,
+  Star,
+} from 'lucide-react';
+import { usePersonalGameLibrary } from '../hooks/usePersonalGameLibrary';
+import { PersonalGameRecord } from '../types/personal';
+import { CompactGameLookupRecord } from '../types/catalog';
+import { GameCard } from '../components/common/GameCard';
+import { GameDetailModal } from '../components/widgets/GameDetailModal';
+import { UniversalActionMenu } from '../components/common/UniversalActionMenu';
+import { CompletionModal } from '../components/widgets/CompletionModal';
+import { EditPersonalDetailsModal } from '../components/widgets/EditPersonalDetailsModal';
+import { ExportImportModal } from '../components/widgets/ExportImportModal';
+import { getAllFamilies, getPlatformFamily, getPlatformDisplayName } from '../services/platformTaxonomyService';
+import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
+
+type MyGamesViewTab = 'all' | 'owned' | 'playing' | 'backlog' | 'completed' | 'wanted' | 'dropped';
+
+export const MyGamesPage: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const rawRecords = usePersonalGameLibrary();
+
+  // Tab View state (Synced with URL ?view=)
+  const viewParam = (searchParams.get('view') || 'all').toLowerCase();
+  const activeTab: MyGamesViewTab = ['all', 'owned', 'playing', 'backlog', 'completed', 'wanted', 'dropped'].includes(viewParam)
+    ? (viewParam as MyGamesViewTab)
+    : 'all';
+
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedPlatformFamily, setSelectedPlatformFamily] = useState<string>('all');
+  const [selectedOwnershipType, setSelectedOwnershipType] = useState<string>('all');
+  const [selectedPlayStatus, setSelectedPlayStatus] = useState<string>('all');
+  const [selectedInterestStatus, setSelectedInterestStatus] = useState<string>('all');
+  const [selectedRatingRange, setSelectedRatingRange] = useState<string>('all');
+  const [selectedTag, setSelectedTag] = useState<string>('all');
+  const [hasNotesOnly, setHasNotesOnly] = useState<boolean>(false);
+  const [hasCompletionsOnly, setHasCompletionsOnly] = useState<boolean>(false);
+
+  // Sorting State
+  const [sortBy, setSortBy] = useState<
+    'recently_updated' | 'recently_added' | 'title_asc' | 'title_desc' | 'year_newest' | 'year_oldest' | 'rating_highest' | 'backlog_priority' | 'completion_recent'
+  >('recently_updated');
+
+  // Layout View Mode (grid vs list)
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => {
+    return (localStorage.getItem('playatlas_mygames_viewmode') as 'grid' | 'list') || 'grid';
+  });
+
+  // Incremental Pagination State (Initial: 40, Load More: 20)
+  const [visibleCount, setVisibleCount] = useState<number>(40);
+
+  // Hydration state for displayed compact records
+  const [hydratedCompactMap, setHydratedCompactMap] = useState<Map<number, CompactGameLookupRecord>>(new Map());
+  const attemptedHydrationIdsRef = useRef<Set<number>>(new Set());
+
+  // Modal dialog states
+  const [selectedGameForModal, setSelectedGameForModal] = useState<CompactGameLookupRecord | null>(null);
+  const [completionGameTarget, setCompletionGameTarget] = useState<{ id: string | number; title: string; coverUrl?: string; year?: number } | null>(null);
+  const [editDetailsTarget, setEditDetailsTarget] = useState<{ record: PersonalGameRecord; title: string } | null>(null);
+  const [isExportModalOpen, setIsExportModalOpen] = useState<boolean>(false);
+
+  // Save viewMode preference to localStorage
+  const handleViewModeChange = (mode: 'grid' | 'list') => {
+    setViewMode(mode);
+    localStorage.setItem('playatlas_mygames_viewmode', mode);
+  };
+
+  const handleTabChange = (tab: MyGamesViewTab) => {
+    if (tab === 'all') {
+      searchParams.delete('view');
+      setSearchParams(searchParams);
+    } else {
+      setSearchParams({ view: tab });
+    }
+  };
+
+  // Derive meaningful tracked records (excludes empty records)
+  const meaningfulRecords = useMemo(() => {
+    return rawRecords.filter(rec => {
+      return (
+        Boolean(rec.interestStatus) ||
+        Boolean(rec.currentPlayStatus) ||
+        Boolean(rec.inBacklogQueue) ||
+        (rec.userRating !== undefined && rec.userRating !== null) ||
+        (rec.userNotes && rec.userNotes.trim().length > 0) ||
+        (rec.ownerships && rec.ownerships.length > 0) ||
+        (rec.customTags && rec.customTags.length > 0) ||
+        (rec.playSessions && rec.playSessions.length > 0) ||
+        (rec.completionHistory && rec.completionHistory.length > 0)
+      );
+    });
+  }, [rawRecords]);
+
+  // Tab Count Definitions
+  const counts = useMemo(() => {
+    return {
+      all: meaningfulRecords.length,
+      owned: meaningfulRecords.filter(r => r.ownerships && r.ownerships.length > 0).length,
+      playing: meaningfulRecords.filter(r => r.currentPlayStatus === 'playing').length,
+      backlog: meaningfulRecords.filter(r => r.inBacklogQueue).length,
+      completed: meaningfulRecords.filter(r => r.currentPlayStatus === 'completed' || (r.completionHistory && r.completionHistory.length > 0)).length,
+      wanted: meaningfulRecords.filter(r => r.interestStatus === 'wanted' || r.interestStatus === 'wishlist').length,
+      dropped: meaningfulRecords.filter(r => r.currentPlayStatus === 'dropped').length,
+    };
+  }, [meaningfulRecords]);
+
+  // Unique custom tags list for filter dropdown
+  const allCustomTags = useMemo(() => {
+    const set = new Set<string>();
+    meaningfulRecords.forEach(r => {
+      if (Array.isArray(r.customTags)) {
+        r.customTags.forEach(t => t && set.add(t.trim()));
+      }
+    });
+    return Array.from(set).sort();
+  }, [meaningfulRecords]);
+
+  // Apply Tab View + Search + Filters
+  const filteredRecords = useMemo(() => {
+    return meaningfulRecords.filter(rec => {
+      // 1. Primary Tab View Filter
+      switch (activeTab) {
+        case 'owned':
+          if (!rec.ownerships || rec.ownerships.length === 0) return false;
+          break;
+        case 'playing':
+          if (rec.currentPlayStatus !== 'playing') return false;
+          break;
+        case 'backlog':
+          if (!rec.inBacklogQueue) return false;
+          break;
+        case 'completed':
+          if (rec.currentPlayStatus !== 'completed' && (!rec.completionHistory || rec.completionHistory.length === 0)) return false;
+          break;
+        case 'wanted':
+          if (rec.interestStatus !== 'wanted' && rec.interestStatus !== 'wishlist') return false;
+          break;
+        case 'dropped':
+          if (rec.currentPlayStatus !== 'dropped') return false;
+          break;
+        case 'all':
+        default:
+          break;
+      }
+
+      // 2. Search Text Filter (Matches Title, Notes, Tags, Storefronts, Owned Platforms)
+      if (searchQuery.trim().length > 0) {
+        const query = searchQuery.trim().toLowerCase();
+        const title = (rec.catalogSnapshot?.name || `Game #${rec.numericId}`).toLowerCase();
+        const notes = (rec.userNotes || '').toLowerCase();
+        const tags = (rec.customTags || []).join(' ').toLowerCase();
+        const storefronts = (rec.ownerships || []).map(o => o.storefrontOrProvider || '').join(' ').toLowerCase();
+        const platforms = (rec.ownerships || []).map(o => getPlatformDisplayName(o.platformId)).join(' ').toLowerCase();
+
+        const matchesQuery =
+          title.includes(query) ||
+          notes.includes(query) ||
+          tags.includes(query) ||
+          storefronts.includes(query) ||
+          platforms.includes(query);
+
+        if (!matchesQuery) return false;
+      }
+
+      // 3. Platform Family Filter
+      if (selectedPlatformFamily !== 'all') {
+        const hasMatchingFamily = (rec.ownerships || []).some(o => getPlatformFamily(o.platformId) === selectedPlatformFamily) ||
+          getPlatformFamily(rec.numericId) === selectedPlatformFamily;
+        if (!hasMatchingFamily) return false;
+      }
+
+      // 4. Ownership Format Filter
+      if (selectedOwnershipType !== 'all') {
+        const hasType = (rec.ownerships || []).some(o => o.ownershipType === selectedOwnershipType);
+        if (!hasType) return false;
+      }
+
+      // 5. Play Status Filter
+      if (selectedPlayStatus !== 'all') {
+        if (rec.currentPlayStatus !== selectedPlayStatus) return false;
+      }
+
+      // 6. Interest Status Filter
+      if (selectedInterestStatus !== 'all') {
+        if (rec.interestStatus !== selectedInterestStatus) return false;
+      }
+
+      // 7. Rating Filter
+      if (selectedRatingRange !== 'all') {
+        if (selectedRatingRange === 'rated' && (rec.userRating === undefined || rec.userRating === null)) return false;
+        if (selectedRatingRange === 'unrated' && rec.userRating !== undefined && rec.userRating !== null) return false;
+        if (selectedRatingRange === 'high_rated' && (rec.userRating === undefined || rec.userRating < 8.0)) return false;
+      }
+
+      // 8. Custom Tag Filter
+      if (selectedTag !== 'all') {
+        if (!rec.customTags || !rec.customTags.includes(selectedTag)) return false;
+      }
+
+      // 9. Has Notes Only
+      if (hasNotesOnly && (!rec.userNotes || !rec.userNotes.trim())) return false;
+
+      // 10. Has Completions Only
+      if (hasCompletionsOnly && (!rec.completionHistory || rec.completionHistory.length === 0)) return false;
+
+      return true;
+    });
+  }, [
+    meaningfulRecords,
+    activeTab,
+    searchQuery,
+    selectedPlatformFamily,
+    selectedOwnershipType,
+    selectedPlayStatus,
+    selectedInterestStatus,
+    selectedRatingRange,
+    selectedTag,
+    hasNotesOnly,
+    hasCompletionsOnly,
+  ]);
+
+  // Apply Sorting
+  const sortedRecords = useMemo(() => {
+    const list = [...filteredRecords];
+    switch (sortBy) {
+      case 'recently_added':
+        return list.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+      case 'title_asc':
+        return list.sort((a, b) => (a.catalogSnapshot?.name || '').localeCompare(b.catalogSnapshot?.name || ''));
+      case 'title_desc':
+        return list.sort((a, b) => (b.catalogSnapshot?.name || '').localeCompare(a.catalogSnapshot?.name || ''));
+      case 'year_newest':
+        return list.sort((a, b) => (b.catalogSnapshot?.releaseYear || 0) - (a.catalogSnapshot?.releaseYear || 0));
+      case 'year_oldest':
+        return list.sort((a, b) => (a.catalogSnapshot?.releaseYear || 0) - (b.catalogSnapshot?.releaseYear || 0));
+      case 'rating_highest':
+        return list.sort((a, b) => (b.userRating || 0) - (a.userRating || 0));
+      case 'backlog_priority':
+        return list.sort((a, b) => (a.backlogPriority || 999) - (b.backlogPriority || 999));
+      case 'completion_recent':
+        return list.sort((a, b) => {
+          const dateA = a.completionHistory?.[a.completionHistory.length - 1]?.completedDate || '';
+          const dateB = b.completionHistory?.[b.completionHistory.length - 1]?.completedDate || '';
+          return dateB.localeCompare(dateA);
+        });
+      case 'recently_updated':
+      default:
+        return list.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    }
+  }, [filteredRecords, sortBy]);
+
+  // Stable Collection Key to reset pagination only on collection identity changes
+  const collectionKey = `mygames:${activeTab}:${searchQuery}:${selectedPlatformFamily}:${selectedOwnershipType}:${selectedPlayStatus}:${selectedInterestStatus}:${selectedRatingRange}:${selectedTag}:${hasNotesOnly}:${hasCompletionsOnly}:${sortBy}`;
+
+  useEffect(() => {
+    setVisibleCount(40);
+  }, [collectionKey]);
+
+  // Visible Personal Records slice
+  const visibleRecords = useMemo(() => {
+    return sortedRecords.slice(0, visibleCount);
+  }, [sortedRecords, visibleCount]);
+
+  // Map visible personal records to CompactGameLookupRecords for grid cards & batch hydration
+  const visibleCompactGames = useMemo(() => {
+    return visibleRecords.map(rec => {
+      const baseCompact = convertPersonalRecordToCompact(rec);
+      const hydrated = hydratedCompactMap.get(baseCompact.id);
+      return hydrated ? { ...baseCompact, ...hydrated } : baseCompact;
+    });
+  }, [visibleRecords, hydratedCompactMap]);
+
+  // Targeted Hydration for visible personal records
+  useEffect(() => {
+    if (visibleCompactGames.length === 0) return;
+
+    let isCurrent = true;
+    const recordsToHydrate = visibleCompactGames.filter(
+      r => (!r.coverUrl || r.coverUrl.includes('nocover')) && !attemptedHydrationIdsRef.current.has(r.id)
+    );
+
+    if (recordsToHydrate.length === 0) return;
+
+    recordsToHydrate.forEach(r => attemptedHydrationIdsRef.current.add(r.id));
+
+    hydrateCompactRecordsBatch(recordsToHydrate)
+      .then(hydratedBatch => {
+        if (!isCurrent || hydratedBatch.length === 0) return;
+        setHydratedCompactMap(prev => {
+          const next = new Map(prev);
+          hydratedBatch.forEach(h => next.set(h.id, h));
+          return next;
+        });
+      })
+      .catch(err => {
+        console.warn('Non-critical personal batch hydration warning:', err);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [visibleCompactGames]);
+
+  // Active filters count indicator
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (selectedPlatformFamily !== 'all') count++;
+    if (selectedOwnershipType !== 'all') count++;
+    if (selectedPlayStatus !== 'all') count++;
+    if (selectedInterestStatus !== 'all') count++;
+    if (selectedRatingRange !== 'all') count++;
+    if (selectedTag !== 'all') count++;
+    if (hasNotesOnly) count++;
+    if (hasCompletionsOnly) count++;
+    return count;
+  }, [
+    selectedPlatformFamily,
+    selectedOwnershipType,
+    selectedPlayStatus,
+    selectedInterestStatus,
+    selectedRatingRange,
+    selectedTag,
+    hasNotesOnly,
+    hasCompletionsOnly,
+  ]);
+
+  const clearAllFilters = () => {
+    setSearchQuery('');
+    setSelectedPlatformFamily('all');
+    setSelectedOwnershipType('all');
+    setSelectedPlayStatus('all');
+    setSelectedInterestStatus('all');
+    setSelectedRatingRange('all');
+    setSelectedTag('all');
+    setHasNotesOnly(false);
+    setHasCompletionsOnly(false);
+  };
+
+  const platformFamilies = getAllFamilies();
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-300">
+      {/* Parchment Header Dashboard */}
+      <div className="themed-panel p-6 md:p-8 rounded-3xl border border-[#c8b584] shadow-xl relative overflow-hidden bg-[#fefcf6] text-[#0f2b48]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
+          <div className="space-y-2 max-w-xl">
+            <div className="flex items-center gap-2 text-xs font-mono text-[var(--primary-action)] font-bold uppercase">
+              <Gamepad2 className="w-4 h-4" />
+              <span>Personal Game Library</span>
+            </div>
+            <h1 className="text-3xl md:text-4xl font-extrabold themed-heading text-[#0c1e36]">
+              My Games
+            </h1>
+            <p className="text-xs text-[#475569] font-medium leading-relaxed">
+              Your authoritative personal video game collection. Track platform ownership, backlog priorities, play statuses, personal ratings, journal notes, and completion histories.
+            </p>
+
+            {/* Quick Live Stats Pills */}
+            <div className="flex flex-wrap items-center gap-2 pt-2 text-[11px] font-mono font-bold">
+              <span className="bg-[#ece4d0] px-2.5 py-1 rounded-xl border border-[#c8b584] text-[#0f2b48]">
+                Tracked: {counts.all}
+              </span>
+              <span className="bg-emerald-500/15 px-2.5 py-1 rounded-xl border border-emerald-600/30 text-emerald-900">
+                Owned: {counts.owned}
+              </span>
+              <span className="bg-indigo-500/15 px-2.5 py-1 rounded-xl border border-indigo-600/30 text-indigo-900">
+                Playing: {counts.playing}
+              </span>
+              <span className="bg-purple-500/15 px-2.5 py-1 rounded-xl border border-purple-600/30 text-purple-900">
+                Backlog: {counts.backlog}
+              </span>
+              <span className="bg-amber-500/15 px-2.5 py-1 rounded-xl border border-amber-600/30 text-amber-900">
+                Completed: {counts.completed}
+              </span>
+              <span className="bg-rose-500/15 px-2.5 py-1 rounded-xl border border-rose-600/30 text-rose-900">
+                Wanted: {counts.wanted}
+              </span>
+            </div>
+          </div>
+
+          {/* Backup & Import Action Button */}
+          <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <button
+              onClick={() => setIsExportModalOpen(true)}
+              className="px-4 py-2.5 rounded-2xl bg-[var(--primary-action)] hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+            >
+              <Download className="w-4 h-4" />
+              <span>Backup / Export JSON</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Primary Tab Views Segmented Bar */}
+      <div className="themed-panel p-1.5 rounded-2xl border border-[#c8b584] bg-[#fefcf6] shadow-md overflow-x-auto">
+        <div className="flex items-center gap-1 min-w-max">
+          {(
+            [
+              { key: 'all', label: 'All Games', count: counts.all, icon: Gamepad2 },
+              { key: 'owned', label: 'Owned', count: counts.owned, icon: Package },
+              { key: 'playing', label: 'Playing', count: counts.playing, icon: Clock },
+              { key: 'backlog', label: 'Backlog', count: counts.backlog, icon: Bookmark },
+              { key: 'completed', label: 'Completed', count: counts.completed, icon: Trophy },
+              { key: 'wanted', label: 'Wanted', count: counts.wanted, icon: Heart },
+              { key: 'dropped', label: 'Dropped', count: counts.dropped, icon: XCircle },
+            ] as const
+          ).map(tab => {
+            const Icon = tab.icon;
+            const isActive = activeTab === tab.key;
+            return (
+              <button
+                key={tab.key}
+                onClick={() => handleTabChange(tab.key)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                  isActive
+                    ? 'bg-[var(--primary-action)] text-white shadow-md'
+                    : 'text-[#0f2b48] hover:bg-[#ece4d0]'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{tab.label}</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                    isActive ? 'bg-white/20 text-white' : 'bg-[#ece4d0] text-[#0f2b48]'
+                  }`}
+                >
+                  {tab.count}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Solid High-Contrast Local Search & Filter Control Surface */}
+      <div className="themed-panel p-4 rounded-2xl border border-[#c8b584] shadow-md bg-[#fefcf6] space-y-3 text-xs font-semibold">
+        {/* Row 1: Search Bar & Primary Actions */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 w-4 h-4 text-[#475569] pointer-events-none" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              placeholder="Search library by title, notes, custom tags, storefronts, or platforms..."
+              className="w-full pl-10 pr-9 py-2.5 rounded-2xl text-xs font-semibold bg-white text-[#0f2b48] border border-[#c8b584] placeholder:text-[#64748b] focus:ring-2 focus:ring-[var(--focus-ring)] transition-all shadow-inner"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery('')}
+                className="absolute right-3 p-1 text-[#475569] hover:text-[#0f2b48]"
+              >
+                <XCircle className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-mono font-bold text-[#0f2b48] shrink-0">
+              Showing {Math.min(visibleCount, sortedRecords.length)} of {sortedRecords.length}
+            </span>
+
+            {/* Grid / List Mode Controls */}
+            <div className="flex items-center bg-[#ece4d0] p-0.5 rounded-xl border border-[#c8b584]">
+              <button
+                onClick={() => handleViewModeChange('grid')}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  viewMode === 'grid' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[#0f2b48] hover:bg-white/50'
+                }`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleViewModeChange('list')}
+                className={`p-1.5 rounded-lg transition-colors ${
+                  viewMode === 'list' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[#0f2b48] hover:bg-white/50'
+                }`}
+                title="List View"
+              >
+                <ListIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Row 2: Detailed Filters and Sorting */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#c8b584]">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Platform Family */}
+            <select
+              value={selectedPlatformFamily}
+              onChange={e => setSelectedPlatformFamily(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+            >
+              <option value="all">All Platform Families</option>
+              {platformFamilies.map(fam => (
+                <option key={fam.key} value={fam.key}>
+                  {fam.label}
+                </option>
+              ))}
+            </select>
+
+            {/* Ownership Format */}
+            <select
+              value={selectedOwnershipType}
+              onChange={e => setSelectedOwnershipType(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+            >
+              <option value="all">All Formats</option>
+              <option value="digital">Digital Only</option>
+              <option value="physical">Physical Disc/Cart</option>
+              <option value="subscription">Subscription</option>
+              <option value="borrowed">Borrowed</option>
+              <option value="previously_owned">Previously Owned</option>
+            </select>
+
+            {/* Rating Range */}
+            <select
+              value={selectedRatingRange}
+              onChange={e => setSelectedRatingRange(e.target.value)}
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+            >
+              <option value="all">All Ratings</option>
+              <option value="rated">Has Personal Rating</option>
+              <option value="high_rated">High Rated (8.0+)</option>
+              <option value="unrated">Unrated</option>
+            </select>
+
+            {/* Custom Tag */}
+            {allCustomTags.length > 0 && (
+              <select
+                value={selectedTag}
+                onChange={e => setSelectedTag(e.target.value)}
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+              >
+                <option value="all">All Custom Tags</option>
+                {allCustomTags.map(t => (
+                  <option key={t} value={t}>
+                    Tag: {t}
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Toggles */}
+            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#c8b584] cursor-pointer text-[11px]">
+              <input
+                type="checkbox"
+                checked={hasNotesOnly}
+                onChange={e => setHasNotesOnly(e.target.checked)}
+                className="rounded accent-[var(--primary-action)]"
+              />
+              <span>Has Notes</span>
+            </label>
+
+            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#c8b584] cursor-pointer text-[11px]">
+              <input
+                type="checkbox"
+                checked={hasCompletionsOnly}
+                onChange={e => setHasCompletionsOnly(e.target.checked)}
+                className="rounded accent-[var(--primary-action)]"
+              />
+              <span>Has Completions</span>
+            </label>
+
+            {activeFiltersCount > 0 && (
+              <button
+                onClick={clearAllFilters}
+                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 text-rose-900 border border-rose-600/30 text-[11px] font-bold hover:bg-rose-500/20"
+              >
+                Clear Filters ({activeFiltersCount})
+              </button>
+            )}
+          </div>
+
+          {/* Sort Selector */}
+          <div className="flex items-center gap-1.5 shrink-0">
+            <SortAsc className="w-3.5 h-3.5 text-[#475569]" />
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value as any)}
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+            >
+              <option value="recently_updated">Recently Updated</option>
+              <option value="recently_added">Recently Added</option>
+              <option value="title_asc">Title (A-Z)</option>
+              <option value="title_desc">Title (Z-A)</option>
+              <option value="year_newest">Release Year (Newest)</option>
+              <option value="year_oldest">Release Year (Oldest)</option>
+              <option value="rating_highest">Personal Rating (Highest)</option>
+              <option value="backlog_priority">Backlog Priority</option>
+              <option value="completion_recent">Most Recent Completion</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content Area */}
+      {meaningfulRecords.length === 0 ? (
+        <div className="themed-panel p-12 text-center rounded-3xl space-y-4 border border-[#c8b584] bg-[#fefcf6]">
+          <Gamepad2 className="w-12 h-12 mx-auto text-[var(--primary-action)] opacity-80" />
+          <div className="space-y-1 max-w-md mx-auto">
+            <h3 className="text-base font-bold themed-heading text-[#0c1e36]">Your Personal Library is Empty</h3>
+            <p className="text-xs text-[#475569]">
+              Games you bookmark or update via the Universal Action Menu will automatically appear in your personal library.
+            </p>
+          </div>
+        </div>
+      ) : sortedRecords.length === 0 ? (
+        <div className="themed-panel p-12 text-center rounded-3xl space-y-3 border border-[#c8b584] bg-[#fefcf6]">
+          <ShieldAlert className="w-10 h-10 mx-auto text-amber-600 opacity-80" />
+          <h3 className="text-base font-bold themed-heading text-[#0c1e36]">No Tracked Games Match Filters</h3>
+          <p className="text-xs text-[#475569] max-w-sm mx-auto">
+            No games in your personal library match the selected view tab ({activeTab}) and filter options.
+          </p>
+          <button
+            onClick={clearAllFilters}
+            className="px-4 py-2 rounded-xl bg-[var(--primary-action)] text-white font-bold text-xs shadow-md"
+          >
+            Clear All Filters
+          </button>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {/* Grid Mode vs List Mode */}
+          {viewMode === 'grid' ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {visibleCompactGames.map(compact => (
+                <GameCard
+                  key={compact.id}
+                  game={compact}
+                  onSelect={(rec: CompactGameLookupRecord) => setSelectedGameForModal(rec)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {visibleRecords.map(rec => {
+                const compact = convertPersonalRecordToCompact(rec);
+                const hydrated = hydratedCompactMap.get(compact.id) || compact;
+
+                return (
+                  <div
+                    key={rec.gameId}
+                    onClick={() => setSelectedGameForModal(hydrated)}
+                    className="themed-panel p-3.5 rounded-2xl border border-[#c8b584] bg-[#fefcf6] hover:bg-[#f5f0e1] cursor-pointer flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-all shadow-sm group"
+                  >
+                    {/* Left Meta info */}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-14 rounded-xl bg-slate-900 border border-[#c8b584] overflow-hidden shrink-0">
+                        {hydrated.coverUrl ? (
+                          <img src={hydrated.coverUrl} alt={hydrated.name} className="w-full h-full object-cover" />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-slate-400">
+                            <Gamepad2 className="w-5 h-5 text-[var(--accent-color)] opacity-60" />
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-bold text-sm text-[#0f2b48] group-hover:text-[var(--primary-action)] truncate">
+                            {hydrated.name}
+                          </h4>
+                          {hydrated.year && <span className="text-xs font-mono text-[#475569]">({hydrated.year})</span>}
+                        </div>
+
+                        {/* Badges row */}
+                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                          {rec.ownerships && rec.ownerships.length > 0 && (
+                            <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white flex items-center gap-1">
+                              <Package className="w-3 h-3" />
+                              {rec.ownerships.map(o => getPlatformDisplayName(o.platformId)).join(', ')}
+                            </span>
+                          )}
+                          {rec.currentPlayStatus === 'playing' && (
+                            <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white">PLAYING</span>
+                          )}
+                          {rec.currentPlayStatus === 'completed' && (
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950">COMPLETED</span>
+                          )}
+                          {rec.inBacklogQueue && (
+                            <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white">BACKLOG</span>
+                          )}
+                          {rec.interestStatus === 'wanted' && (
+                            <span className="px-2 py-0.5 rounded-md bg-rose-600 text-white">WANTED</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right Meta & Actions */}
+                    <div className="flex items-center gap-3 shrink-0 justify-between sm:justify-end" onClick={e => e.stopPropagation()}>
+                      {rec.userRating !== undefined && rec.userRating !== null && (
+                        <span className="font-bold text-xs text-[var(--accent-color)] bg-amber-500/15 px-2.5 py-1 rounded-xl border border-amber-600/30 flex items-center gap-1">
+                          <Star className="w-3.5 h-3.5 fill-current" />
+                          {rec.userRating} ★
+                        </span>
+                      )}
+
+                      <div className="flex items-center gap-1">
+                        {/* Record Completion Quick Action */}
+                        <button
+                          onClick={() => setCompletionGameTarget({ id: rec.gameId, title: hydrated.name, coverUrl: hydrated.coverUrl ?? undefined, year: hydrated.year ?? undefined })}
+                          className="p-1.5 rounded-xl bg-amber-500/15 hover:bg-amber-500/30 text-amber-900 border border-amber-600/30 transition-all"
+                          title="Record Completion"
+                        >
+                          <Trophy className="w-4 h-4" />
+                        </button>
+
+                        {/* Edit Details Quick Action */}
+                        <button
+                          onClick={() => setEditDetailsTarget({ record: rec, title: hydrated.name })}
+                          className="p-1.5 rounded-xl bg-[#ece4d0] hover:bg-[#e4d8bc] text-[#0f2b48] border border-[#c8b584] transition-all"
+                          title="Edit Personal Details"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+
+                        <UniversalActionMenu
+                          gameId={rec.gameId}
+                          gameTitle={hydrated.name}
+                          coverUrl={hydrated.coverUrl ?? undefined}
+                          releaseYear={hydrated.year ?? undefined}
+                          personalRecord={rec}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Load 20 More Button */}
+          {visibleCount < sortedRecords.length && (
+            <div className="flex justify-center pt-4">
+              <button
+                onClick={() => setVisibleCount(prev => prev + 20)}
+                className="px-6 py-2.5 rounded-2xl bg-[var(--primary-action)] hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
+              >
+                <span>Load 20 More</span>
+                <ChevronDown className="w-4 h-4" />
+                <span className="text-[10px] opacity-80 font-mono">({sortedRecords.length - visibleCount} remaining)</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Modals */}
+      <GameDetailModal
+        selectedGame={selectedGameForModal}
+        onClose={() => setSelectedGameForModal(null)}
+      />
+
+      <CompletionModal
+        gameId={completionGameTarget?.id || null}
+        gameTitle={completionGameTarget?.title || ''}
+        coverUrl={completionGameTarget?.coverUrl}
+        releaseYear={completionGameTarget?.year}
+        isOpen={Boolean(completionGameTarget)}
+        onClose={() => setCompletionGameTarget(null)}
+      />
+
+      <EditPersonalDetailsModal
+        gameId={editDetailsTarget?.record.gameId || null}
+        gameTitle={editDetailsTarget?.title || ''}
+        existingRecord={editDetailsTarget?.record}
+        isOpen={Boolean(editDetailsTarget)}
+        onClose={() => setEditDetailsTarget(null)}
+      />
+
+      <ExportImportModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+      />
+    </div>
+  );
+};

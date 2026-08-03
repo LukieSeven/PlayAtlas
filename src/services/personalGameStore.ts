@@ -38,6 +38,7 @@ class PersonalGameStore {
   private cache: Map<string, PersonalGameRecord> = new Map();
   private isInitialized: boolean = false;
   private initPromise: Promise<void> | null = null;
+  private cachedRecordsArray: PersonalGameRecord[] | null = null;
   
   // Per-game listener sets & global listeners
   private gameListenersMap: Map<string, Set<Listener>> = new Map();
@@ -174,7 +175,14 @@ class PersonalGameStore {
   }
 
   public getAllRecords(): PersonalGameRecord[] {
-    return Array.from(this.cache.values());
+    if (!this.cachedRecordsArray) {
+      this.cachedRecordsArray = Array.from(this.cache.values());
+    }
+    return this.cachedRecordsArray;
+  }
+
+  private invalidateAllRecordsCache(): void {
+    this.cachedRecordsArray = null;
   }
 
   /**
@@ -203,6 +211,7 @@ class PersonalGameStore {
     const canonicalId = normalizePersonalGameId(record.gameId);
     const now = new Date().toISOString();
 
+    this.invalidateAllRecordsCache();
     if (this.isRecordEmpty(record)) {
       this.cache.delete(canonicalId);
       this.notifyGame(canonicalId);
@@ -357,6 +366,21 @@ class PersonalGameStore {
     this.commitRecordUpdate(updated);
   }
 
+  public async setTagsAndPriority(gameId: string | number, customTags: string[], backlogPriority?: number, catalogSnapshot?: { name: string; coverUrl?: string; releaseYear?: number }): Promise<void> {
+    await this.init();
+    const canonicalId = normalizePersonalGameId(gameId);
+    const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+
+    const updated: PersonalGameRecord = {
+      ...existing,
+      customTags,
+      backlogPriority,
+      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+    };
+
+    this.commitRecordUpdate(updated);
+  }
+
   public async addCompletion(gameId: string | number, completion: CompletionRecord, catalogSnapshot?: { name: string; coverUrl?: string; releaseYear?: number }): Promise<void> {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
@@ -411,6 +435,7 @@ class PersonalGameStore {
   public async removePersonalRecord(gameId: string | number): Promise<void> {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
+    this.invalidateAllRecordsCache();
     this.cache.delete(canonicalId);
     this.notifyGame(canonicalId);
     this.enqueueWrite(canonicalId, () => personalDataRepository.delete(canonicalId));
