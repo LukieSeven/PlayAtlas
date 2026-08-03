@@ -3,8 +3,53 @@ import { GameItem } from '../types/game';
 import { fetchAndDecompressJson } from '../utils/decompression';
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { openIndexedDB } from './indexDbStorage';
+import { buildCoverUrl } from '../utils/browserCatalogUtils';
 
 const inMemoryChunkCache = new Map<string, any[]>();
+
+/**
+ * Safely extracts a primitive display string from unknown entity representations
+ * (handles raw strings, IGDB objects { id, name, abbreviation }, or nulls)
+ */
+export function normalizeEntityName(value: unknown, fallback = ''): string {
+  if (typeof value === 'string') {
+    return value.trim();
+  }
+
+  if (value && typeof value === 'object') {
+    const entity = value as Record<string, unknown>;
+
+    if (typeof entity.abbreviation === 'string' && entity.abbreviation.trim()) {
+      return entity.abbreviation.trim();
+    }
+
+    if (typeof entity.name === 'string' && entity.name.trim()) {
+      return entity.name.trim();
+    }
+  }
+
+  return fallback;
+}
+
+/**
+ * Normalizes an array or single item into a unique array of primitive string names
+ */
+export function normalizeEntityNames(value: unknown): string[] {
+  if (!value) return [];
+
+  if (!Array.isArray(value)) {
+    const single = normalizeEntityName(value);
+    return single ? [single] : [];
+  }
+
+  return Array.from(
+    new Set(
+      value
+        .map(item => normalizeEntityName(item))
+        .filter((name): name is string => Boolean(name))
+    )
+  );
+}
 
 export function convertIgdbRecordToGameItem(rec: any): GameItem {
   let category: GameItem['category'] = 'Base Game';
@@ -19,24 +64,71 @@ export function convertIgdbRecordToGameItem(rec: any): GameItem {
     category = 'Mod';
   }
 
-  const platformsList = Array.isArray(rec.platforms)
-    ? rec.platforms.map((p: any) => p.abbreviation || p.name || 'Platform')
-    : [];
+  const platformsList = normalizeEntityNames(rec.platforms);
+  const genresList = normalizeEntityNames(rec.genres);
 
-  const genresList = Array.isArray(rec.genres) ? rec.genres : [];
+  const developer =
+    normalizeEntityName(rec.developer) ||
+    normalizeEntityName(rec.developers?.[0]) ||
+    normalizeEntityName(
+      rec.involvedCompanies?.find((company: any) => company?.developer)?.company
+    ) ||
+    normalizeEntityName(
+      rec.involved_companies?.find((company: any) => company?.developer)?.company
+    ) ||
+    'Unknown Developer';
 
-  return {
-    id: String(rec.sourceId || rec.id),
-    title: rec.name,
-    coverUrl: rec.coverUrl || 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.jpg',
-    rating: rec.rating ? Math.round(rec.rating) : 85,
-    releaseDate: rec.firstReleaseDate || 'TBD',
+  const title = normalizeEntityName(rec.name) || normalizeEntityName(rec.title) || 'Untitled Game';
+  
+  let summary = 'No summary available.';
+  if (typeof rec.summary === 'string' && rec.summary.trim()) {
+    summary = rec.summary.trim();
+  } else if (rec.summary) {
+    summary = normalizeEntityName(rec.summary, 'No summary available.');
+  }
+
+  let coverUrl = 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.jpg';
+  if (typeof rec.coverUrl === 'string' && rec.coverUrl.trim()) {
+    coverUrl = rec.coverUrl.trim();
+  } else if (rec.cover_image_id || rec.cover?.image_id) {
+    const built = buildCoverUrl(rec.cover_image_id || rec.cover?.image_id);
+    if (built) coverUrl = built;
+  }
+
+  let releaseDate = 'TBD';
+  if (typeof rec.firstReleaseDate === 'string' && rec.firstReleaseDate.trim()) {
+    releaseDate = rec.firstReleaseDate.trim();
+  } else if (typeof rec.releaseDate === 'string' && rec.releaseDate.trim()) {
+    releaseDate = rec.releaseDate.trim();
+  }
+
+  const gameItem: GameItem = {
+    id: String(rec.sourceId || rec.id || Math.random().toString(36).slice(2)),
+    title,
+    coverUrl,
+    rating: typeof rec.rating === 'number' && !isNaN(rec.rating) ? Math.round(rec.rating) : 85,
+    releaseDate,
     platforms: platformsList.length > 0 ? platformsList : ['PC'],
     genres: genresList.length > 0 ? genresList : ['Action'],
-    developer: rec.developer || 'Unknown Developer',
-    summary: rec.summary || 'No summary available.',
+    developer,
+    summary,
     category,
   };
+
+  // Runtime assertion before returning GameItem
+  if (
+    typeof gameItem.title !== 'string' ||
+    typeof gameItem.developer !== 'string' ||
+    typeof gameItem.summary !== 'string' ||
+    typeof gameItem.coverUrl !== 'string' ||
+    typeof gameItem.releaseDate !== 'string' ||
+    !gameItem.genres.every(item => typeof item === 'string') ||
+    !gameItem.platforms.every(item => typeof item === 'string')
+  ) {
+    throw new Error(`Data Conversion Error: Non-primitive display object detected in converted GameItem for record ID ${gameItem.id}`);
+  }
+
+  return gameItem;
 }
 
 /**
