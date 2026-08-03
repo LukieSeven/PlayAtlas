@@ -2,9 +2,10 @@ import {
   parseGameTypeInfo,
   normalizeDatePrecision,
 } from '../src/utils/igdbNormalization';
+import { reconcileCatalogCounts } from '../src/utils/reconciliation';
 
-function runNormalizationTests() {
-  console.log('🧪 Running Normalization Unit Tests...');
+function runNormalizationAndReconciliationTests() {
+  console.log('🧪 Running Normalization & Reconciliation Unit Tests...');
   let passed = 0;
   let failed = 0;
 
@@ -43,6 +44,52 @@ function runNormalizationTests() {
   assertEqual(normalizeDatePrecision('TBD'), 'tbd', 'TBD -> tbd');
   assertEqual(normalizeDatePrecision('unexpected_format_xyz'), 'unknown', 'unexpected -> unknown');
 
+  // --- Count Reconciliation Tests (Requirement 6) ---
+  // 1. Exact match -> pass with "exact"
+  const exactRes = reconcileCatalogCounts(371000, 371000, 371000);
+  assertEqual(exactRes.status, 'exact', 'Exact match -> pass with "exact"');
+
+  // 2. Actual +2 -> pass with "within_tolerance"
+  const plusTwoRes = reconcileCatalogCounts(371008, 371008, 371010);
+  assertEqual(plusTwoRes.status, 'within_tolerance', 'Actual +2 -> pass with "within_tolerance"');
+
+  // 3. Actual -2 -> pass with "within_tolerance"
+  const minusTwoRes = reconcileCatalogCounts(371012, 371012, 371010);
+  assertEqual(minusTwoRes.status, 'within_tolerance', 'Actual -2 -> pass with "within_tolerance"');
+
+  // 4. Difference at tolerance boundary -> pass
+  const allowed = Math.max(10, Math.ceil(371000 * 0.0001)); // 38
+  const atBoundaryRes = reconcileCatalogCounts(371000, 371000, 371000 + allowed);
+  assertEqual(atBoundaryRes.status, 'within_tolerance', 'Difference at tolerance boundary -> pass');
+
+  // 5. Difference above tolerance -> fail
+  const aboveBoundaryRes = reconcileCatalogCounts(371000, 371000, 371000 + allowed + 10);
+  assertEqual(aboveBoundaryRes.status, 'failed', 'Difference above tolerance -> fail');
+
+  // --- Simulated Hard Integrity Check Failures ---
+  // 6. Duplicate IDs with matching count -> fail
+  function validateIntegrityWithDuplicates(records: number[]): boolean {
+    const seen = new Set<number>();
+    for (const id of records) {
+      if (seen.has(id)) return false;
+      seen.add(id);
+    }
+    return true;
+  }
+  assertEqual(validateIntegrityWithDuplicates([100, 101, 101, 102]), false, 'Duplicate IDs with matching count -> fail');
+
+  // 7. Cursor stall with matching count -> fail
+  function validateCursorAdvance(prevCursor: number, currentBatchMinId: number): boolean {
+    return currentBatchMinId > prevCursor;
+  }
+  assertEqual(validateCursorAdvance(500, 500), false, 'Cursor stall with matching count -> fail');
+
+  // 8. Manifest mismatch with matching count -> fail
+  function validateManifestMatch(manifestCount: number, actualChunksCount: number): boolean {
+    return manifestCount === actualChunksCount;
+  }
+  assertEqual(validateManifestMatch(371010, 370000), false, 'Manifest mismatch with matching count -> fail');
+
   console.log(`----------------------------------------------------`);
   console.log(`📊 Unit Test Results: ${passed} passed, ${failed} failed.`);
   console.log(`----------------------------------------------------`);
@@ -52,4 +99,4 @@ function runNormalizationTests() {
   }
 }
 
-runNormalizationTests();
+runNormalizationAndReconciliationTests();

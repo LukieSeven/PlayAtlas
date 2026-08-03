@@ -43,6 +43,17 @@ async function verifyIgdbCatalog() {
     process.exit(1);
   }
 
+  // Count Reconciliation Verification (Requirement 3 & 5)
+  if (
+    manifest.countReconciliationStatus !== 'exact' &&
+    manifest.countReconciliationStatus !== 'within_tolerance'
+  ) {
+    console.error(
+      `❌ VERIFICATION FAILURE: countReconciliationStatus is '${manifest.countReconciliationStatus}' (Expected 'exact' or 'within_tolerance').`
+    );
+    process.exit(1);
+  }
+
   let totalCalculatedRecords = 0;
   let totalCalculatedBytes = 0;
   const globalSeenIds = new Set<number>();
@@ -135,6 +146,11 @@ async function verifyIgdbCatalog() {
     process.exit(1);
   }
 
+  if (manifest.actualImportedRecordCount !== undefined && totalCalculatedRecords !== manifest.actualImportedRecordCount) {
+    console.error(`❌ VERIFICATION FAILURE: actualImportedRecordCount (${manifest.actualImportedRecordCount}) !== totalCalculatedRecords (${totalCalculatedRecords})`);
+    process.exit(1);
+  }
+
   if (totalCalculatedBytes !== manifest.totalUncompressedBytes) {
     console.error(`❌ VERIFICATION FAILURE: Manifest totalUncompressedBytes (${manifest.totalUncompressedBytes}) !== Sum of chunks (${totalCalculatedBytes})`);
     process.exit(1);
@@ -160,13 +176,16 @@ async function verifyIgdbCatalog() {
   console.log('====================================================');
   console.log('📊 IGDB FULL CATALOG VERIFICATION REPORT');
   console.log('====================================================');
-  console.log(`📁 Target Directory:        ${targetDir}`);
-  console.log(`📦 Manifest Chunks:         ${manifest.chunkCount}`);
-  console.log(`🎮 Total Verified Records:  ${totalCalculatedRecords}`);
-  console.log(`💾 Total Verified Size:     ${(totalCalculatedBytes / (1024 * 1024)).toFixed(2)} MB`);
-  console.log(`👁️ Default-Visible Records:  ${defaultVisibleTotal}`);
-  console.log(`📦 Hidden Records:           ${hiddenTotal}`);
-  console.log(`🔒 SHA-256 Hashes:          All ${manifest.chunkCount} chunk hashes verified!`);
+  console.log(`📁 Target Directory:            ${targetDir}`);
+  console.log(`📌 Snapshot Count at Start:     ${manifest.snapshotCountAtStart}`);
+  console.log(`📌 Snapshot Count at End:       ${manifest.snapshotCountAtEnd}`);
+  console.log(`🎮 Actual Imported Records:     ${totalCalculatedRecords}`);
+  console.log(`⚖️ Count Reconciliation Status: ${manifest.countReconciliationStatus.toUpperCase()}`);
+  console.log(`📦 Manifest Chunks:             ${manifest.chunkCount}`);
+  console.log(`💾 Total Verified Size:         ${(totalCalculatedBytes / (1024 * 1024)).toFixed(2)} MB`);
+  console.log(`👁️ Default-Visible Records:      ${defaultVisibleTotal}`);
+  console.log(`📦 Hidden Records:               ${hiddenTotal}`);
+  console.log(`🔒 SHA-256 Hashes:              All ${manifest.chunkCount} chunk hashes verified!`);
   console.log('====================================================');
   console.log('✅ Independent Catalog Verification Passed Cleanly!');
 }

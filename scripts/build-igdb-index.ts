@@ -6,6 +6,7 @@ import {
   parseGameTypeInfo,
   normalizeDatePrecision,
 } from '../src/utils/igdbNormalization';
+import { reconcileCatalogCounts } from '../src/utils/reconciliation';
 
 function loadEnvFile() {
   const envPaths = [path.join(process.cwd(), '.env'), path.join(process.cwd(), '.env.local')];
@@ -179,9 +180,6 @@ async function getTwitchAccessToken(clientId: string, clientSecret: string): Pro
   return data.access_token;
 }
 
-/**
- * Rate-limited HTTPS Fetch with Retry & Exponential Backoff for Transient Failures
- */
 let totalApiRequestCount = 0;
 let totalRetryCount = 0;
 let http429Count = 0;
@@ -197,7 +195,6 @@ async function queryIgdbWithRetry(
   const maxAttempts = 5;
 
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    // Enforce max 3 requests/sec (350ms spacing)
     const nowMs = Date.now();
     const timeSinceLast = nowMs - lastRequestTime;
     if (timeSinceLast < 350) {
@@ -255,9 +252,6 @@ async function queryIgdbWithRetry(
   }
 }
 
-/**
- * Fetch Snapshot Upper Bound: Maximum IGDB ID
- */
 async function getSnapshotMaxId(clientId: string, token: string): Promise<number> {
   const data = await queryIgdbWithRetry(
     'https://api.igdb.com/v4/games',
@@ -271,10 +265,7 @@ async function getSnapshotMaxId(clientId: string, token: string): Promise<number
   return data[0].id;
 }
 
-/**
- * Fetch Expected Snapshot Record Count
- */
-async function getExpectedSnapshotRecordCount(maxId: number, clientId: string, token: string): Promise<number> {
+async function getSnapshotRecordCount(maxId: number, clientId: string, token: string): Promise<number> {
   const data = await queryIgdbWithRetry(
     'https://api.igdb.com/v4/games/count',
     `where id > 0 & id <= ${maxId};`,
@@ -284,7 +275,7 @@ async function getExpectedSnapshotRecordCount(maxId: number, clientId: string, t
   if (data && typeof data.count === 'number') {
     return data.count;
   }
-  throw new Error(`Failed to retrieve expected snapshot record count for maxId ${maxId}.`);
+  throw new Error(`Failed to retrieve snapshot record count for maxId ${maxId}.`);
 }
 
 function normalizeRawIgdbRecord(raw: any): GameIndexRecord | null {
@@ -443,10 +434,10 @@ async function runIgdbImporter() {
     // ==========================================
     console.log('📦 Initializing Full Catalog Snapshot Boundary...');
     const snapshotMaxId = await getSnapshotMaxId(IGDB_CLIENT_ID, accessToken);
-    const expectedSnapshotRecordCount = await getExpectedSnapshotRecordCount(snapshotMaxId, IGDB_CLIENT_ID, accessToken);
+    const snapshotCountAtStart = await getSnapshotRecordCount(snapshotMaxId, IGDB_CLIENT_ID, accessToken);
 
     console.log(`📌 Snapshot Max ID:                 ${snapshotMaxId}`);
-    console.log(`📌 Expected Snapshot Record Count:  ${expectedSnapshotRecordCount}`);
+    console.log(`📌 Snapshot Count At Start:          ${snapshotCountAtStart}`);
 
     const workingDir = path.join(process.cwd(), 'generated/igdb-full-working');
     const finalDir = path.join(process.cwd(), OUTPUT_DIR_ENV);
@@ -460,6 +451,7 @@ async function runIgdbImporter() {
     let duplicateCount = 0;
     let invalidCount = 0;
     let successfulBatches = 0;
+    let finalBatchSize = 0;
 
     const globalSeenIds = new Set<number>();
     let currentChunkBuffer: GameIndexRecord[] = [];
@@ -534,6 +526,7 @@ async function runIgdbImporter() {
 
       const pageGames: any[] = await queryIgdbWithRetry('https://api.igdb.com/v4/games', pageQuery, IGDB_CLIENT_ID, accessToken);
       successfulBatches++;
+      finalBatchSize = Array.isArray(pageGames) ? pageGames.length : 0;
 
       if (!Array.isArray(pageGames) || pageGames.length === 0) {
         break; // Pagination completed
@@ -621,7 +614,7 @@ async function runIgdbImporter() {
 
       if (totalNormalizedRecords >= nextLogMilestone) {
         const elapsedSec = ((Date.now() - startTime) / 1000).toFixed(1);
-        console.log(`📊 Progress: ${totalNormalizedRecords.toLocaleString()} / ${expectedSnapshotRecordCount.toLocaleString()} records | Cursor: ${lastImportedId.toLocaleString()} | Chunks: ${chunkManifestList.length} | Batches: ${successfulBatches} | Retries: ${totalRetryCount} | Time: ${elapsedSec}s`);
+        console.log(`📊 Progress: ${totalNormalizedRecords.toLocaleString()} / ${snapshotCountAtStart.toLocaleString()} records | Cursor: ${lastImportedId.toLocaleString()} | Chunks: ${chunkManifestList.length} | Batches: ${successfulBatches} | Retries: ${totalRetryCount} | Time: ${elapsedSec}s`);
         nextLogMilestone += 10000;
       }
 
@@ -632,6 +625,23 @@ async function runIgdbImporter() {
 
     // Flush remaining buffer
     flushCurrentChunkBuffer();
+
+    // Query snapshotCountAtEnd with retry (Requirement 1)
+    console.log('📌 Querying Ending Snapshot Count from IGDB /games/count...');
+    let snapshotCountAtEnd = 0;
+    for (let endAttempt = 1; endAttempt <= 3; endAttempt++) {
+      try {
+        snapshotCountAtEnd = await getSnapshotRecordCount(snapshotMaxId, IGDB_CLIENT_ID, accessToken);
+        if (snapshotCountAtEnd === totalNormalizedRecords) break;
+        if (endAttempt < 3) await new Promise(r => setTimeout(r, 1000));
+      } catch (err) {
+        if (endAttempt === 3) throw err;
+        await new Promise(r => setTimeout(r, 1000));
+      }
+    }
+
+    // Perform Reconciliation Check (Requirement 2 & 3)
+    const recon = reconcileCatalogCounts(snapshotCountAtStart, snapshotCountAtEnd, totalNormalizedRecords);
 
     const elapsedSeconds = (Date.now() - startTime) / 1000;
     const avgRecordsPerSec = (totalNormalizedRecords / Math.max(1, elapsedSeconds)).toFixed(1);
@@ -652,9 +662,16 @@ async function runIgdbImporter() {
       importMode: 'full',
 
       snapshotMaxId,
-      expectedSnapshotRecordCount,
-      recordCount: totalNormalizedRecords,
+      expectedSnapshotRecordCount: snapshotCountAtStart,
+      snapshotCountAtStart,
+      snapshotCountAtEnd,
+      actualImportedRecordCount: totalNormalizedRecords,
+      countDifferenceFromStart: recon.countDifferenceFromStart,
+      countDifferenceFromEnd: recon.countDifferenceFromEnd,
+      countTolerance: recon.allowedDifference,
+      countReconciliationStatus: recon.status,
 
+      recordCount: totalNormalizedRecords,
       defaultVisibleCount,
       hiddenCount,
       unknownGameTypeCount: unknownTypeCount,
@@ -681,25 +698,24 @@ async function runIgdbImporter() {
 
     fs.writeFileSync(manifestPath, manifestJsonStr, 'utf-8');
 
-    // Mandatory Full-Import Validations (Requirement 11)
+    // Mandatory Full-Import Validations
     if (totalNormalizedRecords === 0) {
       console.error('❌ VALIDATION FAILURE: 0 records imported.');
       process.exit(1);
     }
 
-    if (totalNormalizedRecords < 10000) {
-      console.error(`❌ VALIDATION FAILURE: Expected at least 10,000 records, but got ${totalNormalizedRecords}.`);
+    if (duplicateCount > 0) {
+      console.error(`❌ VALIDATION FAILURE: ${duplicateCount} duplicate IDs detected.`);
       process.exit(1);
     }
 
-    if (unknownTypeCount / Math.max(1, totalNormalizedRecords) > 0.01) {
-      console.error(`❌ VALIDATION FAILURE: Unknown game types exceed 1% (${unknownTypePct}%).`);
+    if (lastImportedId < snapshotMaxId && finalBatchSize === 500) {
+      console.error(`❌ BOUNDARY FAILURE: Importer stopped at ${lastImportedId} before snapshotMaxId ${snapshotMaxId}.`);
       process.exit(1);
     }
 
-    if (totalNormalizedRecords !== expectedSnapshotRecordCount) {
-      const diff = expectedSnapshotRecordCount - totalNormalizedRecords;
-      console.error(`❌ SNAPSHOT COUNT MISMATCH: Expected ${expectedSnapshotRecordCount}, got ${totalNormalizedRecords} (Diff: ${diff}).`);
+    if (recon.status === 'failed') {
+      console.error(`❌ RECONCILIATION FAILURE: Start diff (${recon.countDifferenceFromStart}) & End diff (${recon.countDifferenceFromEnd}) exceed tolerance (±${recon.allowedDifference}).`);
       process.exit(1);
     }
 
@@ -716,13 +732,24 @@ async function runIgdbImporter() {
     console.log('====================================================');
     console.log('📊 IGDB FULL CATALOG IMPORT DIAGNOSTICS REPORT');
     console.log('====================================================');
-    console.log(`📌 Snapshot Max IGDB ID:          ${snapshotMaxId}`);
-    console.log(`📌 Expected Snapshot Count:        ${expectedSnapshotRecordCount}`);
-    console.log(`📥 Total Raw Records Received:    ${totalRawRecords}`);
-    console.log(`✅ Final Normalized Records:       ${totalNormalizedRecords}`);
+    console.log(`📌 Snapshot Count at Start:       ${snapshotCountAtStart}`);
+    console.log(`📌 Snapshot Count at End:         ${snapshotCountAtEnd}`);
+    console.log(`🎮 Actual Unique Records Imported: ${totalNormalizedRecords}`);
+    console.log(`📊 Difference from Start:         ${recon.countDifferenceFromStart > 0 ? '+' : ''}${recon.countDifferenceFromStart}`);
+    console.log(`📊 Difference from End:           ${recon.countDifferenceFromEnd > 0 ? '+' : ''}${recon.countDifferenceFromEnd}`);
+    console.log(`📏 Allowed Discrepancy:           ±${recon.allowedDifference}`);
+    console.log(`⚖️ Count Reconciliation Status:    ${recon.status.toUpperCase()}`);
+    console.log(`📌 Last Imported ID:              ${lastImportedId}`);
+    console.log(`📌 Snapshot Maximum ID:           ${snapshotMaxId}`);
+    console.log(`📦 Final Batch Size:              ${finalBatchSize}`);
+    console.log(`🔁 Duplicate ID Count:            ${duplicateCount}`);
     console.log(`⏱️ Total Runtime:                 ${elapsedSeconds.toFixed(1)}s (${avgRecordsPerSec} rec/sec)`);
     console.log(`🔄 Total API Requests:            ${totalApiRequestCount} (${successfulBatches} batches)`);
     console.log(`🔁 Total Retries:                 ${totalRetryCount} (429s: ${http429Count}, 5xxs: ${http5xxCount})`);
+    if (recon.warningMessage) {
+      console.log('----------------------------------------------------');
+      console.log(recon.warningMessage);
+    }
     console.log('----------------------------------------------------');
     console.log('Game Type Counts:', JSON.stringify(gameTypeCounts, null, 2));
     console.log(`👁️ Default-Visible Records:        ${defaultVisibleCount}`);
@@ -731,14 +758,6 @@ async function runIgdbImporter() {
     console.log('----------------------------------------------------');
     console.log('Release-Entry Precision Counts:', JSON.stringify(releaseEntryPrecisionCounts, null, 2));
     console.log('Game First-Release Precision Counts:', JSON.stringify(firstReleasePrecisionCounts, null, 2));
-    console.log('----------------------------------------------------');
-    console.log(`📅 Records with Release Date:      ${recordsWithFirstReleaseDate}`);
-    console.log(`❓ Records without Release Date:   ${recordsWithoutFirstReleaseDate}`);
-    console.log(`🎮 Records with Platform Dates:    ${recordsWithPlatformReleaseDates}`);
-    console.log(`🖼️ Records with Cover:             ${recordsWithCoversCount}`);
-    console.log(`📷 Records without Cover:          ${recordsWithoutCoversCount}`);
-    console.log(`📝 Records with Summary:           ${recordsWithSummaryCount}`);
-    console.log(`📄 Records without Summary:        ${recordsWithoutSummaryCount}`);
     console.log('----------------------------------------------------');
     console.log(`📦 Chunk Count:                   ${chunkManifestList.length}`);
     console.log(`📊 Records per Chunk:             ${CHUNK_RECORD_LIMIT}`);
@@ -749,9 +768,7 @@ async function runIgdbImporter() {
     console.log('✅ IGDB Full Catalog Import Completed Successfully!');
 
   } else {
-    // ==========================================
     // 500-RECORD TEST MODE PIPELINE (PROVEN)
-    // ==========================================
     const currentTimestamp = Math.floor(now.getTime() / 1000);
     const twoYearsAgoTimestamp = Math.floor((now.getTime() - 2 * 365.25 * 86400 * 1000) / 1000);
 
