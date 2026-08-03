@@ -86,8 +86,13 @@ export function getDynamicLocalDate(): { dateStr: string; timezone: string } {
   return { dateStr: `${year}-${month}-${day}`, timezone };
 }
 
+export function parseYMDLocal(dateStr: string): Date {
+  const [y, m, d] = dateStr.split('-').map(n => parseInt(n, 10));
+  return new Date(y, (m || 1) - 1, d || 1);
+}
+
 export function calculateDynamicDateRange(timeframe: string, todayStr: string): { startDate: string; endDate: string } {
-  const today = new Date(todayStr);
+  const today = parseYMDLocal(todayStr);
   const start = new Date(today);
   const end = new Date(today);
 

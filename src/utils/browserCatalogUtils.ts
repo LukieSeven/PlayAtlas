@@ -56,7 +56,13 @@ export async function getTokenBucketKey(token: string): Promise<string> {
     return hexHash.slice(0, 2);
   }
 
-  throw new Error('Web Crypto API (globalThis.crypto.subtle) is unavailable in this environment.');
+  // Node.js fallback
+  try {
+    const nodeCrypto = await import('node:crypto');
+    return nodeCrypto.createHash('sha256').update(clean).digest('hex').slice(0, 2);
+  } catch {
+    throw new Error('Web Crypto API (globalThis.crypto.subtle) is unavailable in this environment.');
+  }
 }
 
 export function getReleaseYearKey(firstReleaseDate: string | null | undefined): string {

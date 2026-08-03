@@ -328,6 +328,24 @@ export function compareRecordsDeterministic(
   return a.id - b.id;
 }
 
+export function calculateRankScore(
+  title: string,
+  queryStr: string,
+  tokens: string[],
+  defaultVisible: boolean = true
+): number {
+  const normTitle = normalizeSearchQuery(title);
+  const normQuery = normalizeSearchQuery(queryStr);
+  let score = 0;
+
+  if (normTitle === normQuery) score += 1000;
+  else if (normTitle.startsWith(normQuery)) score += 500;
+  else if (normTitle.includes(normQuery)) score += 200;
+
+  if (defaultVisible) score += 50;
+  return score;
+}
+
 /**
  * Progressive Batching Search Execution Engine with Deterministic 11-Tier Ranking & Session Caching
  */
