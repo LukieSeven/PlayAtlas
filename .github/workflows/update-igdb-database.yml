@@ -16,6 +16,11 @@ on:
           - test
           - full
         default: full
+      skip_igdb_import:
+        description: 'Skip IGDB re-import (use existing full catalog)'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: "pages"
@@ -75,7 +80,7 @@ jobs:
 
       # --- FULL CATALOG EXECUTION & PAGES DEPLOYMENT ---
       - name: Run Complete IGDB Catalog Importer
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+        if: ${{ (inputs.import_mode == 'full' && !inputs.skip_igdb_import) || github.event_name == 'schedule' }}
         env:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
@@ -102,7 +107,7 @@ jobs:
         if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         run: npm run build
 
-      - name: Copy Browser Catalog Files to Build Output (Excluding ZIP)
+      - name: Copy Compressed Browser Catalog Files to Build Output (Excluding ZIP)
         if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         run: |
           mkdir -p dist/data
@@ -129,8 +134,8 @@ jobs:
           name: Play Atlas Full Catalog Master Release
           body: "Complete, normalized, chunked IGDB catalog archive for Play Atlas."
           files: |
-            generated/browser-catalog-test/play-atlas-full-catalog.zip
-            generated/browser-catalog-test/play-atlas-full-catalog.zip.sha256
+            generated/release-assets/play-atlas-full-catalog.zip
+            generated/release-assets/play-atlas-full-catalog.zip.sha256
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
