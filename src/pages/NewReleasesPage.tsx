@@ -1,11 +1,10 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sparkles, Layers, Clock, AlertTriangle, RefreshCw, Search, X } from 'lucide-react';
 import { queryReleaseCatalog, getDynamicLocalDate } from '../services/releaseCatalogService';
 import { executeProgressiveTokenSearch } from '../services/tokenSearchService';
 import { GameListGrid } from '../components/widgets/GameListGrid';
 import { CompactGameLookupRecord } from '../types/catalog';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
-
 import { hydrateCompactRecordsBatch } from '../services/catalogDetailService';
 
 type TimeFrame = 'day' | 'week' | 'month';
@@ -25,6 +24,9 @@ export const NewReleasesPage: React.FC = () => {
   const [searchResults, setSearchResults] = useState<CompactGameLookupRecord[]>([]);
   const [isSearching, setIsSearching] = useState<boolean>(false);
   const [totalSearchMatches, setTotalSearchMatches] = useState<number>(0);
+
+  // Stale async response protection ref
+  const activeSearchQueryRef = useRef<string>('');
 
   // Modal selection
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
@@ -64,7 +66,7 @@ export const NewReleasesPage: React.FC = () => {
     loadReleaseCatalog();
   }, [loadReleaseCatalog]);
 
-  // Non-blocking async hydration of displayed release record batch (at most 40 records)
+  // Non-blocking async hydration of displayed RELEASE FEED record batch (max 40 records)
   useEffect(() => {
     if (releaseGames.length === 0 || searchQuery.trim().length >= 2) return;
 
@@ -76,7 +78,7 @@ export const NewReleasesPage: React.FC = () => {
 
     hydrateCompactRecordsBatch(batchToHydrate)
       .then(hydratedBatch => {
-        if (!isCurrent) return;
+        if (!isCurrent || searchQuery.trim().length >= 2) return;
         setReleaseGames(prev => {
           const hydratedMap = new Map(hydratedBatch.map(h => [h.id, h]));
           return prev.map(r => hydratedMap.get(r.id) || r);
@@ -93,19 +95,28 @@ export const NewReleasesPage: React.FC = () => {
 
   // Full Catalog Search effect (searches all 370,000+ games independently of release window)
   useEffect(() => {
+    const trimmed = searchQuery.trim();
+    activeSearchQueryRef.current = trimmed;
+
     const handler = setTimeout(async () => {
-      if (searchQuery.trim().length >= 2) {
+      if (trimmed.length >= 2) {
         setIsSearching(true);
         try {
-          const res = await executeProgressiveTokenSearch(searchQuery, 40);
-          setSearchResults(res.results || []);
-          setTotalSearchMatches(res.totalMatchingResults || res.results.length);
+          const res = await executeProgressiveTokenSearch(trimmed, 40);
+          if (activeSearchQueryRef.current === trimmed) {
+            setSearchResults(res.results || []);
+            setTotalSearchMatches(res.totalMatchingResults || res.results.length);
+          }
         } catch (err) {
           console.error('Full catalog search error:', err);
-          setSearchResults([]);
-          setTotalSearchMatches(0);
+          if (activeSearchQueryRef.current === trimmed) {
+            setSearchResults([]);
+            setTotalSearchMatches(0);
+          }
         } finally {
-          setIsSearching(false);
+          if (activeSearchQueryRef.current === trimmed) {
+            setIsSearching(false);
+          }
         }
       } else {
         setSearchResults([]);
@@ -115,6 +126,35 @@ export const NewReleasesPage: React.FC = () => {
 
     return () => clearTimeout(handler);
   }, [searchQuery]);
+
+  // Non-blocking async hydration of displayed SEARCH record batch (max 40 records)
+  useEffect(() => {
+    const trimmedQuery = searchQuery.trim();
+    if (trimmedQuery.length < 2 || searchResults.length === 0) return;
+
+    let isCurrent = true;
+    const batchToHydrate = searchResults.slice(0, 40);
+
+    const needsHydration = batchToHydrate.some(r => !r.coverUrl || r.coverUrl.includes('nocover'));
+    if (!needsHydration) return;
+
+    hydrateCompactRecordsBatch(batchToHydrate)
+      .then(hydratedBatch => {
+        if (!isCurrent || activeSearchQueryRef.current !== trimmedQuery) return;
+
+        setSearchResults(prev => {
+          const hydratedMap = new Map(hydratedBatch.map(h => [h.id, h]));
+          return prev.map(r => hydratedMap.get(r.id) || r);
+        });
+      })
+      .catch(err => {
+        console.warn('Non-critical search batch hydration warning:', err);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [searchResults, searchQuery]);
 
   const { dateStr: userTodayDate, timezone: userTimezone } = getDynamicLocalDate();
 

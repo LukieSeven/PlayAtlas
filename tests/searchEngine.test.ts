@@ -4,7 +4,7 @@ import {
 } from '../src/utils/browserCatalogUtils';
 import { getBuildTokenBucketKey } from '../scripts/build-browser-catalog';
 import { calculateRankScore } from '../src/services/tokenSearchService';
-import { fetchGameDetailsForCompactRecords } from '../src/services/catalogDetailService';
+import { fetchGameDetailsForCompactRecords, hydrateCompactRecordsBatch } from '../src/services/catalogDetailService';
 
 async function runSearchEngineTests() {
   console.log('🧪 Running Search Engine, Web Crypto & Builder Parity Tests...');
@@ -70,12 +70,12 @@ async function runSearchEngineTests() {
   const mockChunkLoader = async (chunkFile: string) => {
     if (chunkFile.includes('0001')) {
       return [
-        { id: 101, sourceId: 101, name: 'Game A', firstReleaseDate: '2020-01-01', gameType: 'main_game' },
-        { id: 102, sourceId: 102, name: 'Game B', firstReleaseDate: '2021-01-01', gameType: 'main_game' },
+        { id: 101, sourceId: 101, name: 'Game A', firstReleaseDate: '2020-01-01', gameType: 'main_game', cover_image_id: 'co101' },
+        { id: 102, sourceId: 102, name: 'Game B', firstReleaseDate: '2021-01-01', gameType: 'main_game', cover_image_id: 'co102' },
       ];
     }
     return [
-      { id: 201, sourceId: 201, name: 'Game C', firstReleaseDate: '2022-01-01', gameType: 'main_game' },
+      { id: 201, sourceId: 201, name: 'Game C', firstReleaseDate: '2022-01-01', gameType: 'main_game' }, // Failed cover load fallback
     ];
   };
 
@@ -83,6 +83,21 @@ async function runSearchEngineTests() {
   assertEqual(detailResult.length, 3, 'fetchGameDetailsForCompactRecords returns converted GameItem array');
   assertEqual(detailResult[0].title, 'Game A', 'Preserves exact search ranking order (Game A first)');
   assertEqual(detailResult[1].title, 'Game B', 'Preserves exact search ranking order (Game B second)');
+
+  // 5. Search Result Batch Hydration & Order Preservation Regression Tests
+  const searchResultsBatch = [
+    { id: 101, name: 'Fable', year: 2004, chunk: 1 },
+    { id: 102, name: 'Fable II', year: 2008, chunk: 1 },
+    { id: 201, name: 'Fable III', year: 2010, chunk: 2 },
+  ];
+
+  const hydratedSearchBatch = await hydrateCompactRecordsBatch(searchResultsBatch as any, mockChunkLoader);
+  assertEqual(hydratedSearchBatch.length, 3, 'Search hydration preserves 40-record batch size');
+  assertEqual(hydratedSearchBatch[0].id, 101, 'Correct numeric IGDB game ID (101) survives hydration');
+  assertEqual(hydratedSearchBatch[0].name, 'Fable', 'Search relevance order preserved (Fable first)');
+  assertEqual(hydratedSearchBatch[1].name, 'Fable II', 'Search relevance order preserved (Fable II second)');
+  assert(Boolean(hydratedSearchBatch[0].coverUrl && hydratedSearchBatch[0].coverUrl.includes('co101')), 'Fable search result displays hydrated cover URL');
+  assert(hydratedSearchBatch[2].coverUrl === undefined, 'One failed cover hydration does not discard search result or throw error');
 
   console.log('====================================================');
   console.log('📊 SEARCH TOKEN & BUCKET KEY DIAGNOSTIC REPORT');
