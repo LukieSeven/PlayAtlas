@@ -24,7 +24,7 @@ export function normalizeScore(
   }
 
   // If 100-point scale (e.g. 87/100), convert to 8.7/10
-  let scaled = originalScale === 100 ? value / 10 : value;
+  let scaled = originalScale === 100 && value > 10 ? value / 10 : value;
   scaled = Math.max(0, Math.min(10, scaled));
 
   // Round to 1 decimal place
@@ -54,7 +54,8 @@ export function normalizeExternalGameScore(gameRecord: unknown): NormalizedScore
 
   for (const candidate of ratingCandidates) {
     if (isValidScore(candidate.val) && candidate.val > 0) {
-      return normalizeScore(candidate.val, candidate.scale as 10 | 100, candidate.label);
+      const scale = candidate.val <= 10 ? 10 : (candidate.scale as 10 | 100);
+      return normalizeScore(candidate.val, scale, candidate.label);
     }
   }
 
