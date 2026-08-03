@@ -11,7 +11,10 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { GameItem } from '../../types/game';
 import { AdvancedSearchFilter, FilterState } from './AdvancedSearchFilter';
-import { fetchCuratedGames, searchGamesByQuery } from '../../services/gameDbService';
+import { executeProgressiveTokenSearch } from '../../services/tokenSearchService';
+import { fetchGameDetailsForCompactRecords } from '../../services/catalogDetailService';
+import { queryReleaseCatalog } from '../../services/releaseCatalogService';
+import { GameDetailModal } from './GameDetailModal';
 
 interface GameListGridProps {
   title?: string;
@@ -46,8 +49,11 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 }) => {
   const [liveGames, setLiveGames] = useState<GameItem[]>(initialGames || []);
   const [loading, setLoading] = useState<boolean>(!initialGames || initialGames.length === 0);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [searchTotalCount, setSearchTotalCount] = useState<number>(0);
   const [viewMode, setViewMode] = useState<'grid' | 'cards' | 'list'>('grid');
   const [filters, setFilters] = useState<FilterState>(initialFilterState);
+  const [selectedGameForModal, setSelectedGameForModal] = useState<{ id: string; title: string } | null>(null);
 
   // Permanently lock liveGames to initialGames when provided as props
   useEffect(() => {
@@ -57,49 +63,80 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
     }
   }, [initialGames]);
 
-  // Fetch live games ONLY if no initialGames prop was provided
+  // Fetch initial releases ONLY if no initialGames prop was provided and searchQuery is empty
   useEffect(() => {
-    if (!initialGames || initialGames.length === 0) {
+    if ((!initialGames || initialGames.length === 0) && filters.searchQuery.trim().length === 0) {
       let isMounted = true;
       setLoading(true);
-      fetchCuratedGames().then(data => {
-        if (isMounted) {
-          setLiveGames(data);
-          setLoading(false);
-        }
-      });
+      setSearchError(null);
+
+      queryReleaseCatalog({ viewType: 'first_release', timeframe: 'month' })
+        .then(data => {
+          if (isMounted) {
+            setLiveGames(data.games);
+            setSearchTotalCount(data.games.length);
+            setLoading(false);
+          }
+        })
+        .catch(err => {
+          console.error('Failed to load initial catalog releases:', err);
+          if (isMounted) {
+            setSearchError('Failed to load initial catalog.');
+            setLoading(false);
+          }
+        });
+
       return () => {
         isMounted = false;
       };
     }
-  }, [initialGames]);
+  }, [initialGames, filters.searchQuery]);
 
-  // Handle Live Query Search via GameDB CDN Bucket Search
+  // Handle Live Token Search via Production IGDB Token Catalog
   useEffect(() => {
-    if (filters.searchQuery.trim().length >= 2) {
+    const trimmed = filters.searchQuery.trim();
+
+    if (trimmed.length >= 2) {
       let isMounted = true;
       setLoading(true);
+      setSearchError(null);
+
       const timer = setTimeout(() => {
-        searchGamesByQuery(filters.searchQuery).then(data => {
-          if (isMounted) {
-            setLiveGames(data);
-            setLoading(false);
-          }
-        });
-      }, 400);
+        executeProgressiveTokenSearch(trimmed, 40)
+          .then(async ({ results, report }) => {
+            if (!isMounted) return;
+
+            setSearchTotalCount(report.postingListIdCount);
+
+            if (results.length === 0) {
+              setLiveGames([]);
+              setLoading(false);
+              return;
+            }
+
+            // Batch load full detail records for top compact search results
+            const detailItems = await fetchGameDetailsForCompactRecords(results);
+            if (isMounted) {
+              setLiveGames(detailItems);
+              setLoading(false);
+            }
+          })
+          .catch(err => {
+            console.error('Production IGDB token search error:', err);
+            if (isMounted) {
+              setSearchError(`Search error: ${err?.message || 'Failed to execute token search.'}`);
+              setLiveGames([]);
+              setLoading(false);
+            }
+          });
+      }, 350);
 
       return () => {
         isMounted = false;
         clearTimeout(timer);
       };
-    } else if (filters.searchQuery.trim().length === 0 && !initialGames) {
-      setLoading(true);
-      fetchCuratedGames().then(data => {
-        setLiveGames(data);
-        setLoading(false);
-      });
     }
-  }, [filters.searchQuery, initialGames]);
+  }, [filters.searchQuery]);
 
   // Extract unique criteria values for dropdown options
   const availableGenres = useMemo(() => {
@@ -129,13 +166,16 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
     return Array.from(platSet).sort();
   }, [liveGames]);
 
-  // Multi-criteria filtering logic (100% Strict Zero Leak)
+  // Multi-criteria filtering logic
   const filteredGames = useMemo(() => {
     return liveGames
       .filter(game => {
-        // Strict Category Filter (Main Games = Base Game ONLY, EXCLUDES DLCs & Expansions)
+        // Main Games alignment: includes default-visible types (Base Game & Remake/Remaster)
+        // Excludes DLC / Expansion, Bundle, Mod when 'Main Games' filter is selected
         if (filters.category === 'Main Games') {
-          if (game.category && game.category !== 'Base Game') return false;
+          if (game.category === 'DLC / Expansion' || game.category === 'Bundle' || game.category === 'Mod') {
+            return false;
+          }
         } else if (filters.category !== 'All' && filters.category !== 'Main Games') {
           if (game.category !== filters.category) return false;
         }
@@ -183,9 +223,11 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
     return 'indigo';
   };
 
+  const isSearching = filters.searchQuery.trim().length >= 2;
+
   return (
     <div className="space-y-4">
-      {/* 2-Tier Search & Filter Bar (With Embedded View Mode Toggles) */}
+      {/* 2-Tier Search & Filter Bar */}
       {showControls && (
         <AdvancedSearchFilter
           filters={filters}
@@ -195,22 +237,41 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
           availableYears={availableYears}
           availableDevelopers={availableDevelopers}
           availablePlatforms={availablePlatforms}
-          totalResults={filteredGames.length}
+          totalResults={isSearching ? searchTotalCount : filteredGames.length}
           viewMode={viewMode}
           onViewModeChange={setViewMode}
         />
+      )}
+
+      {/* Result Count Banner when searching */}
+      {isSearching && !loading && !searchError && (
+        <div className="px-4 py-2 rounded-xl bg-slate-900/80 border border-indigo-500/30 flex items-center justify-between text-xs font-mono text-slate-300">
+          <span>
+            Showing <strong className="text-indigo-400 font-extrabold">{Math.min(filteredGames.length, 20)}</strong> of{' '}
+            <strong className="text-cyan-400 font-extrabold">{searchTotalCount.toLocaleString()}</strong> matching games
+          </span>
+          <span className="text-[10px] text-slate-500 uppercase tracking-wider">Production IGDB Search</span>
+        </div>
       )}
 
       {/* Loading Skeleton */}
       {loading && (
         <div className="flex flex-col items-center justify-center p-12 glass-panel rounded-2xl border border-slate-800 space-y-3">
           <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-          <span className="text-xs font-mono text-slate-400">Fetching game metadata from GameDB CDN...</span>
+          <span className="text-xs font-mono text-slate-400">Searching production IGDB token catalog (.json.gz)...</span>
+        </div>
+      )}
+
+      {/* Search Error State */}
+      {!loading && searchError && (
+        <div className="p-6 rounded-2xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono space-y-2">
+          <div className="font-bold text-sm">❌ Search Exception</div>
+          <div>{searchError}</div>
         </div>
       )}
 
       {/* Empty State when no games match search filters */}
-      {!loading && filteredGames.length === 0 && (
+      {!loading && !searchError && filteredGames.length === 0 && (
         <Card glass className="p-12 text-center space-y-4">
           <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 mx-auto">
             <Search className="w-6 h-6" />
@@ -226,10 +287,16 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
       )}
 
       {/* Rendered Games Container - Unranked Cover Cards */}
-      {!loading && viewMode === 'grid' && filteredGames.length > 0 && (
+      {!loading && !searchError && viewMode === 'grid' && filteredGames.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {filteredGames.map((game, index) => (
-            <Card key={game.id} interactive glass className="group flex flex-col justify-between">
+          {filteredGames.slice(0, 20).map((game, index) => (
+            <Card
+              key={game.id}
+              interactive
+              glass
+              onClick={() => setSelectedGameForModal({ id: game.id, title: game.title })}
+              className="group flex flex-col justify-between cursor-pointer"
+            >
               <div>
                 <div className="relative aspect-[3/4] rounded-xl overflow-hidden mb-3">
                   <img
@@ -286,10 +353,16 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         </div>
       )}
 
-      {!loading && viewMode === 'cards' && filteredGames.length > 0 && (
+      {!loading && !searchError && viewMode === 'cards' && filteredGames.length > 0 && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {filteredGames.map((game, index) => (
-            <Card key={game.id} interactive glass className="flex flex-col sm:flex-row gap-4 p-4">
+          {filteredGames.slice(0, 20).map((game, index) => (
+            <Card
+              key={game.id}
+              interactive
+              glass
+              onClick={() => setSelectedGameForModal({ id: game.id, title: game.title })}
+              className="flex flex-col sm:flex-row gap-4 p-4 cursor-pointer"
+            >
               <div className="shrink-0 relative w-full sm:w-36 aspect-[3/4] rounded-xl overflow-hidden">
                 <img src={game.coverUrl} alt={game.title} className="w-full h-full object-cover" />
                 {showRankNumbers && (
@@ -327,12 +400,13 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         </div>
       )}
 
-      {!loading && viewMode === 'list' && filteredGames.length > 0 && (
+      {!loading && !searchError && viewMode === 'list' && filteredGames.length > 0 && (
         <div className="space-y-2">
-          {filteredGames.map((game, index) => (
+          {filteredGames.slice(0, 20).map((game, index) => (
             <div
               key={game.id}
-              className="glass-panel p-3.5 rounded-xl border border-slate-800 flex items-center justify-between hover:border-indigo-500/40 transition-colors gap-4"
+              onClick={() => setSelectedGameForModal({ id: game.id, title: game.title })}
+              className="glass-panel p-3.5 rounded-xl border border-slate-800 flex items-center justify-between hover:border-indigo-500/40 transition-colors gap-4 cursor-pointer"
             >
               <div className="flex items-center gap-4">
                 {showRankNumbers && (
@@ -354,11 +428,20 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
                   <Star className="w-3.5 h-3.5 fill-emerald-400" />
                   <span>{game.rating}</span>
                 </div>
-                <Button variant="outline" size="sm">Manage</Button>
+                <Button variant="outline" size="sm">Details</Button>
               </div>
             </div>
           ))}
         </div>
+      )}
+
+      {/* Game Detail Modal */}
+      {selectedGameForModal && (
+        <GameDetailModal
+          gameId={selectedGameForModal.id}
+          initialTitle={selectedGameForModal.title}
+          onClose={() => setSelectedGameForModal(null)}
+        />
       )}
     </div>
   );

@@ -126,12 +126,82 @@ export function findLookupFileForId(id: number, lookupFiles: TokenManifestLookup
   return null;
 }
 
+function stripLeadingArticle(str: string): string {
+  return str.replace(/^(the|a|an)\s+/i, '').trim();
+}
+
 /**
- * Progressive Batching Search Execution Engine
+ * Calculate ranking score according to strict priority order:
+ * 1. Exact normalized title
+ * 2. Exact title after ignoring leading 'The', 'A', 'An'
+ * 3. Full normalized phrase match
+ * 4. All query tokens matched in title order
+ * 5. Title begins with the query
+ * 6. Main/default-visible game
+ * 7. Remaining token matches
+ */
+export function calculateRankScore(
+  recordName: string,
+  normQuery: string,
+  tokens: string[],
+  defaultVisible: boolean
+): number {
+  const normTitle = normalizeSearchQuery(recordName);
+  const strippedTitle = stripLeadingArticle(normTitle);
+  const strippedQuery = stripLeadingArticle(normQuery);
+
+  let score = 0;
+
+  // 1. Exact normalized title match
+  if (normTitle === normQuery) {
+    score += 100000;
+  }
+  // 2. Exact title match after ignoring leading article (The / A / An)
+  else if (strippedTitle === strippedQuery) {
+    score += 80000;
+  }
+  // 3. Full normalized phrase match
+  else if (normTitle.includes(normQuery)) {
+    score += 50000;
+  }
+
+  // 4. All query tokens matched in title order
+  let inOrder = true;
+  let lastPos = -1;
+  for (const token of tokens) {
+    const pos = normTitle.indexOf(token);
+    if (pos === -1 || pos < lastPos) {
+      inOrder = false;
+      break;
+    }
+    lastPos = pos;
+  }
+  if (inOrder) {
+    score += 30000;
+  }
+
+  // 5. Title begins with the query (or stripped title begins with stripped query)
+  if (normTitle.startsWith(normQuery) || (strippedQuery && strippedTitle.startsWith(strippedQuery))) {
+    score += 15000;
+  }
+
+  // 6. Main / default-visible game
+  if (defaultVisible) {
+    score += 5000;
+  }
+
+  // 7. Tie-breaker: shorter titles rank higher for conciseness
+  score += Math.max(0, 1000 - normTitle.length);
+
+  return score;
+}
+
+/**
+ * Progressive Batching Search Execution Engine with True Multi-Token Posting List Intersection
  */
 export async function executeProgressiveTokenSearch(
   queryStr: string,
-  targetResultCount: number = 20
+  targetResultCount: number = 40
 ): Promise<{
   results: CompactGameLookupRecord[];
   report: SearchPerformanceReport;
@@ -183,23 +253,40 @@ export async function executeProgressiveTokenSearch(
     }
   }
 
-  // 2. Aggregate & Intersect matching game IDs
-  const matchingGameIdsSet = new Set<number>();
-  const idMatchCountMap = new Map<number, number>();
-
-  for (const ids of postingsMap.values()) {
-    for (const id of ids) {
-      matchingGameIdsSet.add(id);
-      idMatchCountMap.set(id, (idMatchCountMap.get(id) || 0) + 1);
+  // 2. TRUE MULTI-TOKEN INTERSECTION
+  // Require every query token to have a non-empty posting list in the index
+  for (const t of tokens) {
+    if (!postingsMap.has(t) || (postingsMap.get(t) || []).length === 0) {
+      return {
+        results: [],
+        report: {
+          query: queryStr,
+          tokenBucketsDownloaded,
+          postingListIdCount: 0,
+          lookupFilesRequired: 0,
+          totalLookupBytesRequired: 0,
+          numberResultsRanked: 0,
+          timeToFirst20Ms: Date.now() - startTime,
+          totalColdSearchDownloadBytes: totalTokenBytesDownloaded,
+          cachedRepeatDownloadBytes: 0,
+        },
+      };
     }
   }
 
-  const allMatchingIds = Array.from(matchingGameIdsSet);
-  const postingListIdCount = allMatchingIds.length;
+  // Sort posting lists from shortest to longest to optimize set intersection
+  const postingLists = tokens.map(t => postingsMap.get(t)!).sort((a, b) => a.length - b.length);
 
-  let candidateIds = allMatchingIds;
+  let intersectedIds = postingLists[0];
+  for (let i = 1; i < postingLists.length; i++) {
+    const set = new Set(postingLists[i]);
+    intersectedIds = intersectedIds.filter(id => set.has(id));
+  }
+
+  const postingListIdCount = intersectedIds.length;
+
+  let candidateIds = intersectedIds;
   if (candidateIds.length > 5000) {
-    candidateIds.sort((a, b) => (idMatchCountMap.get(b) || 0) - (idMatchCountMap.get(a) || 0));
     candidateIds = candidateIds.slice(0, 5000);
   }
 
@@ -245,31 +332,16 @@ export async function executeProgressiveTokenSearch(
       }
     }
 
-    if (loadedLookupRecords.length >= Math.max(targetResultCount * 3, 60)) {
+    if (loadedLookupRecords.length >= Math.max(targetResultCount * 3, 120)) {
       break;
     }
   }
 
-  // 5. Rank Loaded Results
+  // 5. Rank Loaded Results with Enhanced Priority Order
   const rankedResults: Array<{ record: CompactGameLookupRecord; score: number }> = [];
 
   for (const r of loadedLookupRecords) {
-    const normTitle = normalizeSearchQuery(r.name);
-    let score = 0;
-
-    if (normTitle === normQuery) score += 10000;
-    else if (normTitle.startsWith(normQuery)) score += 5000;
-
-    const matchCount = idMatchCountMap.get(r.id) || 1;
-    if (matchCount === tokens.length) score += 2000;
-
-    score += matchCount * 100;
-
-    const pos = normTitle.indexOf(tokens[0]);
-    if (pos >= 0) score += Math.max(0, 100 - pos);
-
-    if (r.defaultVisible) score += 50;
-
+    const score = calculateRankScore(r.name, normQuery, tokens, r.defaultVisible);
     rankedResults.push({ record: r, score });
   }
 
