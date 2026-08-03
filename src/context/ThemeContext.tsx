@@ -1,44 +1,62 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { ThemeContextType, ThemeMode } from '../types/theme';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { ThemeTokens, ThemePresetKey, AccessibilitySettings } from '../types/theme';
+import { themePresets } from '../config/themePresets';
+import {
+  getStoredThemePresetKey,
+  getStoredAccessibilitySettings,
+  applyThemeTokensToDOM,
+  saveThemePreference,
+  saveAccessibilityPreference,
+} from '../services/themeTokenService';
+
+interface ThemeContextType {
+  currentPresetKey: ThemePresetKey;
+  activeTokens: ThemeTokens;
+  accessibility: AccessibilitySettings;
+  setThemePreset: (presetKey: ThemePresetKey) => void;
+  updateAccessibility: (settings: Partial<AccessibilitySettings>) => void;
+  availablePresets: typeof themePresets;
+}
 
 const ThemeContext = createContext<ThemeContextType | undefined>(undefined);
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<ThemeMode>(() => {
-    const saved = localStorage.getItem('playatlas_theme');
-    return (saved as ThemeMode) || 'dark';
-  });
+  const [currentPresetKey, setCurrentPresetKey] = useState<ThemePresetKey>(getStoredThemePresetKey);
+  const [accessibility, setAccessibility] = useState<AccessibilitySettings>(getStoredAccessibilitySettings);
 
-  const [isDark, setIsDark] = useState<boolean>(true);
+  const activeTokens = themePresets[currentPresetKey] || themePresets.watercolor_atlas;
 
+  // Apply theme tokens to document DOM whenever active preset or accessibility settings change
   useEffect(() => {
-    localStorage.setItem('playatlas_theme', theme);
-    const root = document.documentElement;
+    applyThemeTokensToDOM(activeTokens, accessibility);
+  }, [activeTokens, accessibility]);
 
-    if (theme === 'dark') {
-      root.classList.add('dark');
-      setIsDark(true);
-    } else if (theme === 'light') {
-      root.classList.remove('dark');
-      setIsDark(false);
-    } else {
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      if (prefersDark) {
-        root.classList.add('dark');
-        setIsDark(true);
-      } else {
-        root.classList.remove('dark');
-        setIsDark(false);
-      }
+  const setThemePreset = (presetKey: ThemePresetKey) => {
+    if (presetKey in themePresets) {
+      setCurrentPresetKey(presetKey);
+      saveThemePreference(presetKey);
     }
-  }, [theme]);
+  };
 
-  const setTheme = (mode: ThemeMode) => {
-    setThemeState(mode);
+  const updateAccessibility = (newSettings: Partial<AccessibilitySettings>) => {
+    setAccessibility(prev => {
+      const updated = { ...prev, ...newSettings };
+      saveAccessibilityPreference(updated);
+      return updated;
+    });
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, isDark }}>
+    <ThemeContext.Provider
+      value={{
+        currentPresetKey,
+        activeTokens,
+        accessibility,
+        setThemePreset,
+        updateAccessibility,
+        availablePresets: themePresets,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );

@@ -1,15 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Compass, Search, Menu, Moon, Sun, Bell, Plus, Loader2, Calendar, Sparkles, Layers, X } from 'lucide-react';
+import { Compass, Search, Menu, Moon, Sun, Bell, Plus, Loader2, Sparkles, Layers, X } from 'lucide-react';
 import { useTheme } from '../../context/ThemeContext';
 import { useSidebar } from '../../context/SidebarContext';
 import { Button } from '../ui/Button';
 import { Avatar } from '../ui/Avatar';
-import { executeProgressiveTokenSearch } from '../../services/tokenSearchService';
-import { CompactGameLookupRecord } from '../../../scripts/build-browser-catalog';
+import { executeProgressiveTokenSearch, CompactGameLookupRecord } from '../../services/tokenSearchService';
 import { GameDetailModal } from '../widgets/GameDetailModal';
 
 export const Header: React.FC = () => {
-  const { setTheme, isDark } = useTheme();
+  const { activeTokens, setThemePreset } = useTheme();
   const { toggleMobileOpen } = useSidebar();
 
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -45,8 +44,8 @@ export const Header: React.FC = () => {
           setIsSearching(false);
         })
         .catch(err => {
-          console.error('Global search error:', err);
-          setSearchError('Search failed to load results.');
+          console.error('Header quick search error:', err);
+          setSearchError('Search failed');
           setIsSearching(false);
         });
     }, 300);
@@ -54,70 +53,50 @@ export const Header: React.FC = () => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Close dropdown on click outside or Escape keypress
+  // Close dropdown on outside click
   useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
+    const handleOutsideClick = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setIsOpen(false);
       }
-    }
-
-    function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
-        setIsOpen(false);
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-      document.removeEventListener('keydown', handleKeyDown);
     };
+
+    document.addEventListener('mousedown', handleOutsideClick);
+    return () => document.removeEventListener('mousedown', handleOutsideClick);
   }, []);
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full glass-panel border-b border-slate-800/80 px-4 md:px-6 py-3 transition-all">
+      <header className="sticky top-0 z-20 w-full border-b border-slate-800/80 glass-panel bg-slate-950/70 backdrop-blur-md px-4 py-3">
         <div className="flex items-center justify-between gap-4 max-w-7xl mx-auto">
-          {/* Mobile Hamburger & Logo */}
+          {/* Left Navigation Toggle for Mobile */}
           <div className="flex items-center gap-3">
             <button
               onClick={toggleMobileOpen}
-              className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
-              aria-label="Toggle navigation menu"
+              className="lg:hidden p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+              title="Toggle Navigation Menu"
             >
               <Menu className="w-5 h-5" />
             </button>
-
-            <a href="/" className="flex items-center gap-2.5 group">
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 via-purple-600 to-cyan-500 flex items-center justify-center text-white shadow-lg shadow-indigo-500/25 group-hover:scale-105 transition-transform">
-                <Compass className="w-5 h-5" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-extrabold text-lg tracking-wider text-white leading-none group-hover:text-indigo-400 transition-colors">
-                  PLAY<span className="text-indigo-400">ATLAS</span>
-                </span>
-                <span className="text-[10px] text-slate-400 font-mono tracking-tight">GAME DISCOVERY & LISTS</span>
-              </div>
-            </a>
+            <div className="hidden sm:flex items-center gap-2 text-indigo-400 font-mono text-xs">
+              <Compass className="w-4 h-4 text-amber-400 animate-pulse" />
+              <span className="font-bold tracking-wider text-slate-300">PLAY ATLAS</span>
+            </div>
           </div>
 
-          {/* Global Search Bar with Live Progressive Token Results */}
-          <div ref={containerRef} className="relative hidden md:flex items-center flex-1 max-w-md mx-4">
-            <div className="relative w-full">
+          {/* Center Search Input Bar */}
+          <div ref={containerRef} className="relative flex-1 max-w-xl">
+            <div className="relative">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 onFocus={() => {
-                  if (searchQuery.trim().length >= 2 || /^\d+$/.test(searchQuery.trim())) {
-                    setIsOpen(true);
-                  }
+                  if (searchQuery.trim().length >= 2) setIsOpen(true);
                 }}
-                placeholder="Search catalog (e.g. Witcher 3, Mario, Final Fantasy)..."
-                className="w-full pl-10 pr-9 py-2 bg-slate-900/90 border border-slate-800 rounded-xl text-xs font-medium text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all"
+                placeholder="Search 5,900+ games, franchises, or developers (e.g. Final Fantasy, Witcher, Halo)..."
+                className="w-full pl-10 pr-10 py-2 rounded-2xl bg-slate-900/90 border border-slate-800 text-slate-100 placeholder-slate-400 text-xs font-medium focus:outline-none focus:border-indigo-500/60 focus:ring-1 focus:ring-indigo-500/30 transition-all"
               />
               {searchQuery && (
                 <button
@@ -126,16 +105,16 @@ export const Header: React.FC = () => {
                     setSearchResults([]);
                     setIsOpen(false);
                   }}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
               )}
             </div>
 
-            {/* Results Dropdown Menu */}
+            {/* Quick Search Results Dropdown Panel */}
             {isOpen && (
-              <div className="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-800 rounded-2xl shadow-2xl overflow-hidden z-50 animate-in fade-in slide-in-from-top-2 duration-200 max-h-96 overflow-y-auto">
+              <div className="absolute top-full left-0 right-0 mt-2 glass-panel rounded-2xl border border-slate-800 shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto">
                 {isSearching && (
                   <div className="flex items-center gap-2.5 p-4 text-xs font-mono text-slate-400">
                     <Loader2 className="w-4 h-4 text-indigo-400 animate-spin" />
@@ -179,24 +158,12 @@ export const Header: React.FC = () => {
                             <div className="text-xs font-bold text-slate-100 group-hover:text-indigo-400 transition-colors">
                               {game.name}
                             </div>
-                            <div className="text-[10px] text-slate-400 font-mono flex items-center gap-1.5 mt-0.5">
-                              <span>{game.gameType.replace('_', ' ').toUpperCase()}</span>
-                              {game.year && (
-                                <>
-                                  <span>•</span>
-                                  <span className="flex items-center gap-0.5 text-slate-300">
-                                    <Calendar className="w-2.5 h-2.5" />
-                                    {game.year}
-                                  </span>
-                                </>
-                              )}
+                            <div className="text-[10px] font-mono text-slate-400">
+                              {game.year ? game.year : 'TBA'} • {game.gameType}
                             </div>
                           </div>
                         </div>
-
-                        <span className="text-[10px] font-mono text-slate-500 group-hover:text-cyan-400 transition-colors">
-                          Chunk #{game.chunk}
-                        </span>
+                        <span className="text-[10px] font-mono text-indigo-400 group-hover:underline">View</span>
                       </button>
                     ))}
                   </div>
@@ -214,11 +181,11 @@ export const Header: React.FC = () => {
 
             {/* Theme Switcher Button */}
             <button
-              onClick={() => setTheme(isDark ? 'light' : 'dark')}
+              onClick={() => setThemePreset(activeTokens.isDark ? 'clean_catalog' : 'watercolor_atlas')}
               className="p-2 rounded-xl text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 transition-colors border border-slate-800"
-              title={`Switch to ${isDark ? 'Light' : 'Dark'} mode`}
+              title={`Switch Theme Preset (Current: ${activeTokens.name})`}
             >
-              {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
+              {activeTokens.isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-indigo-400" />}
             </button>
 
             {/* Notifications */}

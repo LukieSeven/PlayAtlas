@@ -1,35 +1,73 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
+
+:root {
+  --color-primary: #2b7a94;
+  --color-secondary: #366e57;
+  --color-accent: #d4af37;
+  --color-bg: #0c1626;
+  --color-panel-surface: #132238;
+  --color-panel-border: rgba(212, 175, 55, 0.25);
+  --color-text: #e2e8f0;
+  --color-text-muted: #94a3b8;
+  --color-heading: #f8fafc;
+  --font-heading: 'Cinzel', 'Playfair Display', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --texture-opacity: 0.15;
+  --border-radius: 1rem;
+  --shadow-style: 0 10px 30px -5px rgba(12, 22, 38, 0.8), 0 0 15px rgba(212, 175, 55, 0.1);
+}
 
 @layer base {
   html {
     font-size: 90%;
     zoom: 0.9;
-    --color-bg-main: #030712;
-    --color-bg-card: rgba(17, 24, 39, 0.7);
-    --color-border-card: rgba(255, 255, 255, 0.08);
   }
 
   body {
-    background-color: var(--color-bg-main);
-    color: #f3f4f6;
-    font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    background-color: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-body);
+    min-height: 100vh;
+    background-image: 
+      radial-gradient(circle at 15% 15%, rgba(43, 122, 148, var(--texture-opacity)) 0%, transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(54, 110, 87, var(--texture-opacity)) 0%, transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(212, 175, 55, calc(var(--texture-opacity) * 0.4)) 0%, transparent 60%);
+    background-attachment: fixed;
+  }
+
+  h1, h2, h3, .serif-heading {
+    font-family: var(--font-heading);
+    letter-spacing: 0.025em;
+    color: var(--color-heading);
   }
 }
 
-/* Custom Utilities for Glassmorphism and Neon Accents */
+/* Reduce Motion Accessibility */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+}
+
+/* Glassmorphism Panels with Watercolor Border Accents */
 .glass-panel {
-  background: rgba(15, 23, 42, 0.65);
+  background: var(--color-panel-surface);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--color-panel-border);
+  box-shadow: var(--shadow-style);
 }
 
 .glass-card {
-  background: linear-gradient(135deg, rgba(30, 41, 59, 0.5) 0%, rgba(15, 23, 42, 0.6) 100%);
+  background: var(--color-panel-surface);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  border: 1px solid var(--color-panel-border);
+  box-shadow: var(--shadow-style);
+  border-radius: var(--border-radius);
 }
 
 .glass-card-hover {
@@ -38,16 +76,23 @@
 
 .glass-card-hover:hover {
   transform: translateY(-2px);
-  border-color: rgba(99, 102, 241, 0.3);
-  box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.15);
+  border-color: var(--color-accent);
+  box-shadow: 0 12px 35px 0 rgba(212, 175, 55, 0.2);
 }
 
-.neon-glow-indigo {
-  box-shadow: 0 0 25px rgba(99, 102, 241, 0.25);
+/* Gold Cartographic Accents */
+.gold-accent-text {
+  color: var(--color-accent);
 }
 
-.neon-glow-cyan {
-  box-shadow: 0 0 25px rgba(6, 182, 212, 0.25);
+.gold-accent-border {
+  border-color: var(--color-accent);
+}
+
+.gold-badge {
+  background-color: rgba(212, 175, 55, 0.15);
+  color: var(--color-accent);
+  border: 1px solid rgba(212, 175, 55, 0.4);
 }
 
 /* Custom Scrollbar */
@@ -57,14 +102,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #030712;
+  background: var(--color-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
+  background: rgba(212, 175, 55, 0.3);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #334155;
+  background: var(--color-accent);
 }
