@@ -129,8 +129,14 @@ jobs:
                 mkdir -p generated/release-restore-staging
                 unzip -q generated/release-download/play-atlas-full-catalog.zip -d generated/release-restore-staging
 
-                echo "Release archive contents (top 300 files):"
-                find generated/release-restore-staging -maxdepth 6 -type f | sort | head -n 300
+                FILE_LIST_PATH="${RUNNER_TEMP:-/tmp}/release-archive-files.txt"
+                find generated/release-restore-staging -maxdepth 6 -type f -print | sort > "${FILE_LIST_PATH}"
+
+                echo "Release archive contents — first 300 files:"
+                head -n 300 "${FILE_LIST_PATH}"
+
+                TOTAL_EXTRACTED_FILES="$(wc -l < "${FILE_LIST_PATH}")"
+                echo "Total extracted files: ${TOTAL_EXTRACTED_FILES}"
 
                 MANIFEST_PATH="$(find generated/release-restore-staging -type f -name "browser_catalog_manifest.json" -print -quit)"
 
@@ -218,32 +224,35 @@ jobs:
               generated/restored-artifact/artifact.zip \
               -d generated/restored-artifact/content
 
-            echo "📂 Extracted artifact structure (top 300 files):"
-            find generated/restored-artifact/content -maxdepth 7 -type f | sort | head -n 300
+            ART_FILE_LIST_PATH="${RUNNER_TEMP:-/tmp}/artifact-files.txt"
+            find generated/restored-artifact/content -maxdepth 7 -type f -print | sort > "${ART_FILE_LIST_PATH}"
+
+            echo "📂 Extracted artifact structure — first 300 files:"
+            head -n 300 "${ART_FILE_LIST_PATH}"
 
             # Detect nested catalog root directory & format
             CATALOG_ROOT=""
             CATALOG_FORMAT=""
 
-            if find generated/restored-artifact/content -name "browser_catalog_manifest.json" | grep -q .; then
-              MANIFEST_FILE=$(find generated/restored-artifact/content -name "browser_catalog_manifest.json" | head -n 1)
-              CATALOG_ROOT=$(dirname "$MANIFEST_FILE")
+            MANIFEST_FILE="$(find generated/restored-artifact/content -type f -name "browser_catalog_manifest.json" -print -quit)"
+            RAW_MANIFEST_FILE="$(find generated/restored-artifact/content -type f -name "game_index_manifest.json" -print -quit)"
+            ZIP_FILE="$(find generated/restored-artifact/content -type f -name "play-atlas-full-catalog.zip" -print -quit)"
 
-              if find "$CATALOG_ROOT/chunks" -name "*.json.gz" 2>/dev/null | grep -q .; then
+            if [ -n "${MANIFEST_FILE}" ]; then
+              CATALOG_ROOT="$(dirname "${MANIFEST_FILE}")"
+              if find "$CATALOG_ROOT/chunks" -type f -name "*.json.gz" 2>/dev/null | grep -q .; then
                 CATALOG_FORMAT="current_compressed_browser_catalog"
               else
                 CATALOG_FORMAT="legacy_uncompressed_browser_catalog"
               fi
-            elif find generated/restored-artifact/content -name "game_index_manifest.json" | grep -q .; then
-              MANIFEST_FILE=$(find generated/restored-artifact/content -name "game_index_manifest.json" | head -n 1)
-              CATALOG_ROOT=$(dirname "$MANIFEST_FILE")
+            elif [ -n "${RAW_MANIFEST_FILE}" ]; then
+              CATALOG_ROOT="$(dirname "${RAW_MANIFEST_FILE}")"
               CATALOG_FORMAT="raw_full_igdb_catalog"
-            elif find generated/restored-artifact/content -name "play-atlas-full-catalog.zip" | grep -q .; then
-              ZIP_FILE=$(find generated/restored-artifact/content -name "play-atlas-full-catalog.zip" | head -n 1)
+            elif [ -n "${ZIP_FILE}" ]; then
               mkdir -p generated/restored-zip-content
               unzip -q "$ZIP_FILE" -d generated/restored-zip-content
-              MANIFEST_FILE=$(find generated/restored-zip-content -name "browser_catalog_manifest.json" | head -n 1)
-              CATALOG_ROOT=$(dirname "$MANIFEST_FILE")
+              ZIP_MANIFEST_FILE="$(find generated/restored-zip-content -type f -name "browser_catalog_manifest.json" -print -quit)"
+              CATALOG_ROOT="$(dirname "${ZIP_MANIFEST_FILE}")"
               CATALOG_FORMAT="nested_zip_browser_catalog"
             else
               echo "::error::No valid catalog marker found in extracted artifact!"
@@ -270,10 +279,10 @@ jobs:
           test -d generated/browser-catalog-restored/search
           test -d generated/browser-catalog-restored/releases
 
-          REC_COUNT=$(jq -r '.catalogRecordCount // .recordCount // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)
-          CHUNK_COUNT=$(jq -r '.fullCatalog.chunkCount // (.chunks | length) // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)
-          FIRST_CHUNK=$(find generated/browser-catalog-restored/chunks -type f | sort | head -n 1 | xargs -r basename)
-          LAST_CHUNK=$(find generated/browser-catalog-restored/chunks -type f | sort | tail -n 1 | xargs -r basename)
+          REC_COUNT="$(jq -r '.catalogRecordCount // .recordCount // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)"
+          CHUNK_COUNT="$(jq -r '.fullCatalog.chunkCount // (.chunks | length) // 0' generated/browser-catalog-restored/browser_catalog_manifest.json)"
+          FIRST_CHUNK="$(find generated/browser-catalog-restored/chunks -type f | sort | sed -n '1p' | xargs -r basename)"
+          LAST_CHUNK="$(find generated/browser-catalog-restored/chunks -type f | sort | sed -n '$p' | xargs -r basename)"
 
           echo "===================================================="
           echo "📊 FINAL RESTORED CATALOG DIAGNOSTIC SUMMARY"
