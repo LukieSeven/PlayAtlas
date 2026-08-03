@@ -18,6 +18,7 @@ function openIndexedDB(): Promise<IDBDatabase> {
         const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
         store.createIndex('firstReleaseDate', 'firstReleaseDate', { unique: false });
         store.createIndex('category', 'category', { unique: false });
+        store.createIndex('defaultVisible', 'defaultVisible', { unique: false });
       }
     };
 
@@ -86,16 +87,24 @@ export function saveManifestMetadataToLocalStorage(manifest: IndexManifest): voi
 
 /**
  * Check Manifest & Sync Catalog with IndexedDB
- * Uses Vite base-aware paths (import.meta.env.BASE_URL) & logs diagnostics to console.
+ * Checks IGDB test manifest first (data/igdb_index_manifest.json), falling back to game_index_manifest.json.
  */
 export async function syncGameIndexCatalog(): Promise<CompiledGameIndex> {
   const rawBaseUrl = (import.meta as any).env?.BASE_URL || './';
   const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
-  const manifestUrl = `${baseUrl}data/game_index_manifest.json`;
-  const indexUrl = `${baseUrl}data/game_index.json`;
+
+  // First try IGDB index manifest, fallback to legacy manifest
+  let manifestUrl = `${baseUrl}data/igdb_index_manifest.json`;
+  let indexUrl = `${baseUrl}data/igdb_index.json`;
+
+  let manifestRes = await fetch(manifestUrl);
+  if (!manifestRes.ok) {
+    manifestUrl = `${baseUrl}data/game_index_manifest.json`;
+    indexUrl = `${baseUrl}data/game_index.json`;
+    manifestRes = await fetch(manifestUrl);
+  }
 
   console.log(`[Diagnostics] Manifest URL requested: ${manifestUrl}`);
-  const manifestRes = await fetch(manifestUrl);
   console.log(`[Diagnostics] Manifest response status: ${manifestRes.status} ${manifestRes.statusText}`);
 
   if (!manifestRes.ok) {
@@ -113,6 +122,7 @@ export async function syncGameIndexCatalog(): Promise<CompiledGameIndex> {
   const isCacheValid =
     cachedManifest !== null &&
     cachedRecords.length > 0 &&
+    cachedManifest.source === publishedManifest.source &&
     cachedManifest.version === publishedManifest.version &&
     cachedManifest.schemaVersion === publishedManifest.schemaVersion &&
     cachedManifest.generatedAt === publishedManifest.generatedAt &&
@@ -123,10 +133,6 @@ export async function syncGameIndexCatalog(): Promise<CompiledGameIndex> {
     return {
       manifest: publishedManifest,
       diagnostics: {
-        bucketFilesProcessed: 26,
-        bucketEntriesProcessed: publishedManifest.recordCount,
-        uniqueGameIdsFound: publishedManifest.recordCount,
-        duplicateEntriesRemoved: 0,
         gameRecordsLoaded: cachedRecords.length,
         validReleaseDatesCount: cachedRecords.filter(r => r.firstReleaseDate !== null).length,
         recordsWithoutReleaseDates: cachedRecords.filter(r => r.firstReleaseDate === null).length,

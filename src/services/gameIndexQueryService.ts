@@ -8,6 +8,7 @@ export interface QueryOptions {
   category?: string;
   genre?: string;
   platform?: string;
+  includeHidden?: boolean; // Set true for search queries
 }
 
 export interface QueryResult {
@@ -37,14 +38,15 @@ export function getUserLocalDate(): { dateStr: string; timezone: string } {
 }
 
 /**
- * Helper to map GameCategory to GameItem category union
+ * Helper to map GameCategory/GameType to GameItem category union
  */
-function mapRecordCategoryToUiCategory(recordCategory: string): 'Base Game' | 'DLC / Expansion' | 'Bundle' | 'Remake' | 'Mod' | undefined {
-  if (recordCategory === 'Base Game') return 'Base Game';
-  if (recordCategory === 'DLC' || recordCategory === 'Expansion' || recordCategory === 'Standalone Expansion' || recordCategory === 'Pack') return 'DLC / Expansion';
-  if (recordCategory === 'Bundle') return 'Bundle';
-  if (recordCategory === 'Remake' || recordCategory === 'Remaster') return 'Remake';
-  if (recordCategory === 'Mod') return 'Mod';
+function mapRecordCategoryToUiCategory(record: GameIndexRecord): 'Base Game' | 'DLC / Expansion' | 'Bundle' | 'Remake' | 'Mod' | undefined {
+  const typeStr = record.gameType || record.category || 'Main Game';
+  if (typeStr === 'Main Game' || typeStr === 'Base Game' || typeStr === 'Expanded Game' || typeStr === 'Port') return 'Base Game';
+  if (typeStr.includes('DLC') || typeStr.includes('Expansion') || typeStr.includes('Pack')) return 'DLC / Expansion';
+  if (typeStr.includes('Bundle')) return 'Bundle';
+  if (typeStr.includes('Remake') || typeStr.includes('Remaster')) return 'Remake';
+  if (typeStr.includes('Mod')) return 'Mod';
   return 'Base Game';
 }
 
@@ -52,9 +54,10 @@ function mapRecordCategoryToUiCategory(recordCategory: string): 'Base Game' | 'D
  * Adapter: Convert GameIndexRecord to UI GameItem
  */
 export function convertIndexRecordToGameItem(record: GameIndexRecord): GameItem {
+  const title = record.name || record.title || 'Untitled Game';
   return {
     id: record.id,
-    title: record.title,
+    title,
     coverUrl: record.coverUrl || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600&auto=format&fit=crop',
     bannerUrl: record.coverUrl || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1080&auto=format&fit=crop',
     rating: 9.0,
@@ -62,8 +65,8 @@ export function convertIndexRecordToGameItem(record: GameIndexRecord): GameItem 
     platforms: record.platforms.map(p => p.name),
     genres: record.genres.map(g => g.name),
     developer: 'Game Studio',
-    summary: `Source path: ${record.sourceRecordPath}`,
-    category: mapRecordCategoryToUiCategory(record.category),
+    summary: record.summary || `Source: ${record.sourceRecordPath || 'IGDB'}`,
+    category: mapRecordCategoryToUiCategory(record),
   };
 }
 
@@ -84,6 +87,11 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
 
   // Step 1: Match by date & release view mode (before UI filters)
   const dateMatchedRecords = records.filter(record => {
+    // Respect defaultVisible unless includeHidden is true
+    if (!options.includeHidden && record.defaultVisible === false) {
+      return false;
+    }
+
     if (options.viewType === 'first_release') {
       // Mode 1: Games receiving their first-ever release on selected date
       if (options.timeframe === 'day') {
@@ -96,14 +104,16 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
     } else {
       // Mode 2: Games receiving a platform-specific release on selected date
       if (options.timeframe === 'day') {
-        return record.platformReleaseDates.some(p => p.dateStr === userToday);
+        return record.platformReleaseDates.some(p => p.date === userToday || p.dateStr === userToday);
       } else if (options.timeframe === 'week') {
         return record.platformReleaseDates.some(
-          p => p.dateStr !== null && p.dateStr >= '2026-07-24' && p.dateStr <= userToday
+          p => (p.date != null && p.date >= '2026-07-24' && p.date <= userToday) ||
+               (p.dateStr != null && p.dateStr >= '2026-07-24' && p.dateStr <= userToday)
         );
       } else if (options.timeframe === 'month') {
         return record.platformReleaseDates.some(
-          p => p.dateStr !== null && p.dateStr >= '2026-07-01' && p.dateStr <= userToday
+          p => (p.date != null && p.date >= '2026-07-01' && p.date <= userToday) ||
+               (p.dateStr != null && p.dateStr >= '2026-07-01' && p.dateStr <= userToday)
         );
       }
     }
@@ -115,8 +125,9 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
   // Step 2: Apply UI filters (category, genre, platform)
   const finalFilteredRecords = dateMatchedRecords.filter(record => {
     if (options.category && options.category !== 'All') {
-      if (options.category === 'Main Games' && record.category !== 'Base Game') return false;
-      if (options.category !== 'Main Games' && record.category !== options.category) return false;
+      const cat = record.gameType || record.category;
+      if (options.category === 'Main Games' && cat !== 'Main Game' && cat !== 'Base Game') return false;
+      if (options.category !== 'Main Games' && cat !== options.category) return false;
     }
 
     if (options.genre && options.genre !== 'all') {
@@ -129,8 +140,8 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
 
     return true;
   }).sort((a, b) => {
-    const tsA = a.firstReleaseTimestamp || 0;
-    const tsB = b.firstReleaseTimestamp || 0;
+    const tsA = a.firstReleaseTimestamp || (a.firstReleaseDate ? new Date(a.firstReleaseDate).getTime() : 0);
+    const tsB = b.firstReleaseTimestamp || (b.firstReleaseDate ? new Date(b.firstReleaseDate).getTime() : 0);
     return tsB - tsA; // Chronological descending sort
   });
 

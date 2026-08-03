@@ -1,0 +1,13 @@
+{
+  "source": "igdb",
+  "version": 1,
+  "schemaVersion": 1,
+  "generatedAt": "2026-08-03T04:00:22.624Z",
+  "recordCount": 4,
+  "defaultVisibleCount": 3,
+  "fileCount": 1,
+  "files": [
+    "data/igdb_index.json"
+  ],
+  "dataFile": "data/igdb_index.json"
+}
