@@ -1,29 +1,31 @@
-export type CatalogDataSourceMode = 'lizardbyte' | 'igdb_browser_catalog';
+export type CatalogDataSourceMode = 'igdb_browser_catalog' | 'lizardbyte';
 
 const STORAGE_KEY = 'play_atlas_data_source';
 
 /**
- * Get active catalog data source mode (defaults to 'lizardbyte' unless set or URL param specifies 'igdb')
+ * Get active catalog data source mode.
+ * Default in production is 'igdb_browser_catalog'.
+ * Temporary emergency rollback available via ?datasource=lizardbyte.
  */
 export function getCatalogDataSourceMode(): CatalogDataSourceMode {
   if (typeof window !== 'undefined' && window.location) {
     const urlParams = new URLSearchParams(window.location.search);
     const dsParam = urlParams.get('datasource');
-    if (dsParam === 'igdb' || dsParam === 'igdb_browser_catalog') {
-      return 'igdb_browser_catalog';
+    if (dsParam === 'lizardbyte') {
+      return 'lizardbyte';
     }
   }
 
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === 'igdb' || stored === 'igdb_browser_catalog') {
-      return 'igdb_browser_catalog';
+    if (stored === 'lizardbyte') {
+      return 'lizardbyte';
     }
   } catch {
     // LocalStorage fallback
   }
 
-  return 'lizardbyte';
+  return 'igdb_browser_catalog';
 }
 
 /**
@@ -46,3 +48,9 @@ export function getBasePathAwareUrl(relPath: string): string {
   const cleanRel = relPath.startsWith('/') ? relPath.slice(1) : relPath;
   return `${baseUrl}${cleanRel}`;
 }
+
+/**
+ * GitHub Release URL for direct ZIP archive download (Offloaded from GitHub Pages site size)
+ */
+export const FULL_CATALOG_RELEASE_ZIP_URL =
+  'https://github.com/LukieSeven/PlayAtlas/releases/download/v1.0.0-catalog/play-atlas-full-catalog.zip';

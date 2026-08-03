@@ -34,6 +34,7 @@ const INPUT_DIR_ENV = process.env.IGDB_FULL_CATALOG_DIR || 'generated/igdb-full-
 const OUTPUT_DIR_ENV = process.env.PLAY_ATLAS_BROWSER_DATA_DIR || 'generated/browser-catalog-test';
 const LOOKUP_FILE_RECORD_LIMIT = 10000;
 const RELEASE_FILE_RECORD_LIMIT = 2500;
+const MAX_DEPLOYMENT_CEILING_BYTES = 900 * 1024 * 1024; // 900 MB ceiling
 
 function computeSha256(content: Buffer | string): string {
   return crypto.createHash('sha256').update(content).digest('hex');
@@ -252,7 +253,6 @@ async function runBrowserCatalogBuilder() {
   console.log('🔤 Partitioning 256 Token Posting Buckets...');
   const tokenBucketsMap = new Map<string, Record<string, number[]>>();
 
-  // Initialize 256 bucket keys ("00" to "ff")
   for (let b = 0; b < 256; b++) {
     const hexKey = b.toString(16).padStart(2, '0');
     tokenBucketsMap.set(hexKey, {});
@@ -288,7 +288,6 @@ async function runBrowserCatalogBuilder() {
     const filename = `tokens_${hexKey}.json`;
     const filePath = path.join(searchTokensDir, filename);
 
-    // Sort tokens deterministically
     const sortedTokens = Object.keys(bucketObj).sort();
     const sortedBucketObj: Record<string, number[]> = {};
     for (const t of sortedTokens) {
@@ -340,7 +339,6 @@ async function runBrowserCatalogBuilder() {
 
   for (const [yearStr, records] of yearPartitionsMap.entries()) {
     if (yearStr === 'undated') {
-      // Partition undated records into ID-range files (max 2500 per file)
       records.sort((a, b) => a.sourceId - b.sourceId);
       let uIdx = 1;
       for (let i = 0; i < records.length; i += RELEASE_FILE_RECORD_LIMIT) {
@@ -365,12 +363,10 @@ async function runBrowserCatalogBuilder() {
         uIdx++;
       }
     } else {
-      // Check if annual partition exceeds 5 MB or 2,500 records
       const jsonTestStr = JSON.stringify(records, null, 2);
       const testBuffer = Buffer.from(jsonTestStr, 'utf-8');
 
       if (testBuffer.length > 5 * 1024 * 1024 || records.length > RELEASE_FILE_RECORD_LIMIT) {
-        // Subdivide annual partition by month
         const yearSubDir = path.join(releasesDir, yearStr);
         fs.mkdirSync(yearSubDir, { recursive: true });
 
@@ -405,7 +401,6 @@ async function runBrowserCatalogBuilder() {
           });
         }
       } else {
-        // Single annual release file
         records.sort((a, b) => (b.firstReleaseDate || '').localeCompare(a.firstReleaseDate || ''));
         const filename = `${yearStr}.json`;
         const filePath = path.join(releasesDir, filename);
@@ -478,7 +473,7 @@ async function runBrowserCatalogBuilder() {
     },
 
     optionalArchive: {
-      file: 'play-atlas-full-catalog.zip',
+      file: 'https://github.com/LukieSeven/PlayAtlas/releases/download/v1.0.0-catalog/play-atlas-full-catalog.zip',
       byteSize: zipBuffer.length,
       sha256: zipSha256,
       format: 'zip',
@@ -488,29 +483,29 @@ async function runBrowserCatalogBuilder() {
   const browserManifestPath = path.join(outputDir, 'browser_catalog_manifest.json');
   fs.writeFileSync(browserManifestPath, JSON.stringify(browserCatalogManifest, null, 2), 'utf-8');
 
-  const tokenSizes = tokenBucketsList.map(b => b.byteSize);
-  const maxTokenBucketSize = Math.max(...tokenSizes);
-  const avgTokenBucketSize = Math.round(totalTokenBytes / tokenBucketsList.length);
+  // Enforce 900 MB Deployment Ceiling (Excluding Zip)
+  const publishedCatalogBytes = totalLookupBytes + totalTokenBytes + totalReleaseBytes + totalCatalogUncompressedBytes;
+  const publishedCatalogMb = (publishedCatalogBytes / (1024 * 1024)).toFixed(2);
 
-  const lookupSizes = lookupFilesList.map(l => l.byteSize);
-  const maxLookupFileSize = Math.max(...lookupSizes);
-  const avgLookupFileSize = Math.round(totalLookupBytes / lookupFilesList.length);
+  if (publishedCatalogBytes > MAX_DEPLOYMENT_CEILING_BYTES) {
+    console.error(`❌ CUTOVER BLOCKED: published catalog (${publishedCatalogMb} MB) exceeds safe 900 MB GitHub Pages limit!`);
+    process.exit(1);
+  }
 
   console.log('====================================================');
-  console.log('📊 REVISED BROWSER CATALOG BUILD DIAGNOSTICS REPORT');
+  console.log('📊 PRODUCTION CATALOG BUILD & CEILING VERIFICATION');
   console.log('====================================================');
   console.log(`🎮 Total Catalog Records:          ${totalCatalogRecords.toLocaleString()}`);
-  console.log(`🔤 Unique Search Tokens:            ${tokenPostingsMap.size.toLocaleString()}`);
-  console.log(`🎮 Compact Lookup Table Size:       ${(totalLookupBytes / (1024 * 1024)).toFixed(2)} MB (${lookupFilesList.length} files)`);
-  console.log(`🔤 Token Posting Index Size:       ${(totalTokenBytes / (1024 * 1024)).toFixed(2)} MB (${tokenBucketsList.length} buckets)`);
-  console.log(`🔍 Combined Search System Size:     ${((totalLookupBytes + totalTokenBytes) / (1024 * 1024)).toFixed(2)} MB (vs previous 223 MB!)`);
-  console.log(`📏 Token Bucket Sizes (Max / Avg):  ${(maxTokenBucketSize / 1024).toFixed(1)} KB / ${(avgTokenBucketSize / 1024).toFixed(1)} KB`);
-  console.log(`📏 Lookup File Sizes (Max / Avg):   ${(maxLookupFileSize / (1024 * 1024)).toFixed(2)} MB / ${(avgLookupFileSize / (1024 * 1024)).toFixed(2)} MB`);
-  console.log(`📅 Release Partitions Total Size:   ${(totalReleaseBytes / (1024 * 1024)).toFixed(2)} MB (${releaseManifestPartitions.length} partitions)`);
-  console.log(`📦 Full Detail Chunks:              ${outputChunksList.length} chunks (${(totalCatalogUncompressedBytes / (1024 * 1024)).toFixed(2)} MB)`);
-  console.log(`🗜️ Master ZIP Archive Size:        ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
+  console.log(`🎮 Compact Lookup Table Size:       ${(totalLookupBytes / (1024 * 1024)).toFixed(2)} MB`);
+  console.log(`🔤 Token Posting Index Size:       ${(totalTokenBytes / (1024 * 1024)).toFixed(2)} MB`);
+  console.log(`📅 Release Partitions Total Size:   ${(totalReleaseBytes / (1024 * 1024)).toFixed(2)} MB`);
+  console.log(`📦 Full Detail Chunks Total Size:   ${(totalCatalogUncompressedBytes / (1024 * 1024)).toFixed(2)} MB`);
+  console.log(`----------------------------------------------------`);
+  console.log(`🚀 Total Published Deployment Size: ${publishedCatalogMb} MB (Ceiling: 900 MB)`);
+  console.log(`⚖️ 900 MB Size Ceiling Check:       PASSED CLEANLY!`);
+  console.log(`🗜️ Master ZIP Archive Size:        ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB (Offloaded to GitHub Release Asset)`);
   console.log('====================================================');
-  console.log('✅ Token-Based Browser Catalog Built Successfully!');
+  console.log('✅ Production Browser Catalog Built Successfully!');
 }
 
 runBrowserCatalogBuilder().catch(err => {
