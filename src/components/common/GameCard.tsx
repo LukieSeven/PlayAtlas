@@ -123,16 +123,16 @@ export const GameCard: React.FC<GameCardProps> = ({
       </div>
 
       {/* Card Details */}
-      <div className="space-y-1 flex-1 flex flex-col justify-between">
+      <div className="space-y-1 flex-1 flex flex-col justify-between pt-1">
         <div>
-          <h3 className="font-bold text-xs text-[#0f2b48] dark:text-slate-100 group-hover:text-[var(--primary-action)] transition-colors line-clamp-1 leading-snug">
+          <h3 className="font-bold text-xs text-[var(--surface-light-text,#0f2b48)] group-hover:text-[var(--primary-action)] transition-colors line-clamp-1 leading-snug">
             {liveVm.title}
           </h3>
 
-          <div className="flex items-center justify-between text-[11px] font-mono text-[var(--text-muted)] mt-0.5">
-            <span>{liveVm.releaseYearDisplay}</span>
+          <div className="flex items-center justify-between text-[11px] font-mono text-[var(--surface-light-muted,#475569)] mt-0.5">
+            <span className="font-medium">{liveVm.releaseYearDisplay}</span>
             {liveVm.primaryPlatforms.length > 0 && (
-              <span className="truncate max-w-[110px] text-[var(--text-secondary)] font-semibold">
+              <span className="truncate max-w-[110px] text-[var(--surface-light-text,#0f2b48)] font-semibold">
                 {liveVm.primaryPlatforms.join(' • ')}
               </span>
             )}
@@ -148,19 +148,19 @@ export const GameCard: React.FC<GameCardProps> = ({
                 {liveVm.personalScore.displayString}
               </span>
             ) : !liveVm.externalScore.isUnrated ? (
-              <span className="font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/30 flex items-center gap-0.5">
+              <span className="font-bold text-emerald-800 bg-emerald-500/15 px-1.5 py-0.5 rounded border border-emerald-600/30 flex items-center gap-0.5">
                 <Star className="w-3 h-3 fill-current" />
                 {liveVm.externalScore.displayString}
               </span>
             ) : (
-              <span className="text-[10px] font-semibold text-[var(--text-muted)] opacity-75">
+              <span className="text-[10px] font-semibold text-[var(--surface-light-muted,#475569)] opacity-90">
                 Not Rated
               </span>
             )}
           </div>
 
           {liveVm.genresDisplay.length > 0 && (
-            <span className="text-[10px] font-medium text-[var(--text-muted)] truncate max-w-[80px]">
+            <span className="text-[10px] font-medium text-[var(--surface-light-muted,#475569)] truncate max-w-[80px]">
               {liveVm.genresDisplay[0]}
             </span>
           )}

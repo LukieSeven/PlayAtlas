@@ -128,6 +128,37 @@ async function runReleaseCatalogRegressionTests() {
     globalThis.fetch = originalFetch;
   }
 
+  // 6. Release Record Batch Hydration & Order Preservation Test
+  const { hydrateCompactRecordsBatch } = await import('../src/services/catalogDetailService');
+
+  const unhydratedBatch = [
+    { id: 101, name: 'Game Alpha', year: 2026, defaultVisible: true, chunk: 1 },
+    { id: 102, name: 'Game Beta', year: 2026, defaultVisible: true, chunk: 1 },
+    { id: 103, name: 'Game Gamma', year: 2026, defaultVisible: true, chunk: 2 },
+  ];
+
+  const mockChunkLoader = async (chunkFile: string) => {
+    if (chunkFile.includes('0001')) {
+      return [
+        { id: 101, sourceId: 101, name: 'Game Alpha', cover_image_id: 'co101' },
+        { id: 102, sourceId: 102, name: 'Game Beta', cover_image_id: 'co102' },
+      ];
+    }
+    return [
+      { id: 103, sourceId: 103, name: 'Game Gamma' }, // Missing cover (uses fallback)
+    ];
+  };
+
+  const hydratedResults = await hydrateCompactRecordsBatch(unhydratedBatch as any, mockChunkLoader);
+  assertEqual(hydratedResults.length, 3, 'Hydration preserves original batch size');
+  assertEqual(hydratedResults[0].name, 'Game Alpha', 'Hydration preserves exact original order (Game Alpha first)');
+  assertEqual(hydratedResults[1].name, 'Game Beta', 'Hydration preserves exact original order (Game Beta second)');
+  assertEqual(hydratedResults[2].name, 'Game Gamma', 'Hydration preserves exact original order (Game Gamma third)');
+
+  assert(Boolean(hydratedResults[0].coverUrl && hydratedResults[0].coverUrl.includes('co101')), 'Game Alpha hydrated with real cover URL');
+  assert(Boolean(hydratedResults[1].coverUrl && hydratedResults[1].coverUrl.includes('co102')), 'Game Beta hydrated with real cover URL');
+  assert(hydratedResults[2].coverUrl === undefined, 'Missing cover retains fallback state');
+
   console.log(`----------------------------------------------------`);
   console.log(`📊 Release Catalog Regression Test Results: ${passed} passed, ${failed} failed.`);
   console.log(`----------------------------------------------------`);

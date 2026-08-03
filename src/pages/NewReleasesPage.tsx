@@ -6,6 +6,8 @@ import { GameListGrid } from '../components/widgets/GameListGrid';
 import { CompactGameLookupRecord } from '../types/catalog';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
 
+import { hydrateCompactRecordsBatch } from '../services/catalogDetailService';
+
 type TimeFrame = 'day' | 'week' | 'month';
 type ReleaseViewMode = 'first_release' | 'platform_release';
 
@@ -44,6 +46,8 @@ export const NewReleasesPage: React.FC = () => {
         year: r.firstReleaseDate ? parseInt(r.firstReleaseDate.slice(0, 4), 10) : undefined,
         gameType: r.gameType || undefined,
         defaultVisible: r.defaultVisible !== false,
+        coverUrl: r.coverUrl || undefined,
+        chunk: r.dataChunk ? parseInt(String(r.dataChunk).replace(/\D/g, ''), 10) : undefined,
       }));
 
       setReleaseGames(mapped);
@@ -59,6 +63,33 @@ export const NewReleasesPage: React.FC = () => {
   useEffect(() => {
     loadReleaseCatalog();
   }, [loadReleaseCatalog]);
+
+  // Non-blocking async hydration of displayed release record batch (at most 40 records)
+  useEffect(() => {
+    if (releaseGames.length === 0 || searchQuery.trim().length >= 2) return;
+
+    let isCurrent = true;
+    const batchToHydrate = releaseGames.slice(0, 40);
+
+    const needsHydration = batchToHydrate.some(r => !r.coverUrl || r.coverUrl.includes('nocover'));
+    if (!needsHydration) return;
+
+    hydrateCompactRecordsBatch(batchToHydrate)
+      .then(hydratedBatch => {
+        if (!isCurrent) return;
+        setReleaseGames(prev => {
+          const hydratedMap = new Map(hydratedBatch.map(h => [h.id, h]));
+          return prev.map(r => hydratedMap.get(r.id) || r);
+        });
+      })
+      .catch(err => {
+        console.warn('Non-critical release batch hydration warning:', err);
+      });
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [releaseGames, searchQuery]);
 
   // Full Catalog Search effect (searches all 370,000+ games independently of release window)
   useEffect(() => {

@@ -1,4 +1,4 @@
-import { CompactGameLookupRecord } from '../../scripts/build-browser-catalog';
+import { CompactGameLookupRecord } from '../types/catalog';
 import { GameItem } from '../types/game';
 import { fetchAndDecompressJson } from '../utils/decompression';
 import { getBasePathAwareUrl } from './catalogDataSource';
@@ -251,4 +251,40 @@ export async function fetchGameDetailsForCompactRecords(
   }
 
   return resultGameItems;
+}
+
+const hydratedRecordsCache = new Map<number, CompactGameLookupRecord>();
+
+/**
+ * Hydrates a displayed batch (e.g., 20–40 games) of compact records with real cover art,
+ * genres, platforms, rating, and developer from local catalog detail chunks while preserving exact array ordering.
+ */
+export async function hydrateCompactRecordsBatch(
+  records: CompactGameLookupRecord[],
+  chunkLoader?: (chunkFile: string) => Promise<any[]>
+): Promise<CompactGameLookupRecord[]> {
+  if (!records || records.length === 0) return [];
+
+  const unhydrated = records.filter(r => !hydratedRecordsCache.has(r.id));
+
+  if (unhydrated.length > 0) {
+    const details = await fetchGameDetailsForCompactRecords(unhydrated, chunkLoader);
+    for (let i = 0; i < unhydrated.length; i++) {
+      const orig = unhydrated[i];
+      const detail = details[i];
+      if (detail) {
+        const hydrated: CompactGameLookupRecord = {
+          ...orig,
+          coverUrl: detail.coverUrl && detail.coverUrl !== 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.jpg' ? detail.coverUrl : orig.coverUrl,
+          rating: detail.rating > 0 ? detail.rating : orig.rating,
+          genres: detail.genres && detail.genres.length > 0 ? detail.genres : orig.genres,
+          platforms: detail.platforms && detail.platforms.length > 0 ? detail.platforms : orig.platforms,
+          developer: detail.developer || orig.developer,
+        };
+        hydratedRecordsCache.set(orig.id, hydrated);
+      }
+    }
+  }
+
+  return records.map(r => hydratedRecordsCache.get(r.id) || r);
 }
