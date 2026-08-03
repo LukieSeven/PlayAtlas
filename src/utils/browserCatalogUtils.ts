@@ -1,5 +1,3 @@
-import crypto from 'crypto';
-
 export function normalizeSearchQuery(q: string | null | undefined): string {
   if (!q || typeof q !== 'string') return '';
   return q
@@ -39,12 +37,34 @@ export function tokenizeTitle(title: string | null | undefined): string[] {
 }
 
 /**
- * Get 2-character hex bucket key (00 to ff) for a token using SHA-256
+ * Synchronous SHA-256 bucket key helper for Node.js build scripts
  */
-export function getTokenBucketKey(token: string): string {
+export function getTokenBucketKeySync(token: string): string {
   const clean = token.trim().toLowerCase();
-  const hash = crypto.createHash('sha256').update(clean).digest('hex');
-  return hash.slice(0, 2); // 256 buckets from 00 to ff
+  try {
+    const nodeCrypto = require('crypto');
+    return nodeCrypto.createHash('sha256').update(clean).digest('hex').slice(0, 2);
+  } catch {
+    return '00';
+  }
+}
+
+/**
+ * Get 2-character hex bucket key (00 to ff) for a token using browser-safe Web Crypto API
+ */
+export async function getTokenBucketKey(token: string): Promise<string> {
+  const clean = token.trim().toLowerCase();
+  const bytes = new TextEncoder().encode(clean);
+
+  if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.subtle) {
+    const digest = await globalThis.crypto.subtle.digest('SHA-256', bytes);
+    const firstByte = new Uint8Array(digest)[0];
+    return firstByte.toString(16).padStart(2, '0');
+  }
+
+  const nodeCrypto = await import('crypto');
+  const hash = nodeCrypto.createHash('sha256').update(clean).digest('hex');
+  return hash.slice(0, 2);
 }
 
 export function getReleaseYearKey(firstReleaseDate: string | null | undefined): string {

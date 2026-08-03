@@ -158,7 +158,8 @@ export async function executeProgressiveTokenSearch(
   }
 
   const manifest = await fetchTokenManifest();
-  const requiredBucketKeys = Array.from(new Set(tokens.map(t => getTokenBucketKey(t))));
+  const bucketKeys = await Promise.all(tokens.map(t => getTokenBucketKey(t)));
+  const requiredBucketKeys = Array.from(new Set(bucketKeys));
 
   let tokenBucketsDownloaded = 0;
   let totalTokenBytesDownloaded = 0;

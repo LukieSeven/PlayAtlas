@@ -5,7 +5,7 @@ import zlib from 'zlib';
 import archiver from 'archiver';
 import {
   tokenizeTitle,
-  getTokenBucketKey,
+  getTokenBucketKeySync,
   getReleaseYearKey,
   getReleaseMonthKey,
 } from '../src/utils/browserCatalogUtils';
@@ -359,7 +359,7 @@ async function runBrowserCatalogBuilder() {
   }
 
   for (const [token, idSet] of tokenPostingsMap.entries()) {
-    const bucketKey = getTokenBucketKey(token);
+    const bucketKey = getTokenBucketKeySync(token);
     const sortedIds = Array.from(idSet).sort((a, b) => a - b);
     const bucketObj = tokenBucketsMap.get(bucketKey)!;
     bucketObj[token] = sortedIds;
