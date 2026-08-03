@@ -17,10 +17,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: 'npm'
@@ -47,7 +47,7 @@ jobs:
 
       - name: Upload Test Database & Build Artifact
         if: ${{ inputs.import_mode == 'test' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: igdb-test-database-${{ github.run_id }}
           path: |
@@ -76,7 +76,7 @@ jobs:
 
       - name: Upload Full Catalog & Build Artifact
         if: ${{ inputs.import_mode == 'full' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: igdb-full-catalog-${{ github.run_id }}
           path: |
