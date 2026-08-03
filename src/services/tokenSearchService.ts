@@ -3,6 +3,8 @@ import {
   tokenizeTitle,
   getTokenBucketKey,
 } from '../utils/browserCatalogUtils';
+import { fetchAndDecompressJson } from '../utils/decompression';
+import { getBasePathAwareUrl } from './catalogDataSource';
 import { CompactGameLookupRecord } from '../../scripts/build-browser-catalog';
 
 export interface TokenManifestLookupFile {
@@ -10,8 +12,10 @@ export interface TokenManifestLookupFile {
   firstId: number;
   lastId: number;
   recordCount: number;
-  byteSize: number;
+  compressedByteSize: number;
+  uncompressedByteSize: number;
   sha256: string;
+  compression: 'gzip';
 }
 
 export interface TokenManifestBucket {
@@ -19,8 +23,10 @@ export interface TokenManifestBucket {
   file: string;
   tokenCount: number;
   postingCount: number;
-  byteSize: number;
+  compressedByteSize: number;
+  uncompressedByteSize: number;
   sha256: string;
+  compression: 'gzip';
 }
 
 export interface TokenManifest {
@@ -49,20 +55,13 @@ const cachedTokenBuckets = new Map<string, Record<string, number[]>>();
 const cachedLookupFiles = new Map<string, CompactGameLookupRecord[]>();
 let tokenManifestCache: TokenManifest | null = null;
 
-function getBaseUrl(): string {
-  const rawBaseUrl = (import.meta as any).env?.BASE_URL || './';
-  return rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
-}
-
 /**
  * Fetch Token Search Manifest (Base-Path Aware)
  */
 export async function fetchTokenManifest(): Promise<TokenManifest> {
   if (tokenManifestCache) return tokenManifestCache;
 
-  const baseUrl = getBaseUrl();
-  const manifestUrl = `${baseUrl}data/search/token_manifest.json`;
-
+  const manifestUrl = getBasePathAwareUrl('data/search/token_manifest.json');
   const res = await fetch(manifestUrl);
   if (!res.ok) {
     throw new Error(`Failed to fetch token search manifest (${res.status}): ${res.statusText}`);
@@ -73,43 +72,44 @@ export async function fetchTokenManifest(): Promise<TokenManifest> {
 }
 
 /**
- * Fetch Token Bucket File (Base-Path Aware)
+ * Fetch & Decompress Token Bucket File (.json.gz, Base-Path Aware)
  */
 export async function fetchTokenBucket(hexKey: string): Promise<Record<string, number[]>> {
   if (cachedTokenBuckets.has(hexKey)) {
     return cachedTokenBuckets.get(hexKey)!;
   }
 
-  const baseUrl = getBaseUrl();
-  const bucketUrl = `${baseUrl}data/search/tokens/tokens_${hexKey}.json`;
+  const manifest = await fetchTokenManifest();
+  const bucketInfo = manifest.tokenBuckets.find(b => b.key === hexKey);
+  const relPath = bucketInfo ? bucketInfo.file : `search/tokens/tokens_${hexKey}.json.gz`;
 
-  const res = await fetch(bucketUrl);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch token bucket ${hexKey} (${res.status})`);
-  }
+  const bucketUrl = getBasePathAwareUrl(`data/${relPath}`);
+  const bucketObj = await fetchAndDecompressJson<Record<string, number[]>>(
+    bucketUrl,
+    bucketInfo?.sha256
+  );
 
-  const bucketObj: Record<string, number[]> = await res.json();
   cachedTokenBuckets.set(hexKey, bucketObj);
   return bucketObj;
 }
 
 /**
- * Fetch Compact Game Lookup File (Base-Path Aware)
+ * Fetch & Decompress Compact Game Lookup File (.json.gz, Base-Path Aware)
  */
 export async function fetchLookupFile(relPath: string): Promise<CompactGameLookupRecord[]> {
   if (cachedLookupFiles.has(relPath)) {
     return cachedLookupFiles.get(relPath)!;
   }
 
-  const baseUrl = getBaseUrl();
-  const fileUrl = `${baseUrl}data/${relPath}`;
+  const manifest = await fetchTokenManifest();
+  const lookupInfo = manifest.lookupFiles.find(l => l.file === relPath);
 
-  const res = await fetch(fileUrl);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch lookup file ${relPath} (${res.status})`);
-  }
+  const fileUrl = getBasePathAwareUrl(`data/${relPath}`);
+  const records = await fetchAndDecompressJson<CompactGameLookupRecord[]>(
+    fileUrl,
+    lookupInfo?.sha256
+  );
 
-  const records: CompactGameLookupRecord[] = await res.json();
   cachedLookupFiles.set(relPath, records);
   return records;
 }
@@ -163,7 +163,7 @@ export async function executeProgressiveTokenSearch(
   let tokenBucketsDownloaded = 0;
   let totalTokenBytesDownloaded = 0;
 
-  // 1. Load Token Buckets
+  // 1. Load & Decompress Token Buckets
   const postingsMap = new Map<string, number[]>();
 
   for (const bucketKey of requiredBucketKeys) {
@@ -172,7 +172,7 @@ export async function executeProgressiveTokenSearch(
     if (!isCached) {
       tokenBucketsDownloaded++;
       const bucketInfo = manifest.tokenBuckets.find(b => b.key === bucketKey);
-      if (bucketInfo) totalTokenBytesDownloaded += bucketInfo.byteSize;
+      if (bucketInfo) totalTokenBytesDownloaded += bucketInfo.compressedByteSize;
     }
 
     for (const t of tokens) {
@@ -196,7 +196,6 @@ export async function executeProgressiveTokenSearch(
   const allMatchingIds = Array.from(matchingGameIdsSet);
   const postingListIdCount = allMatchingIds.length;
 
-  // Safeguard for very broad tokens: Sort IDs by match density & limit candidate set if huge
   let candidateIds = allMatchingIds;
   if (candidateIds.length > 5000) {
     candidateIds.sort((a, b) => (idMatchCountMap.get(b) || 0) - (idMatchCountMap.get(a) || 0));
@@ -223,7 +222,7 @@ export async function executeProgressiveTokenSearch(
     (a, b) => (fileToIdsMap.get(b)?.length || 0) - (fileToIdsMap.get(a)?.length || 0)
   );
 
-  // 4. Progressive Batch Loading of Compact Lookup Files
+  // 4. Progressive Batch Loading & Decompression of Compact Lookup Files
   const loadedLookupRecords: CompactGameLookupRecord[] = [];
   let lookupFilesRequired = 0;
   let totalLookupBytesRequired = 0;
@@ -235,7 +234,7 @@ export async function executeProgressiveTokenSearch(
 
     if (!isCached) {
       lookupFilesRequired++;
-      if (fileInfo) totalLookupBytesRequired += fileInfo.byteSize;
+      if (fileInfo) totalLookupBytesRequired += fileInfo.compressedByteSize;
     }
 
     const idsInFile = new Set(fileToIdsMap.get(relPath)!);
@@ -245,7 +244,6 @@ export async function executeProgressiveTokenSearch(
       }
     }
 
-    // Stop early if we have enough ranked candidates to serve initial page of 20 results
     if (loadedLookupRecords.length >= Math.max(targetResultCount * 3, 60)) {
       break;
     }

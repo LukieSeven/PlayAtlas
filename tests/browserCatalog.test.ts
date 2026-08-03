@@ -5,6 +5,7 @@ import {
   getReleaseYearKey,
   buildCoverThumbnailUrl,
 } from '../src/utils/browserCatalogUtils';
+import zlib from 'zlib';
 
 function runBrowserCatalogUnitTests() {
   console.log('🧪 Running Browser Catalog Unit Tests...');
@@ -52,6 +53,13 @@ function runBrowserCatalogUnitTests() {
     'co1vcf -> IGDB small cover URL'
   );
   assertEqual(buildCoverThumbnailUrl(null), null, 'null imageId -> null cover thumbnail');
+
+  // 6. Gzip Compression/Decompression Sanity Test
+  const sampleData = { game: 'The Witcher 3', id: 1942 };
+  const jsonStr = JSON.stringify(sampleData);
+  const compressedBuffer = zlib.gzipSync(Buffer.from(jsonStr, 'utf-8'));
+  const decompressedStr = zlib.gunzipSync(compressedBuffer).toString('utf-8');
+  assertEqual(decompressedStr, jsonStr, 'Gzip compression and decompression works cleanly');
 
   console.log(`----------------------------------------------------`);
   console.log(`📊 Unit Test Results: ${passed} passed, ${failed} failed.`);

@@ -1,14 +1,42 @@
 import { getBasePathAwareUrl } from './catalogDataSource';
+import { fetchAndDecompressJson } from '../utils/decompression';
 import { GameItem } from '../types/game';
 import { openIndexedDB } from './indexDbStorage';
-import { ReleaseListingRecord } from '../../scripts/build-browser-catalog';
+
+export interface CompactPlatformReleaseDate {
+  p: number; // platform ID
+  d: string; // date YYYY-MM-DD
+}
+
+export interface ReleaseListingRecord {
+  id: string;
+  sourceId: number;
+  name: string;
+  slug: string | null;
+  gameType: string;
+  gameTypeLabel: string;
+  defaultVisible: boolean;
+  firstReleaseDate: string | null;
+  firstReleaseDatePrecision: string;
+  platformReleaseDates: CompactPlatformReleaseDate[];
+  platforms: Array<{
+    id: number;
+    name: string;
+    abbreviation: string | null;
+  }>;
+  coverUrl: string | null;
+  summaryPreview: string | null;
+  dataChunk: string;
+}
 
 export interface ReleaseManifestPartition {
   key: string;
   file: string;
   recordCount: number;
-  byteSize: number;
+  compressedByteSize: number;
+  uncompressedByteSize: number;
   sha256: string;
+  compression: 'gzip';
 }
 
 export interface ReleaseManifest {
@@ -16,6 +44,13 @@ export interface ReleaseManifest {
   generatedAt: string;
   recordCount: number;
   totalBytes: number;
+  platformsMetadata?: {
+    file: string;
+    compressedByteSize: number;
+    uncompressedByteSize: number;
+    sha256: string;
+    compression: 'gzip';
+  };
   partitions: ReleaseManifestPartition[];
 }
 
@@ -37,6 +72,7 @@ export interface ReleaseQueryResult {
 }
 
 let releaseManifestCache: ReleaseManifest | null = null;
+let sharedPlatformsMapCache: Record<number, { name: string; abbreviation: string | null }> | null = null;
 const cachedPartitionsMap = new Map<string, ReleaseListingRecord[]>();
 
 /**
@@ -71,7 +107,6 @@ export function calculateDynamicDateRange(
   if (timeframe === 'day') {
     return { startDate: localTodayStr, endDate: localTodayStr };
   } else if (timeframe === 'week') {
-    // 7 rolling days (today - 6 days through today)
     const startDateObj = new Date(todayDate);
     startDateObj.setDate(startDateObj.getDate() - 6);
     const startY = startDateObj.getFullYear();
@@ -82,7 +117,6 @@ export function calculateDynamicDateRange(
       endDate: localTodayStr,
     };
   } else {
-    // Month mode: 1st of current month through today
     const startM = String(m).padStart(2, '0');
     return {
       startDate: `${y}-${startM}-01`,
@@ -109,7 +143,25 @@ export async function fetchReleaseManifest(): Promise<ReleaseManifest> {
 }
 
 /**
- * Fetch & Cache Individual Release Partition File
+ * Fetch & Decompress Shared Platforms Metadata (metadata/platforms.json.gz)
+ */
+export async function fetchSharedPlatformsMetadata(): Promise<Record<number, { name: string; abbreviation: string | null }>> {
+  if (sharedPlatformsMapCache) return sharedPlatformsMapCache;
+
+  const manifest = await fetchReleaseManifest();
+  const metaInfo = manifest.platformsMetadata;
+  const relPath = metaInfo ? metaInfo.file : 'metadata/platforms.json.gz';
+  const url = getBasePathAwareUrl(`data/${relPath}`);
+
+  sharedPlatformsMapCache = await fetchAndDecompressJson<Record<number, { name: string; abbreviation: string | null }>>(
+    url,
+    metaInfo?.sha256
+  );
+  return sharedPlatformsMapCache!;
+}
+
+/**
+ * Fetch & Decompress Individual Release Partition File (.json.gz)
  */
 export async function fetchReleasePartitionFile(relPath: string): Promise<ReleaseListingRecord[]> {
   if (cachedPartitionsMap.has(relPath)) {
@@ -135,13 +187,15 @@ export async function fetchReleasePartitionFile(relPath: string): Promise<Releas
     console.warn('IndexedDB partition check warning:', err);
   }
 
-  const fileUrl = getBasePathAwareUrl(`data/${relPath}`);
-  const res = await fetch(fileUrl);
-  if (!res.ok) {
-    throw new Error(`Failed to fetch release partition file ${relPath} (${res.status})`);
-  }
+  const manifest = await fetchReleaseManifest();
+  const partInfo = manifest.partitions.find(p => p.file === relPath);
 
-  const records: ReleaseListingRecord[] = await res.json();
+  const fileUrl = getBasePathAwareUrl(`data/${relPath}`);
+  const records = await fetchAndDecompressJson<ReleaseListingRecord[]>(
+    fileUrl,
+    partInfo?.sha256
+  );
+
   cachedPartitionsMap.set(relPath, records);
 
   // Save to IndexedDB
@@ -159,13 +213,25 @@ export async function fetchReleasePartitionFile(relPath: string): Promise<Releas
 /**
  * Adapter: Convert ReleaseListingRecord to UI GameItem
  */
-export function convertReleaseRecordToGameItem(record: ReleaseListingRecord): GameItem {
+export function convertReleaseRecordToGameItem(
+  record: ReleaseListingRecord,
+  platformsMap?: Record<number, { name: string; abbreviation: string | null }>
+): GameItem {
   const typeStr = record.gameTypeLabel || record.gameType || 'Main Game';
   let category: GameItem['category'] = 'Base Game';
   if (typeStr.includes('DLC') || typeStr.includes('Expansion') || typeStr.includes('Pack')) category = 'DLC / Expansion';
   else if (typeStr.includes('Bundle')) category = 'Bundle';
   else if (typeStr.includes('Remake') || typeStr.includes('Remaster')) category = 'Remake';
   else if (typeStr.includes('Mod')) category = 'Mod';
+
+  let platformNames: string[] = [];
+  if (Array.isArray(record.platforms) && record.platforms.length > 0) {
+    platformNames = record.platforms.map(p => p.name);
+  } else if (Array.isArray(record.platformReleaseDates) && record.platformReleaseDates.length > 0 && platformsMap) {
+    platformNames = Array.from(
+      new Set(record.platformReleaseDates.map(prd => platformsMap[prd.p]?.name || 'Unknown Platform'))
+    );
+  }
 
   return {
     id: record.id,
@@ -174,7 +240,7 @@ export function convertReleaseRecordToGameItem(record: ReleaseListingRecord): Ga
     bannerUrl: record.coverUrl || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1080&auto=format&fit=crop',
     rating: 9.0,
     releaseDate: record.firstReleaseDate || 'Unknown',
-    platforms: record.platforms.map(p => p.name),
+    platforms: platformNames,
     genres: [],
     developer: 'Game Studio',
     summary: record.summaryPreview || 'IGDB Source Record',
@@ -183,20 +249,24 @@ export function convertReleaseRecordToGameItem(record: ReleaseListingRecord): Ga
 }
 
 /**
- * Query Partitioned Release Catalog (Dynamic Dates, Base-Path Aware)
+ * Query Partitioned Release Catalog (Dynamic Dates, Base-Path Aware, Gzip Decompression)
  */
 export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise<ReleaseQueryResult> {
   const { dateStr: localToday, timezone: userTimezone } = getDynamicLocalDate();
   const { startDate, endDate } = calculateDynamicDateRange(options.timeframe, localToday);
 
   const manifest = await fetchReleaseManifest();
+  let platformsMap: Record<number, { name: string; abbreviation: string | null }> | undefined;
+  try {
+    platformsMap = await fetchSharedPlatformsMetadata();
+  } catch {
+    // Shared platforms fallback
+  }
 
-  // Find relevant partition files for the date range
   const startYear = startDate.slice(0, 4);
   const endYear = endDate.slice(0, 4);
 
   const targetPartitions = manifest.partitions.filter(p => {
-    // Match year or year/month subfolder
     if (p.key.startsWith(startYear) || p.key.startsWith(endYear)) return true;
     return false;
   });
@@ -219,19 +289,18 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
       if (!record.firstReleaseDate) return false;
       return record.firstReleaseDate >= startDate && record.firstReleaseDate <= endDate;
     } else {
-      // Platform release mode
       if (!Array.isArray(record.platformReleaseDates) || record.platformReleaseDates.length === 0) {
         if (!record.firstReleaseDate) return false;
         return record.firstReleaseDate >= startDate && record.firstReleaseDate <= endDate;
       }
 
       return record.platformReleaseDates.some(
-        prd => prd.date != null && prd.date >= startDate && prd.date <= endDate
+        prd => prd.d != null && prd.d >= startDate && prd.d <= endDate
       );
     }
   }).sort((a, b) => (b.firstReleaseDate || '').localeCompare(a.firstReleaseDate || ''));
 
-  const games = filteredRecords.map(convertReleaseRecordToGameItem);
+  const games = filteredRecords.map(r => convertReleaseRecordToGameItem(r, platformsMap));
 
   return {
     games,

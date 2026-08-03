@@ -1,4 +1,6 @@
 import { GameIndexRecord, IndexManifest } from '../types/indexSchema';
+import { getBasePathAwareUrl } from './catalogDataSource';
+import { fetchAndDecompressJson } from '../utils/decompression';
 
 const DB_NAME = 'play_atlas_catalog_db';
 const DB_VERSION = 2; // Upgraded to v2 for tiered hybrid catalog storage
@@ -115,21 +117,8 @@ export async function requestStoragePersistence(): Promise<boolean> {
  * Fetch Browser Catalog Manifest
  */
 export async function fetchBrowserCatalogManifest(): Promise<any> {
-  const rawBaseUrl = (import.meta as any).env?.BASE_URL || './';
-  const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
-
-  let manifestUrl = `${baseUrl}data/browser_catalog_manifest.json`;
-  let res = await fetch(manifestUrl);
-
-  if (!res.ok) {
-    manifestUrl = `${baseUrl}data/igdb_index_manifest.json`;
-    res = await fetch(manifestUrl);
-  }
-
-  if (!res.ok) {
-    manifestUrl = `${baseUrl}data/game_index_manifest.json`;
-    res = await fetch(manifestUrl);
-  }
+  const manifestUrl = getBasePathAwareUrl('data/browser_catalog_manifest.json');
+  const res = await fetch(manifestUrl);
 
   if (!res.ok) {
     throw new Error(`Failed to fetch catalog manifest (${res.status}): ${res.statusText}`);
@@ -195,27 +184,17 @@ export function saveManifestMetadataToLocalStorage(manifest: IndexManifest): voi
 }
 
 /**
- * Sync catalog for default browsing view (Tier 1 & Tier 2)
+ * Sync catalog for default browsing view
  */
 export async function syncGameIndexCatalog(): Promise<any> {
-  const rawBaseUrl = (import.meta as any).env?.BASE_URL || './';
-  const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
+  const manifestUrl = getBasePathAwareUrl('data/browser_catalog_manifest.json');
+  const res = await fetch(manifestUrl);
 
-  let manifestUrl = `${baseUrl}data/igdb_index_manifest.json`;
-  let indexUrl = `${baseUrl}data/igdb_index.json`;
-
-  let manifestRes = await fetch(manifestUrl);
-  if (!manifestRes.ok) {
-    manifestUrl = `${baseUrl}data/game_index_manifest.json`;
-    indexUrl = `${baseUrl}data/game_index.json`;
-    manifestRes = await fetch(manifestUrl);
+  if (!res.ok) {
+    throw new Error(`Failed to fetch browser catalog manifest (${res.status}): ${res.statusText}`);
   }
 
-  if (!manifestRes.ok) {
-    throw new Error(`Failed to fetch index manifest (${manifestRes.status}): ${manifestRes.statusText}`);
-  }
-
-  const publishedManifest: IndexManifest = await manifestRes.json();
+  const publishedManifest: IndexManifest = await res.json();
   const cachedManifest = getCachedManifestMetadata();
   const cachedRecords = await loadRecordsFromIndexedDB();
 
@@ -247,35 +226,21 @@ export async function syncGameIndexCatalog(): Promise<any> {
     };
   }
 
-  const indexRes = await fetch(indexUrl);
-  if (!indexRes.ok) {
-    throw new Error(`Failed to fetch full game index (${indexRes.status}): ${indexRes.statusText}`);
-  }
-
-  const compiledIndex: any = await indexRes.json();
-  await saveRecordsToIndexedDB(compiledIndex.records);
-  saveManifestMetadataToLocalStorage(compiledIndex.manifest);
-
-  return compiledIndex;
+  return {
+    manifest: publishedManifest,
+    diagnostics: null,
+    records: cachedRecords,
+  };
 }
 
 /**
- * Bulk Full Catalog Installer (Tier 3: Sequential Chunk Downloading with Progress & Resumability)
+ * Bulk Full Catalog Installer (Tier 3: Sequential Chunk Downloading & Gzip Decompression with Progress & Resumability)
  */
 export async function installFullCatalog(
   onProgress?: (progress: InstallationProgress) => void,
   signal?: AbortSignal
 ): Promise<void> {
-  const rawBaseUrl = (import.meta as any).env?.BASE_URL || './';
-  const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
-
-  const manifestUrl = `${baseUrl}data/browser_catalog_manifest.json`;
-  const res = await fetch(manifestUrl);
-  if (!res.ok) {
-    throw new Error(`Full catalog manifest unavailable (${res.status}). Cannot install full catalog.`);
-  }
-
-  const manifest = await res.json();
+  const manifest = await fetchBrowserCatalogManifest();
   const chunks: any[] = manifest.fullCatalog?.chunks || [];
 
   if (chunks.length === 0) {
@@ -306,7 +271,7 @@ export async function installFullCatalog(
   let bytesDownloaded = 0;
   const totalChunks = chunks.length;
   const totalRecords = manifest.catalogRecordCount || 0;
-  const totalBytes = manifest.fullCatalogUncompressedBytes || 0;
+  const totalBytes = manifest.fullCatalogCompressedBytes || manifest.fullCatalogUncompressedBytes || 0;
 
   for (let i = 0; i < chunks.length; i++) {
     if (signal && signal.aborted) {
@@ -314,23 +279,21 @@ export async function installFullCatalog(
     }
 
     const chunkInfo = chunks[i];
-    const chunkRelPath = chunkInfo.file; // e.g. "chunks/game_index_0001.json"
+    const chunkRelPath = chunkInfo.file; // e.g. "chunks/game_index_0001.json.gz"
 
     if (completedChunkFiles.has(chunkRelPath)) {
       recordsInstalled += chunkInfo.recordCount;
-      bytesDownloaded += chunkInfo.byteSize;
+      bytesDownloaded += chunkInfo.compressedByteSize || chunkInfo.byteSize;
       continue;
     }
 
-    const chunkUrl = `${baseUrl}data/${chunkRelPath}`;
-    const chunkRes = await fetch(chunkUrl);
+    const chunkUrl = getBasePathAwareUrl(`data/${chunkRelPath}`);
+    const chunkRecords = await fetchAndDecompressJson<GameIndexRecord[]>(
+      chunkUrl,
+      chunkInfo.sha256
+    );
 
-    if (!chunkRes.ok) {
-      throw new Error(`Failed to download chunk ${chunkRelPath} (HTTP ${chunkRes.status})`);
-    }
-
-    const chunkRecords: GameIndexRecord[] = await chunkRes.json();
-    bytesDownloaded += chunkInfo.byteSize;
+    bytesDownloaded += chunkInfo.compressedByteSize || chunkInfo.byteSize;
     recordsInstalled += chunkRecords.length;
 
     // Write chunk records & chunk completion state to IndexedDB incrementally
@@ -347,7 +310,7 @@ export async function installFullCatalog(
         chunkFile: chunkRelPath,
         downloadedAt: new Date().toISOString(),
         recordCount: chunkRecords.length,
-        byteSize: chunkInfo.byteSize,
+        compressedByteSize: chunkInfo.compressedByteSize,
         sha256: chunkInfo.sha256,
       });
 

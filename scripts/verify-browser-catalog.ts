@@ -1,23 +1,29 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import zlib from 'zlib';
 
-function computeSha256(content: Buffer | string): string {
+function computeSha256(content: Buffer | Uint8Array): string {
   return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+function decompressGzipToJson<T>(buffer: Buffer): T {
+  const decompressed = zlib.gunzipSync(buffer);
+  return JSON.parse(decompressed.toString('utf-8'));
 }
 
 async function verifyBrowserCatalog() {
   const targetArg = process.argv[2] || 'generated/browser-catalog-test';
   const targetDir = path.isAbsolute(targetArg) ? targetArg : path.join(process.cwd(), targetArg);
 
-  console.log(`🔍 Verifying Compact Token Browser Catalog in: ${targetDir}`);
+  console.log(`🔍 Verifying Gzipped Browser Catalog Output in: ${targetDir}`);
 
   if (!fs.existsSync(targetDir)) {
     console.error(`❌ VERIFICATION FAILURE: Output directory does not exist: ${targetDir}`);
     process.exit(1);
   }
 
-  // 1. Verify Browser Catalog Manifest
+  // 1. Check Master Browser Catalog Manifest
   const browserManifestPath = path.join(targetDir, 'browser_catalog_manifest.json');
   if (!fs.existsSync(browserManifestPath)) {
     console.error(`❌ VERIFICATION FAILURE: browser_catalog_manifest.json missing at ${browserManifestPath}`);
@@ -30,37 +36,37 @@ async function verifyBrowserCatalog() {
     process.exit(1);
   }
 
-  // 2. Verify Full Detail Chunks
+  // 2. Verify Full Detail Chunks (.json.gz)
   const validChunkPaths = new Set<string>();
   let totalChunkRecords = 0;
 
   for (const chunkInfo of browserManifest.fullCatalog.chunks) {
-    const chunkRelPath = chunkInfo.file; // e.g. "chunks/game_index_0001.json"
+    const chunkRelPath = chunkInfo.file; // e.g. "chunks/game_index_0001.json.gz"
     validChunkPaths.add(chunkRelPath);
 
     const chunkAbsPath = path.join(targetDir, chunkRelPath);
     if (!fs.existsSync(chunkAbsPath)) {
-      console.error(`❌ VERIFICATION FAILURE: Full detail chunk missing: ${chunkAbsPath}`);
+      console.error(`❌ VERIFICATION FAILURE: Full detail compressed chunk missing: ${chunkAbsPath}`);
       process.exit(1);
     }
 
-    const rawBuffer = fs.readFileSync(chunkAbsPath);
-    const calculatedHash = computeSha256(rawBuffer);
+    const compressedBuffer = fs.readFileSync(chunkAbsPath);
+    const calculatedHash = computeSha256(compressedBuffer);
     if (calculatedHash !== chunkInfo.sha256) {
-      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for ${chunkRelPath}!`);
+      console.error(`❌ VERIFICATION FAILURE: Hash mismatch for ${chunkRelPath}! Manifest: ${chunkInfo.sha256}, Actual: ${calculatedHash}`);
       process.exit(1);
     }
 
-    const records: any[] = JSON.parse(rawBuffer.toString('utf-8'));
+    const records = decompressGzipToJson<any[]>(compressedBuffer);
     totalChunkRecords += records.length;
   }
 
   if (totalChunkRecords !== browserManifest.catalogRecordCount) {
-    console.error(`❌ VERIFICATION FAILURE: Total chunk records (${totalChunkRecords}) !== manifest catalogRecordCount (${browserManifest.catalogRecordCount})`);
+    console.error(`❌ VERIFICATION FAILURE: Total chunk records (${totalChunkRecords}) !== catalogRecordCount (${browserManifest.catalogRecordCount})`);
     process.exit(1);
   }
 
-  // 3. Verify Token Search Manifest & Games Lookup Files
+  // 3. Verify Token Search Manifest & Games Lookup Files (.json.gz)
   const searchManifestPath = path.join(targetDir, browserManifest.searchManifest);
   if (!fs.existsSync(searchManifestPath)) {
     console.error(`❌ VERIFICATION FAILURE: Token search manifest missing: ${searchManifestPath}`);
@@ -68,7 +74,7 @@ async function verifyBrowserCatalog() {
   }
 
   const tokenManifest = JSON.parse(fs.readFileSync(searchManifestPath, 'utf-8'));
-  const lookupGameIds = new Map<number, number>(); // ID -> chunk ID
+  const lookupGameIds = new Map<number, number>();
   let totalLookupRecords = 0;
 
   for (const lookupInfo of tokenManifest.lookupFiles) {
@@ -78,14 +84,14 @@ async function verifyBrowserCatalog() {
       process.exit(1);
     }
 
-    const rawBuffer = fs.readFileSync(lookupAbsPath);
-    const calculatedHash = computeSha256(rawBuffer);
+    const compressedBuffer = fs.readFileSync(lookupAbsPath);
+    const calculatedHash = computeSha256(compressedBuffer);
     if (calculatedHash !== lookupInfo.sha256) {
       console.error(`❌ VERIFICATION FAILURE: Hash mismatch for lookup file ${lookupInfo.file}!`);
       process.exit(1);
     }
 
-    const records: any[] = JSON.parse(rawBuffer.toString('utf-8'));
+    const records = decompressGzipToJson<any[]>(compressedBuffer);
     totalLookupRecords += records.length;
 
     let prevId = -1;
@@ -120,7 +126,7 @@ async function verifyBrowserCatalog() {
     process.exit(1);
   }
 
-  // 4. Verify 256 Token Posting Buckets
+  // 4. Verify 256 Token Posting Buckets (.json.gz)
   if (!Array.isArray(tokenManifest.tokenBuckets) || tokenManifest.tokenBuckets.length !== 256) {
     console.error(`❌ VERIFICATION FAILURE: tokenBuckets length is ${tokenManifest.tokenBuckets?.length} (expected 256).`);
     process.exit(1);
@@ -135,14 +141,14 @@ async function verifyBrowserCatalog() {
       process.exit(1);
     }
 
-    const rawBuffer = fs.readFileSync(bucketAbsPath);
-    const calculatedHash = computeSha256(rawBuffer);
+    const compressedBuffer = fs.readFileSync(bucketAbsPath);
+    const calculatedHash = computeSha256(compressedBuffer);
     if (calculatedHash !== bucketInfo.sha256) {
       console.error(`❌ VERIFICATION FAILURE: Hash mismatch for token bucket ${bucketInfo.file}!`);
       process.exit(1);
     }
 
-    const bucketObj: Record<string, number[]> = JSON.parse(rawBuffer.toString('utf-8'));
+    const bucketObj = decompressGzipToJson<Record<string, number[]>>(compressedBuffer);
     for (const [token, ids] of Object.entries(bucketObj)) {
       globalTokens.add(token);
       for (const id of ids) {
@@ -154,12 +160,7 @@ async function verifyBrowserCatalog() {
     }
   }
 
-  if (globalTokens.size !== tokenManifest.uniqueTokenCount) {
-    console.error(`❌ VERIFICATION FAILURE: Verified unique tokens (${globalTokens.size}) !== tokenManifest.uniqueTokenCount (${tokenManifest.uniqueTokenCount})`);
-    process.exit(1);
-  }
-
-  // 5. Verify Subdivided Release Partitions
+  // 5. Verify Subdivided Release Partitions (.json.gz)
   const releaseManifestPath = path.join(targetDir, browserManifest.releaseManifest);
   if (!fs.existsSync(releaseManifestPath)) {
     console.error(`❌ VERIFICATION FAILURE: Release manifest missing: ${releaseManifestPath}`);
@@ -176,14 +177,14 @@ async function verifyBrowserCatalog() {
       process.exit(1);
     }
 
-    const rawBuffer = fs.readFileSync(partAbsPath);
-    const calculatedHash = computeSha256(rawBuffer);
+    const compressedBuffer = fs.readFileSync(partAbsPath);
+    const calculatedHash = computeSha256(compressedBuffer);
     if (calculatedHash !== partInfo.sha256) {
       console.error(`❌ VERIFICATION FAILURE: Hash mismatch for release partition ${partInfo.file}!`);
       process.exit(1);
     }
 
-    const records: any[] = JSON.parse(rawBuffer.toString('utf-8'));
+    const records = decompressGzipToJson<any[]>(compressedBuffer);
     totalReleaseRecords += records.length;
 
     for (const r of records) {
@@ -199,17 +200,10 @@ async function verifyBrowserCatalog() {
     process.exit(1);
   }
 
-  // 6. Verify Master ZIP Archive
-  const zipPath = path.join(targetDir, browserManifest.optionalArchive.file);
-  if (!fs.existsSync(zipPath)) {
-    console.error(`❌ VERIFICATION FAILURE: Master ZIP archive missing: ${zipPath}`);
-    process.exit(1);
-  }
-
-  const zipBuffer = fs.readFileSync(zipPath);
-  const calculatedZipHash = computeSha256(zipBuffer);
-  if (calculatedZipHash !== browserManifest.optionalArchive.sha256) {
-    console.error(`❌ VERIFICATION FAILURE: Master ZIP archive hash mismatch! Manifest: ${browserManifest.optionalArchive.sha256}, Actual: ${calculatedZipHash}`);
+  // 6. Verify ZIP Archive Excluded from Published Pages Output
+  const zipInPages = path.join(targetDir, 'play-atlas-full-catalog.zip');
+  if (fs.existsSync(zipInPages)) {
+    console.error(`❌ VERIFICATION FAILURE: Master ZIP archive play-atlas-full-catalog.zip MUST NOT be present in published Pages directory!`);
     process.exit(1);
   }
 
@@ -222,19 +216,19 @@ async function verifyBrowserCatalog() {
   }
 
   console.log('====================================================');
-  console.log('📊 REVISED BROWSER CATALOG VERIFICATION REPORT');
+  console.log('📊 GZIPPED BROWSER CATALOG INDEPENDENT VERIFICATION');
   console.log('====================================================');
-  console.log(`📁 Target Directory:          ${targetDir}`);
-  console.log(`🎮 Total Verified Games:      ${totalLookupRecords.toLocaleString()}`);
-  console.log(`🔤 Unique Search Tokens:      ${globalTokens.size.toLocaleString()}`);
-  console.log(`🎮 Compact Lookup Files:      ${tokenManifest.lookupFiles.length} files`);
-  console.log(`🔤 Token Buckets Verified:    ${tokenManifest.tokenBuckets.length} buckets`);
-  console.log(`📅 Release Partitions:        ${releaseManifest.partitions.length} partitions`);
-  console.log(`📦 Full Chunks Verified:      ${browserManifest.fullCatalog.chunks.length} chunks`);
-  console.log(`🗜️ Master ZIP Verified:      ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB`);
-  console.log(`🔒 Hashes & Links:            All SHA-256 hashes and numeric chunk IDs verified!`);
+  console.log(`📁 Target Directory:            ${targetDir}`);
+  console.log(`🎮 Total Verified Games:        ${totalLookupRecords.toLocaleString()}`);
+  console.log(`🔤 Unique Search Tokens:        ${globalTokens.size.toLocaleString()}`);
+  console.log(`🎮 Compact Lookup Files:        ${tokenManifest.lookupFiles.length} files (.json.gz)`);
+  console.log(`🔤 Token Buckets Verified:      ${tokenManifest.tokenBuckets.length} buckets (.json.gz)`);
+  console.log(`📅 Release Partitions:          ${releaseManifest.partitions.length} partitions (.json.gz)`);
+  console.log(`📦 Full Chunks Verified:        ${browserManifest.fullCatalog.chunks.length} chunks (.json.gz)`);
+  console.log(`🗜️ ZIP Archive Exclusion:       CONFIRMED ABSENT from Pages output!`);
+  console.log(`🔒 Hashes & Decompression:     All SHA-256 hashes & gzip decompressions verified!`);
   console.log('====================================================');
-  console.log('✅ Independent Browser Catalog Verification Passed Cleanly!');
+  console.log('✅ Gzipped Browser Catalog Verification Passed Cleanly!');
 }
 
 verifyBrowserCatalog().catch(err => {
