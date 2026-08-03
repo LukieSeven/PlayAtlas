@@ -1,24 +1,10 @@
-name: Update IGDB Database & Deploy Play Atlas
+name: Live IGDB Database Test Importer
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: '0 6 * * *'
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: true
 
 jobs:
-  update-and-deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  test-igdb-import:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Repository
@@ -33,21 +19,21 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run IGDB Importer (500 Record Test Milestone)
+      - name: Run Live 500-Record IGDB Importer
         env:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
           IGDB_IMPORT_LIMIT: 500
         run: npx tsx scripts/build-igdb-index.ts
 
-      - name: Build Application
+      - name: Run Production Build Validation
         run: npm run build
 
-      - name: Upload Pages Artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Upload Test Database & Build Artifact
+        uses: actions/upload-artifact@v4
         with:
-          path: './dist'
-
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          name: igdb-test-database
+          path: |
+            public/data/igdb_index_manifest.json
+            public/data/igdb_index.json
+            dist/
