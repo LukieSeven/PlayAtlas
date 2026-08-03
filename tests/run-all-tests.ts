@@ -1,5 +1,9 @@
 import { execSync } from 'child_process';
 import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const testFiles = [
   'normalization.test.ts',
@@ -41,7 +45,6 @@ for (const file of testFiles) {
 
     console.log(output);
 
-    // Extract passed & failed counts from output
     const passMatch = output.match(/(\d+)\s+passed/i);
     const failMatch = output.match(/(\d+)\s+failed/i);
 

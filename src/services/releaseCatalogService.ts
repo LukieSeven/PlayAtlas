@@ -77,7 +77,7 @@ let cachedManifest: ReleaseCatalogManifest | null = null;
 let cachedPartitionsMap = new Map<string, ReleaseListingRecord[]>();
 let sharedPlatformsMapCache: Record<number, { name: string; abbreviation: string | null }> | null = null;
 
-function getDynamicLocalDate(): { dateStr: string; timezone: string } {
+export function getDynamicLocalDate(): { dateStr: string; timezone: string } {
   const now = new Date();
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
@@ -86,12 +86,18 @@ function getDynamicLocalDate(): { dateStr: string; timezone: string } {
   return { dateStr: `${year}-${month}-${day}`, timezone };
 }
 
-function calculateDynamicDateRange(timeframe: string, todayStr: string): { startDate: string; endDate: string } {
+export function calculateDynamicDateRange(timeframe: string, todayStr: string): { startDate: string; endDate: string } {
   const today = new Date(todayStr);
   const start = new Date(today);
   const end = new Date(today);
 
-  if (timeframe === 'new_releases' || timeframe === 'past_30_days') {
+  if (timeframe === 'day') {
+    // Exact day
+  } else if (timeframe === 'week') {
+    start.setDate(today.getDate() - 6);
+  } else if (timeframe === 'month') {
+    start.setDate(1);
+  } else if (timeframe === 'new_releases' || timeframe === 'past_30_days') {
     start.setDate(today.getDate() - 30);
   } else if (timeframe === 'upcoming' || timeframe === 'next_30_days') {
     end.setDate(today.getDate() + 90);

@@ -43,9 +43,12 @@ export function setCatalogDataSourceMode(mode: CatalogDataSourceMode): void {
  * Get base-path aware resource URL for GitHub Pages compatibility (/PlayAtlas/ or ./)
  */
 export function getBasePathAwareUrl(relPath: string): string {
+  const cleanRel = relPath.startsWith('/') ? relPath.slice(1) : relPath;
+  if (typeof window === 'undefined') {
+    return `https://lukieseven.github.io/PlayAtlas/${cleanRel}`;
+  }
   const rawBaseUrl = (import.meta as any).env?.BASE_URL || './';
   const baseUrl = rawBaseUrl.endsWith('/') ? rawBaseUrl : `${rawBaseUrl}/`;
-  const cleanRel = relPath.startsWith('/') ? relPath.slice(1) : relPath;
   return `${baseUrl}${cleanRel}`;
 }
 
