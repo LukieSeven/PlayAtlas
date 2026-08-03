@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Loader2 } from 'lucide-react';
-import { getNewReleases, ReleaseFeedPartition } from '../services/releaseCatalogService';
+import { CalendarDays, Loader2 } from 'lucide-react';
+import { getUpcomingGames, ReleaseFeedPartition } from '../services/releaseCatalogService';
 import { GameCard } from '../components/common/GameCard';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
 
-export const NewReleasesPage: React.FC = () => {
+export const UpcomingPage: React.FC = () => {
   const [data, setData] = useState<ReleaseFeedPartition | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
@@ -13,7 +13,7 @@ export const NewReleasesPage: React.FC = () => {
     let isMounted = true;
     setIsLoading(true);
 
-    getNewReleases(30)
+    getUpcomingGames(30)
       .then((partition: ReleaseFeedPartition) => {
         if (isMounted) {
           setData(partition);
@@ -21,7 +21,7 @@ export const NewReleasesPage: React.FC = () => {
         }
       })
       .catch((err: unknown) => {
-        console.error('Failed to fetch new releases:', err);
+        console.error('Failed to fetch upcoming games:', err);
         if (isMounted) setIsLoading(false);
       });
 
@@ -36,25 +36,25 @@ export const NewReleasesPage: React.FC = () => {
       <div className="themed-panel p-6 md:p-8 rounded-3xl border border-[var(--panel-border)] shadow-xl relative overflow-hidden">
         <div className="relative z-10 space-y-2">
           <div className="flex items-center gap-2 text-xs font-mono text-[var(--accent-color)] uppercase font-bold">
-            <Sparkles className="w-4 h-4" />
-            <span>Official Release Feed</span>
+            <CalendarDays className="w-4 h-4" />
+            <span>Future Radar</span>
           </div>
-          <h1 className="text-3xl md:text-4xl font-extrabold themed-heading">New Releases</h1>
+          <h1 className="text-3xl md:text-4xl font-extrabold themed-heading">Upcoming Releases</h1>
           <p className="text-xs md:text-sm text-[var(--text-secondary)] max-w-2xl">
-            Explore recently launched video games across all major gaming platforms, powered by verified release dates.
+            Track upcoming video game launches, announced release dates, and scheduled future debuts.
           </p>
         </div>
       </div>
 
-      {/* Release Feed Content */}
+      {/* Upcoming Games Grid */}
       {isLoading ? (
         <div className="p-12 text-center text-xs font-mono text-[var(--text-muted)] flex items-center justify-center gap-2">
           <Loader2 className="w-5 h-5 animate-spin text-[var(--accent-color)]" />
-          <span>Loading new releases feed...</span>
+          <span>Loading upcoming releases feed...</span>
         </div>
       ) : !data || data.items.length === 0 ? (
         <div className="themed-panel p-12 text-center rounded-3xl text-xs font-mono text-[var(--text-muted)]">
-          No new release games currently available.
+          No upcoming games currently scheduled in the feed.
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">

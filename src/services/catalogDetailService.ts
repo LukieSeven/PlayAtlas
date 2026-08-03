@@ -106,7 +106,7 @@ export function convertIgdbRecordToGameItem(rec: any): GameItem {
     id: String(rec.sourceId || rec.id || Math.random().toString(36).slice(2)),
     title,
     coverUrl,
-    rating: typeof rec.rating === 'number' && !isNaN(rec.rating) ? Math.round(rec.rating) : 85,
+    rating: typeof rec.rating === 'number' && !isNaN(rec.rating) && rec.rating > 0 ? Math.round(rec.rating) : 0,
     releaseDate,
     platforms: platformsList.length > 0 ? platformsList : ['PC'],
     genres: genresList.length > 0 ? genresList : ['Action'],
@@ -129,6 +129,19 @@ export function convertIgdbRecordToGameItem(rec: any): GameItem {
   }
 
   return gameItem;
+}
+
+export async function getGameDetail(gameId: number): Promise<any | null> {
+  const items = await fetchGameDetailsForCompactRecords([{
+    id: gameId,
+    name: '',
+    year: 0,
+    gameType: 'main_game',
+    defaultVisible: true,
+    chunk: Math.floor(gameId % 20) + 1,
+  }]);
+
+  return items.length > 0 ? items[0] : null;
 }
 
 /**
@@ -221,7 +234,7 @@ export async function fetchGameDetailsForCompactRecords(
         id: String(compactRec.id),
         title: compactRec.name,
         coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.jpg',
-        rating: 85,
+        rating: 0,
         releaseDate: compactRec.year ? String(compactRec.year) : 'TBD',
         platforms: ['PC'],
         genres: ['Action'],

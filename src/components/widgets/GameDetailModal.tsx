@@ -1,251 +1,212 @@
-import React, { useState, useEffect } from 'react';
-import { X, Calendar, Layers, Loader2, Database } from 'lucide-react';
+import React, { useState, useEffect, useSyncExternalStore } from 'react';
+import { X, Calendar, Gamepad2, Package, MessageSquare } from 'lucide-react';
+import { getGameDetail } from '../../services/catalogDetailService';
+import { GameDetailRecord } from '../../types/catalogDetail';
+import { UniversalActionMenu } from '../common/UniversalActionMenu';
+import { personalGameStore } from '../../services/personalGameStore';
+import { normalizeExternalGameScore } from '../../services/scoreNormalizationService';
+import { getPlatformDisplayName } from '../../services/platformTaxonomyService';
 import { Badge } from '../ui/Badge';
-import { fetchAndDecompressJson } from '../../utils/decompression';
-import { getBasePathAwareUrl } from '../../services/catalogDataSource';
-import { openIndexedDB } from '../../services/indexDbStorage';
 
-export interface GameDetailModalProps {
-  gameId: number | string;
-  chunkNumber?: number;
-  initialTitle?: string;
+interface GameDetailModalProps {
+  gameId: number | null;
   onClose: () => void;
 }
 
-export const GameDetailModal: React.FC<GameDetailModalProps> = ({
-  gameId,
-  chunkNumber,
-  initialTitle,
-  onClose,
-}) => {
-  const [loading, setLoading] = useState<boolean>(true);
-  const [error, setError] = useState<string | null>(null);
-  const [fullDetailRecord, setFullDetailRecord] = useState<any | null>(null);
+export const GameDetailModal: React.FC<GameDetailModalProps> = ({ gameId, onClose }) => {
+  const [detail, setDetail] = useState<GameDetailRecord | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [notes, setNotes] = useState('');
+
+  const strId = gameId ? String(gameId) : '';
+
+  // Subscribe to live PersonalGameStore updates
+  const personalRecord = useSyncExternalStore(
+    cb => personalGameStore.subscribe(cb),
+    () => (strId ? personalGameStore.getRecord(strId) || personalGameStore.getRecord(`igdb_${strId}`) : undefined)
+  );
 
   useEffect(() => {
-    let isMounted = true;
-    setLoading(true);
-    setError(null);
-
-    const numericId = typeof gameId === 'number' ? gameId : parseInt(String(gameId).replace(/\D/g, ''), 10);
-
-    async function loadChunk() {
-      try {
-        let chunkFile = chunkNumber ? `chunks/game_index_${String(chunkNumber).padStart(4, '0')}.json.gz` : null;
-
-        // Check token_manifest if chunkNumber not directly supplied
-        if (!chunkFile) {
-          try {
-            const manifestUrl = getBasePathAwareUrl('data/search/token_manifest.json');
-            const manifestRes = await fetch(manifestUrl);
-            if (manifestRes.ok) {
-              const manifest = await manifestRes.json();
-              const lookupFile = manifest.lookupFiles?.find(
-                (l: any) => numericId >= l.firstId && numericId <= l.lastId
-              );
-              if (lookupFile) {
-                // Fetch lookup file to get chunk ID
-                const lookupUrl = getBasePathAwareUrl(`data/${lookupFile.file}`);
-                const lookupRecords = await fetchAndDecompressJson<any[]>(lookupUrl);
-                const rec = lookupRecords.find((r: any) => r.id === numericId);
-                if (rec && rec.chunk) {
-                  chunkFile = `chunks/game_index_${String(rec.chunk).padStart(4, '0')}.json.gz`;
-                }
-              }
-            }
-          } catch {
-            // Fallback
-          }
-        }
-
-        if (!chunkFile) chunkFile = 'chunks/game_index_0001.json.gz';
-
-        // Check IndexedDB cache
-        try {
-          const db = await openIndexedDB();
-          const cachedChunk: any = await new Promise((resolve, reject) => {
-            const tx = db.transaction('full_chunks', 'readonly');
-            const store = tx.objectStore('full_chunks');
-            const req = store.get(chunkFile);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-          });
-
-          if (cachedChunk && Array.isArray(cachedChunk.records)) {
-            const foundRec = cachedChunk.records.find((r: any) => r.sourceId === numericId || r.id === String(gameId));
-            if (foundRec && isMounted) {
-              setFullDetailRecord(foundRec);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch {
-          // Continue to network fetch
-        }
-
-        // Fetch compressed detail chunk (.json.gz)
-        const chunkUrl = getBasePathAwareUrl(`data/${chunkFile}`);
-        const chunkRecords = await fetchAndDecompressJson<any[]>(chunkUrl);
-
-        const targetRecord = chunkRecords.find(
-          r => r.sourceId === numericId || r.id === String(gameId)
-        ) || chunkRecords[0];
-
-        if (isMounted) {
-          setFullDetailRecord(targetRecord);
-          setLoading(false);
-        }
-
-        // Cache in IndexedDB asynchronously
-        try {
-          const db = await openIndexedDB();
-          const tx = db.transaction('full_chunks', 'readwrite');
-          tx.objectStore('full_chunks').put({
-            chunkFile,
-            downloadedAt: new Date().toISOString(),
-            records: chunkRecords,
-          });
-        } catch {
-          // Non-critical cache write error
-        }
-      } catch (err: any) {
-        console.error('Failed to load full detail chunk:', err);
-        if (isMounted) {
-          setError(err?.message || 'Failed to load game detail record.');
-          setLoading(false);
-        }
-      }
+    if (!gameId) {
+      setDetail(null);
+      return;
     }
 
-    loadChunk();
+    let isMounted = true;
+    setIsLoading(true);
+
+    getGameDetail(gameId)
+      .then((res: GameDetailRecord | null) => {
+        if (isMounted) {
+          setDetail(res);
+          setIsLoading(false);
+        }
+      })
+      .catch((err: unknown) => {
+        console.error('Failed to load game details:', err);
+        if (isMounted) setIsLoading(false);
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [gameId, chunkNumber]);
+  }, [gameId]);
+
+  useEffect(() => {
+    if (personalRecord?.userNotes) {
+      setNotes(personalRecord.userNotes);
+    } else {
+      setNotes('');
+    }
+  }, [personalRecord]);
+
+  if (!gameId) return null;
+
+  const catalogSnapshot = detail ? { name: detail.name, coverUrl: detail.coverUrl, releaseYear: detail.releaseYear } : undefined;
+  const externalScore = detail ? normalizeExternalGameScore(detail) : { ratingValue: null, displayString: 'Not Rated', isUnrated: true };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl bg-slate-900 border border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-800 bg-slate-900/50">
-          <div className="flex items-center gap-2">
-            <h3 className="text-xl font-bold text-white tracking-tight">
-              {fullDetailRecord?.name || initialTitle || 'Game Details'}
-            </h3>
-            <Badge variant="indigo" className="gap-1 font-mono text-[10px] py-0.5 px-2">
-              <Database className="w-3 h-3 text-cyan-400" />
-              IGDB Record
-            </Badge>
-          </div>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Content */}
-        <div className="p-6 overflow-y-auto space-y-6">
-          {loading && (
-            <div className="flex flex-col items-center justify-center py-12 space-y-3">
-              <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
-              <span className="text-xs font-mono text-slate-400">
-                Fetching & decompressing detail chunk (.json.gz)...
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto themed-panel rounded-3xl p-6 border border-[var(--panel-border)] shadow-2xl space-y-6 animate-in zoom-in-95 duration-200"
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Top Header Controls */}
+        <div className="flex items-start justify-between gap-4 border-b border-[var(--panel-border)] pb-4">
+          <div className="space-y-1">
+            <h2 className="text-2xl font-bold themed-heading">{detail?.name || 'Loading Game...'}</h2>
+            <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[var(--text-muted)]">
+              {detail?.releaseYear && (
+                <span className="flex items-center gap-1">
+                  <Calendar className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                  {detail.releaseYear}
+                </span>
+              )}
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                {externalScore.displayString}
               </span>
             </div>
-          )}
+          </div>
 
-          {error && (
-            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 text-red-400 text-xs font-mono">
-              ❌ {error}
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            {detail && (
+              <UniversalActionMenu
+                gameId={detail.id}
+                gameTitle={detail.name}
+                coverUrl={detail.coverUrl}
+                releaseYear={detail.releaseYear}
+              />
+            )}
+            <button
+              onClick={onClose}
+              className="p-2 rounded-2xl bg-[rgba(0,0,0,0.1)] hover:bg-[rgba(0,0,0,0.2)] text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
 
-          {!loading && fullDetailRecord && (
-            <div className="space-y-6">
-              {/* Top Summary Banner */}
-              <div className="flex flex-col sm:flex-row gap-5 items-start">
-                {fullDetailRecord.coverUrl && (
-                  <img
-                    src={fullDetailRecord.coverUrl}
-                    alt={fullDetailRecord.name}
-                    className="w-32 h-44 object-cover rounded-2xl border border-slate-800 shadow-lg flex-shrink-0"
-                  />
+        {/* Content Body */}
+        {isLoading ? (
+          <div className="py-12 text-center text-xs font-mono text-[var(--text-muted)] animate-pulse">
+            Fetching game details and media...
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {/* Top Media & Overview Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              {/* Cover Image */}
+              <div className="aspect-[3/4] w-full rounded-2xl overflow-hidden bg-slate-900 border border-[var(--panel-border)] shadow-md">
+                {detail?.coverUrl ? (
+                  <img src={detail.coverUrl} alt={detail.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center text-slate-400 font-mono text-xs">
+                    <Gamepad2 className="w-10 h-10 text-[var(--accent-color)] opacity-60 mb-2" />
+                    <span>No Cover Image</span>
+                  </div>
                 )}
-                <div className="space-y-3 flex-1">
-                  <div>
-                    <h2 className="text-2xl font-extrabold text-white">{fullDetailRecord.name}</h2>
-                    <div className="flex flex-wrap items-center gap-2 mt-2">
-                      <Badge variant="purple">
-                        {fullDetailRecord.gameTypeLabel || fullDetailRecord.gameType || 'Main Game'}
-                      </Badge>
-                      {fullDetailRecord.firstReleaseDate && (
-                        <Badge variant="cyan" className="gap-1">
-                          <Calendar className="w-3 h-3" />
-                          {fullDetailRecord.firstReleaseDate}
-                        </Badge>
-                      )}
-                    </div>
+              </div>
+
+              {/* Summary Description & Personal Status Widget */}
+              <div className="sm:col-span-2 space-y-4">
+                {/* Personal Status Dashboard Box */}
+                <div className="p-4 rounded-2xl bg-[rgba(0,0,0,0.05)] border border-[var(--panel-border)] space-y-3">
+                  <div className="flex items-center justify-between text-xs font-mono font-bold text-[var(--accent-color)]">
+                    <span>PERSONAL GAME TRACKING</span>
+                    {personalRecord && <Badge variant="emerald">RECORD ACTIVE</Badge>}
                   </div>
 
-                  <p className="text-sm text-slate-300 leading-relaxed">
-                    {fullDetailRecord.summary || 'No summary available for this catalog record.'}
+                  {/* Ownership Summary */}
+                  {personalRecord && personalRecord.ownerships.length > 0 ? (
+                    <div className="space-y-1 text-xs">
+                      <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">Ownership</span>
+                      <div className="flex flex-wrap gap-1.5">
+                        {personalRecord.ownerships.map((o, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2.5 py-1 rounded-xl bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold text-[11px] flex items-center gap-1"
+                          >
+                            <Package className="w-3 h-3 text-emerald-500" />
+                            {getPlatformDisplayName(o.platformId)} ({o.ownershipType})
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-[var(--text-muted)] italic">Not in collection yet. Use Action Menu to add ownership.</p>
+                  )}
+
+                  {/* Play & Backlog Status Indicators */}
+                  <div className="flex flex-wrap gap-2 text-xs font-semibold">
+                    {personalRecord?.currentPlayStatus && (
+                      <span className="px-2.5 py-1 rounded-xl bg-[var(--primary-action)] text-white font-bold capitalize">
+                        Status: {personalRecord.currentPlayStatus}
+                      </span>
+                    )}
+                    {personalRecord?.inBacklogQueue && (
+                      <span className="px-2.5 py-1 rounded-xl bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold border border-amber-500/30">
+                        In Backlog
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {/* Game Description */}
+                <div>
+                  <h4 className="text-xs font-mono uppercase text-[var(--text-muted)] mb-1">Overview</h4>
+                  <p className="text-xs text-[var(--text-primary)] leading-relaxed line-clamp-6">
+                    {detail?.summary || 'No overview summary available for this title.'}
                   </p>
                 </div>
               </div>
-
-              {/* Supported Platforms */}
-              {Array.isArray(fullDetailRecord.platforms) && fullDetailRecord.platforms.length > 0 && (
-                <div className="space-y-2">
-                  <h4 className="text-xs font-extrabold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Layers className="w-3.5 h-3.5 text-indigo-400" />
-                    Platforms
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {fullDetailRecord.platforms.map((p: any) => (
-                      <span
-                        key={p.id}
-                        className="px-2.5 py-1 rounded-lg bg-slate-800 text-slate-200 text-xs font-medium border border-slate-700/50"
-                      >
-                        {p.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* Source Details */}
-              <div className="p-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 space-y-2 text-xs font-mono">
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>IGDB Source ID:</span>
-                  <span className="text-indigo-400 font-bold">{fullDetailRecord.sourceId}</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Date Precision:</span>
-                  <span className="text-slate-200">{fullDetailRecord.datePrecision || 'day'}</span>
-                </div>
-                <div className="flex items-center justify-between text-slate-400">
-                  <span>Default Search Visibility:</span>
-                  <span className={fullDetailRecord.defaultVisible ? 'text-emerald-400' : 'text-amber-400'}>
-                    {fullDetailRecord.defaultVisible ? 'Visible (Main Game)' : 'Default Hidden (DLC / Add-on)'}
-                  </span>
-                </div>
-              </div>
             </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-800 bg-slate-900/50 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-medium text-xs transition-colors"
-          >
-            Close
-          </button>
-        </div>
+            {/* Personal Review Notes Field */}
+            <div className="space-y-2 pt-2 border-t border-[var(--panel-border)]">
+              <div className="flex items-center justify-between text-xs font-mono text-[var(--text-muted)]">
+                <span className="flex items-center gap-1">
+                  <MessageSquare className="w-3.5 h-3.5 text-[var(--accent-color)]" />
+                  Personal Game Notes & Journal
+                </span>
+              </div>
+              <textarea
+                value={notes}
+                onChange={e => setNotes(e.target.value)}
+                onBlur={async () => {
+                  if (strId) {
+                    await personalGameStore.setNotes(strId, notes.trim() || undefined, catalogSnapshot);
+                  }
+                }}
+                placeholder="Write personal thoughts, play notes, or completion logs..."
+                rows={3}
+                className="w-full p-3 rounded-2xl themed-input text-xs leading-relaxed font-medium"
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

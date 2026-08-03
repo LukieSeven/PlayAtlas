@@ -4,13 +4,23 @@ import { CountdownCard } from '../components/widgets/CountdownCard';
 import { GameListGrid } from '../components/widgets/GameListGrid';
 import { fetchUpcomingGames } from '../services/gameDbService';
 import { GameItem } from '../types/game';
+import { CompactGameLookupRecord } from '../types/catalog';
 import { Flame } from 'lucide-react';
 
 export const UpcomingGamesPage: React.FC = () => {
-  const [upcomingGames, setUpcomingGames] = useState<GameItem[]>([]);
+  const [upcomingGames, setUpcomingGames] = useState<CompactGameLookupRecord[]>([]);
 
   useEffect(() => {
-    fetchUpcomingGames().then(data => setUpcomingGames(data));
+    fetchUpcomingGames().then(data => {
+      const mapped: CompactGameLookupRecord[] = data.map((item: GameItem) => ({
+        id: parseInt(item.id, 10) || Math.floor(Math.random() * 100000),
+        name: item.title,
+        year: item.releaseDate ? parseInt(item.releaseDate.slice(0, 4), 10) || 2026 : 2026,
+        gameType: 'main_game',
+        defaultVisible: true,
+      }));
+      setUpcomingGames(mapped);
+    });
   }, []);
 
   return (

@@ -39,27 +39,29 @@ export interface ReleaseManifestPartition {
   compression: 'gzip';
 }
 
-export interface ReleaseManifest {
+export interface ReleaseCatalogManifest {
   schemaVersion: number;
   generatedAt: string;
   recordCount: number;
-  totalBytes: number;
+  partitionCount: number;
+  partitions: ReleaseManifestPartition[];
   platformsMetadata?: {
     file: string;
+    recordCount: number;
     compressedByteSize: number;
     uncompressedByteSize: number;
     sha256: string;
     compression: 'gzip';
   };
-  partitions: ReleaseManifestPartition[];
+}
+
+export interface ReleaseFeedPartition {
+  items: Array<{ record: ReleaseListingRecord }>;
 }
 
 export interface ReleaseQueryOptions {
-  viewType: 'first_release' | 'platform_release';
-  timeframe: 'day' | 'week' | 'month';
-  category?: string;
-  genre?: string;
-  platform?: string;
+  timeframe: 'new_releases' | 'upcoming' | 'past_30_days' | 'next_30_days';
+  viewType?: 'first_release' | 'platform_release';
   includeHidden?: boolean;
 }
 
@@ -71,80 +73,50 @@ export interface ReleaseQueryResult {
   matchingPartitionsLoaded: number;
 }
 
-let releaseManifestCache: ReleaseManifest | null = null;
+let cachedManifest: ReleaseCatalogManifest | null = null;
+let cachedPartitionsMap = new Map<string, ReleaseListingRecord[]>();
 let sharedPlatformsMapCache: Record<number, { name: string; abbreviation: string | null }> | null = null;
-const cachedPartitionsMap = new Map<string, ReleaseListingRecord[]>();
 
-/**
- * Get User's Local Browser Date & Timezone dynamically
- */
-export function getDynamicLocalDate(): {
-  dateStr: string;
-  year: string;
-  month: string;
-  day: string;
-  timezone: string;
-} {
-  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+function getDynamicLocalDate(): { dateStr: string; timezone: string } {
   const now = new Date();
-  const year = String(now.getFullYear());
+  const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${day}`;
-  return { dateStr, year, month, day, timezone };
+  const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  return { dateStr: `${year}-${month}-${day}`, timezone };
 }
 
-/**
- * Calculate Date Range dynamically for day, week (7 rolling days), and month (1st of month to today)
- */
-export function calculateDynamicDateRange(
-  timeframe: 'day' | 'week' | 'month',
-  localTodayStr: string
-): { startDate: string; endDate: string } {
-  const [y, m, d] = localTodayStr.split('-').map(Number);
-  const todayDate = new Date(y, m - 1, d);
+function calculateDynamicDateRange(timeframe: string, todayStr: string): { startDate: string; endDate: string } {
+  const today = new Date(todayStr);
+  const start = new Date(today);
+  const end = new Date(today);
 
-  if (timeframe === 'day') {
-    return { startDate: localTodayStr, endDate: localTodayStr };
-  } else if (timeframe === 'week') {
-    const startDateObj = new Date(todayDate);
-    startDateObj.setDate(startDateObj.getDate() - 6);
-    const startY = startDateObj.getFullYear();
-    const startM = String(startDateObj.getMonth() + 1).padStart(2, '0');
-    const startD = String(startDateObj.getDate()).padStart(2, '0');
-    return {
-      startDate: `${startY}-${startM}-${startD}`,
-      endDate: localTodayStr,
-    };
-  } else {
-    const startM = String(m).padStart(2, '0');
-    return {
-      startDate: `${y}-${startM}-01`,
-      endDate: localTodayStr,
-    };
-  }
-}
-
-/**
- * Fetch Release Manifest (Base-Path Aware)
- */
-export async function fetchReleaseManifest(): Promise<ReleaseManifest> {
-  if (releaseManifestCache) return releaseManifestCache;
-
-  const manifestUrl = getBasePathAwareUrl('data/releases/release_manifest.json');
-  const res = await fetch(manifestUrl);
-
-  if (!res.ok) {
-    throw new Error(`Failed to fetch release manifest (${res.status}): ${res.statusText}`);
+  if (timeframe === 'new_releases' || timeframe === 'past_30_days') {
+    start.setDate(today.getDate() - 30);
+  } else if (timeframe === 'upcoming' || timeframe === 'next_30_days') {
+    end.setDate(today.getDate() + 90);
   }
 
-  releaseManifestCache = await res.json();
-  return releaseManifestCache!;
+  const format = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const da = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${da}`;
+  };
+
+  return { startDate: format(start), endDate: format(end) };
 }
 
-/**
- * Fetch & Decompress Shared Platforms Metadata (metadata/platforms.json.gz)
- */
+export async function fetchReleaseManifest(): Promise<ReleaseCatalogManifest> {
+  if (cachedManifest) return cachedManifest;
+
+  const url = getBasePathAwareUrl('data/release_catalog_manifest.json');
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch release manifest: ${res.statusText}`);
+  cachedManifest = await res.json();
+  return cachedManifest!;
+}
+
 export async function fetchSharedPlatformsMetadata(): Promise<Record<number, { name: string; abbreviation: string | null }>> {
   if (sharedPlatformsMapCache) return sharedPlatformsMapCache;
 
@@ -160,15 +132,11 @@ export async function fetchSharedPlatformsMetadata(): Promise<Record<number, { n
   return sharedPlatformsMapCache!;
 }
 
-/**
- * Fetch & Decompress Individual Release Partition File (.json.gz)
- */
 export async function fetchReleasePartitionFile(relPath: string): Promise<ReleaseListingRecord[]> {
   if (cachedPartitionsMap.has(relPath)) {
     return cachedPartitionsMap.get(relPath)!;
   }
 
-  // Check IndexedDB
   try {
     const db = await openIndexedDB();
     const cachedObj: any = await new Promise((resolve, reject) => {
@@ -198,21 +166,17 @@ export async function fetchReleasePartitionFile(relPath: string): Promise<Releas
 
   cachedPartitionsMap.set(relPath, records);
 
-  // Save to IndexedDB
   try {
     const db = await openIndexedDB();
     const tx = db.transaction('release_partitions', 'readwrite');
     tx.objectStore('release_partitions').put({ year: relPath, records });
   } catch (err) {
-    console.warn('Failed to store partition in IndexedDB:', err);
+    // Non-critical cache write error
   }
 
   return records;
 }
 
-/**
- * Adapter: Convert ReleaseListingRecord to UI GameItem
- */
 export function convertReleaseRecordToGameItem(
   record: ReleaseListingRecord,
   platformsMap?: Record<number, { name: string; abbreviation: string | null }>
@@ -238,7 +202,7 @@ export function convertReleaseRecordToGameItem(
     title: record.name,
     coverUrl: record.coverUrl || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=600&auto=format&fit=crop',
     bannerUrl: record.coverUrl || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?q=80&w=1080&auto=format&fit=crop',
-    rating: 9.0,
+    rating: 0,
     releaseDate: record.firstReleaseDate || 'Unknown',
     platforms: platformNames,
     genres: [],
@@ -248,9 +212,6 @@ export function convertReleaseRecordToGameItem(
   };
 }
 
-/**
- * Query Partitioned Release Catalog (Dynamic Dates, Base-Path Aware, Gzip Decompression)
- */
 export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise<ReleaseQueryResult> {
   const { dateStr: localToday, timezone: userTimezone } = getDynamicLocalDate();
   const { startDate, endDate } = calculateDynamicDateRange(options.timeframe, localToday);
@@ -279,7 +240,6 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
     loadedRecords.push(...pRecords);
   }
 
-  // Filter records by date range, defaultVisibility, and UI filters
   const filteredRecords = loadedRecords.filter(record => {
     if (!options.includeHidden && record.defaultVisible === false) {
       return false;
@@ -309,4 +269,16 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
     userTimezone,
     matchingPartitionsLoaded: partitionsToLoad.length,
   };
+}
+
+export async function getNewReleases(limit: number = 30): Promise<ReleaseFeedPartition> {
+  const result = await queryReleaseCatalog({ timeframe: 'new_releases' });
+  const records = result.records.slice(0, limit);
+  return { items: records.map(r => ({ record: r })) };
+}
+
+export async function getUpcomingGames(limit: number = 30): Promise<ReleaseFeedPartition> {
+  const result = await queryReleaseCatalog({ timeframe: 'upcoming' });
+  const records = result.records.slice(0, limit);
+  return { items: records.map(r => ({ record: r })) };
 }
