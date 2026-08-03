@@ -7,7 +7,10 @@ import { Footer } from './Footer';
 
 export const AppLayout: React.FC = () => {
   return (
-    <div className="h-screen w-screen overflow-hidden flex themed-app-shell font-sans selection:bg-[var(--primary-action)] selection:text-white">
+    <div className="h-screen w-screen overflow-hidden flex themed-app-shell font-sans selection:bg-[var(--primary-action)] selection:text-white relative">
+      {/* Cartographic Background Overlay (Layer 4) */}
+      <div className="cartographic-bg-overlay" />
+
       {/* Left Pinned Sidebar */}
       <Sidebar />
 
@@ -15,7 +18,7 @@ export const AppLayout: React.FC = () => {
       <MobileNav />
 
       {/* Main Viewport Container */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-1">
         {/* Sticky Top Header Navigation */}
         <Header />
 

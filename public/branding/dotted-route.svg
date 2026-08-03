@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 150" fill="none">
+  <!-- Dotted Travel Path Route with Destination X Marker -->
+  <path d="M20 120 C 100 40, 180 140, 260 50 C 310 10, 360 80, 380 40" stroke="#d4af37" stroke-width="2" stroke-dasharray="4 6" opacity="0.6" stroke-linecap="round" />
+  
+  <!-- Waypoint Destination X Marker -->
+  <g stroke="#d4af37" stroke-width="2" opacity="0.8">
+    <line x1="373" y1="33" x2="387" y2="47" />
+    <line x1="387" y1="33" x2="373" y2="47" />
+  </g>
+</svg>

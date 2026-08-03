@@ -60,6 +60,33 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--header-bg', tokens.headerBackground);
   root.style.setProperty('--panel-border', tokens.panelBorder);
 
+  // Apply Paper & Watercolor Texture System Tokens
+  root.style.setProperty('--paper-base', tokens.paperBase);
+  root.style.setProperty('--paper-highlight', tokens.paperHighlight);
+  root.style.setProperty('--wash-blue', tokens.washBlue);
+  root.style.setProperty('--wash-teal', tokens.washTeal);
+  root.style.setProperty('--wash-green', tokens.washGreen);
+  root.style.setProperty('--wash-navy', tokens.washNavy);
+  
+  // Apply Accessibility Controlled Texture Opacities
+  const activeGrainOpacity = accessibility.disableTextures || accessibility.plainBackgroundMode ? 0 : tokens.paperGrainOpacity;
+  const activeWashOpacity = accessibility.disableTextures || accessibility.plainBackgroundMode ? 0 : tokens.washOpacity;
+  const activePigmentEdgeOpacity = accessibility.disableTextures || accessibility.plainBackgroundMode ? 0 : tokens.pigmentEdgeOpacity;
+  const activeAtlasLineOpacity = accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode ? 0 : tokens.atlasLineOpacity;
+  const activeRouteOpacity = accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode ? 0 : tokens.routeLineOpacity;
+  const activeOrnamentOpacity = accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode ? 0 : tokens.ornamentOpacity;
+
+  root.style.setProperty('--paper-grain-opacity', activeGrainOpacity.toString());
+  root.style.setProperty('--wash-opacity', activeWashOpacity.toString());
+  root.style.setProperty('--pigment-edge-opacity', activePigmentEdgeOpacity.toString());
+  root.style.setProperty('--atlas-line-color', tokens.atlasLineColor);
+  root.style.setProperty('--atlas-line-opacity', activeAtlasLineOpacity.toString());
+  root.style.setProperty('--route-line-color', tokens.routeLineColor);
+  root.style.setProperty('--route-line-opacity', activeRouteOpacity.toString());
+  root.style.setProperty('--ornament-color', tokens.ornamentColor);
+  root.style.setProperty('--ornament-opacity', activeOrnamentOpacity.toString());
+  root.style.setProperty('--panel-texture-opacity', (accessibility.disableTextures ? 0 : tokens.panelTextureOpacity).toString());
+
   // Apply Sidebar Colors
   root.style.setProperty('--sidebar-text', tokens.sidebarText);
   root.style.setProperty('--sidebar-muted-text', tokens.sidebarMutedText);
@@ -93,17 +120,8 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--font-heading', tokens.headingFontFamily);
   root.style.setProperty('--font-body', tokens.bodyFontFamily);
 
-  // Apply Utilities & Accessibility Controls
-  const activeTextureOpacity = accessibility.disableTextures || accessibility.plainBackgroundMode
-    ? 0
-    : tokens.textureOpacity;
-
-  const activeOrnamentOpacity = accessibility.reduceDecorativeElements || accessibility.plainBackgroundMode
-    ? 0
-    : tokens.ornamentOpacity;
-
-  root.style.setProperty('--texture-opacity', activeTextureOpacity.toString());
-  root.style.setProperty('--ornament-opacity', activeOrnamentOpacity.toString());
+  // Apply Utilities & General Styles
+  root.style.setProperty('--texture-opacity', (accessibility.disableTextures ? 0 : tokens.textureOpacity).toString());
   root.style.setProperty('--border-radius', tokens.cornerRadius);
   root.style.setProperty('--shadow-style', tokens.shadow);
 

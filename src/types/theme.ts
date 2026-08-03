@@ -28,6 +28,25 @@ export interface ThemeTokens {
   sidebarActiveBackground: string;
   headerBackground: string;
   
+  // Paper & Watercolor Texture System Tokens
+  paperBase: string;
+  paperHighlight: string;
+  paperGrainOpacity: number;
+  washBlue: string;
+  washTeal: string;
+  washGreen: string;
+  washNavy: string;
+  washOpacity: number;
+  pigmentEdgeOpacity: number;
+  atlasLineColor: string;
+  atlasLineOpacity: number;
+  routeLineColor: string;
+  routeLineOpacity: number;
+  ornamentColor: string;
+  ornamentOpacity: number;
+  panelPaperColor: string;
+  panelTextureOpacity: number;
+
   // Panel & Card Surfaces
   panelBackground: string;
   panelElevatedBackground: string;
@@ -65,7 +84,6 @@ export interface ThemeTokens {
   shadow: string;
   cornerRadius: string;
   textureOpacity: number;
-  ornamentOpacity: number;
   decorativeMotif: 'cartographic' | 'minimal' | 'neon' | 'retro' | 'none';
 
   isDark: boolean;

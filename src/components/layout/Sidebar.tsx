@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import {
   Home,
   Rocket,
@@ -12,11 +12,9 @@ import {
   Trophy,
   Layers,
   Gamepad2,
-  Settings,
-  Palette
+  Settings
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
-import { useTheme } from '../../context/ThemeContext';
 import { Badge } from '../ui/Badge';
 import { AddTabModal } from '../widgets/AddTabModal';
 
@@ -34,8 +32,6 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export const Sidebar: React.FC = () => {
   const { customTabs, addTab, deleteTab } = useSidebar();
-  const { activeTokens } = useTheme();
-  const navigate = useNavigate();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const isDefaultSystemTab = (id: string) => {
@@ -118,7 +114,7 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Bottom Action Footer with Create & Permanent Settings Triggers */}
+      {/* Bottom Action Footer */}
       <div className="p-3 border-t border-[var(--panel-border)] space-y-2 bg-[rgba(0,0,0,0.1)]">
         <button
           onClick={() => setIsAddModalOpen(true)}
@@ -126,19 +122,6 @@ export const Sidebar: React.FC = () => {
         >
           <Plus className="w-4 h-4 text-amber-400" />
           <span>Create Custom Tab / List</span>
-        </button>
-
-        {/* Compact Theme Preview Selector Button */}
-        <button
-          onClick={() => navigate('/settings')}
-          className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.12)] border border-[var(--panel-border)] text-xs text-[var(--sidebar-text)] transition-all group"
-          title="Open Theme Customizer"
-        >
-          <div className="flex items-center gap-2">
-            <Palette className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
-            <span className="font-semibold truncate">{activeTokens.name}</span>
-          </div>
-          <span className="text-[10px] font-mono text-[var(--accent-color)] uppercase">Theme</span>
         </button>
 
         {/* Permanent Settings Navigation Item */}
