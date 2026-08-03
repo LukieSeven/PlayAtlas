@@ -331,16 +331,28 @@ export function compareRecordsDeterministic(
 export function calculateRankScore(
   title: string,
   queryStr: string,
-  tokens: string[],
+  tokens: string[] = [],
   defaultVisible: boolean = true
 ): number {
   const normTitle = normalizeSearchQuery(title);
   const normQuery = normalizeSearchQuery(queryStr);
   let score = 0;
 
-  if (normTitle === normQuery) score += 1000;
-  else if (normTitle.startsWith(normQuery)) score += 500;
-  else if (normTitle.includes(normQuery)) score += 200;
+  if (normTitle === normQuery) {
+    score += 2000;
+  } else if (normTitle.startsWith(normQuery) || normTitle.startsWith(`the ${normQuery}`)) {
+    score += 1000;
+  } else if (normTitle.includes(normQuery)) {
+    score += 500;
+  }
+
+  const titleTokens = tokenizeTitle(normTitle);
+  const queryTokens = tokens.length > 0 ? tokens : tokenizeTitle(normQuery);
+  const matchingTokens = queryTokens.filter(t => titleTokens.includes(t));
+  score += matchingTokens.length * 100;
+
+  const lengthPenalty = Math.max(0, normTitle.length - normQuery.length);
+  score -= lengthPenalty * 2;
 
   if (defaultVisible) score += 50;
   return score;

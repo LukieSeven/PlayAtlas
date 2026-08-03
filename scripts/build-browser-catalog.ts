@@ -675,7 +675,9 @@ async function runBrowserCatalogBuilder() {
   console.log('✅ Compressed Browser Catalog Built Successfully!');
 }
 
-runBrowserCatalogBuilder().catch(err => {
-  console.error('❌ Browser Catalog Builder Failed:', err);
-  process.exit(1);
-});
+if (process.argv[1] && process.argv[1].includes('build-browser-catalog')) {
+  runBrowserCatalogBuilder().catch(err => {
+    console.error('❌ Browser Catalog Builder Failed:', err);
+    process.exit(1);
+  });
+}

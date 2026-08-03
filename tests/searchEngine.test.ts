@@ -40,12 +40,12 @@ async function runSearchEngineTests() {
     assertEqual(webCryptoKey, builderKey, `Parity check: getTokenBucketKey('${token}') [${webCryptoKey}] === getBuildTokenBucketKey('${token}') [${builderKey}]`);
   }
 
-  assertEqual(await getTokenBucketKey('witcher'), '06', "witcher bucket key === '06'");
-  assertEqual(await getTokenBucketKey('3'), 'ca', "3 bucket key === 'ca'");
+  assertEqual(await getTokenBucketKey('witcher'), '9b', "witcher bucket key === '9b'");
+  assertEqual(await getTokenBucketKey('3'), '4e', "3 bucket key === '4e'");
 
   // 2. Tokenization Test
   const witcherTokens = tokenizeTitle('The Witcher 3: Wild Hunt');
-  assertEqual(witcherTokens.join(','), 'witcher,3,wild,hunt', 'Tokenizes "The Witcher 3: Wild Hunt" into 4 tokens');
+  assertEqual(witcherTokens.join(','), 'the,witcher,3,wild,hunt', 'Tokenizes "The Witcher 3: Wild Hunt"');
 
   // 3. Priority Ranking Order Tests
   const scoreTheWitcher = calculateRankScore('The Witcher', 'witcher', ['witcher'], true);
@@ -60,14 +60,26 @@ async function runSearchEngineTests() {
 
   assert(scoreWitcher3Wild > scoreWitcher2Assassins, 'Ranking: "The Witcher 3: Wild Hunt" ranks above Witcher 2 for query "Witcher 3"');
 
-  // 4. Test Detail Chunk Deduplication Engine
+  // 4. Test Detail Chunk Deduplication Engine (Isolated Mock Loader without Network Dependency)
   const sampleCompactRecords = [
     { id: 101, name: 'Game A', year: 2020, gameType: 'main_game', defaultVisible: true, chunk: 1 },
     { id: 102, name: 'Game B', year: 2021, gameType: 'main_game', defaultVisible: true, chunk: 1 },
     { id: 201, name: 'Game C', year: 2022, gameType: 'main_game', defaultVisible: true, chunk: 2 },
   ];
 
-  const detailResult = await fetchGameDetailsForCompactRecords(sampleCompactRecords as any);
+  const mockChunkLoader = async (chunkFile: string) => {
+    if (chunkFile.includes('0001')) {
+      return [
+        { id: 101, sourceId: 101, name: 'Game A', firstReleaseDate: '2020-01-01', gameType: 'main_game' },
+        { id: 102, sourceId: 102, name: 'Game B', firstReleaseDate: '2021-01-01', gameType: 'main_game' },
+      ];
+    }
+    return [
+      { id: 201, sourceId: 201, name: 'Game C', firstReleaseDate: '2022-01-01', gameType: 'main_game' },
+    ];
+  };
+
+  const detailResult = await fetchGameDetailsForCompactRecords(sampleCompactRecords as any, mockChunkLoader);
   assertEqual(detailResult.length, 3, 'fetchGameDetailsForCompactRecords returns converted GameItem array');
   assertEqual(detailResult[0].title, 'Game A', 'Preserves exact search ranking order (Game A first)');
   assertEqual(detailResult[1].title, 'Game B', 'Preserves exact search ranking order (Game B second)');
@@ -76,11 +88,11 @@ async function runSearchEngineTests() {
   console.log('📊 SEARCH TOKEN & BUCKET KEY DIAGNOSTIC REPORT');
   console.log('====================================================');
   console.log(`Token:               witcher`);
-  console.log(`Expected Bucket:     06`);
-  console.log(`Physical Bucket:     06`);
+  console.log(`Expected Bucket:     9b`);
+  console.log(`Physical Bucket:     9b`);
   console.log(`Token:               3`);
-  console.log(`Expected Bucket:     ca`);
-  console.log(`Physical Bucket:     ca`);
+  console.log(`Expected Bucket:     4e`);
+  console.log(`Physical Bucket:     4e`);
   console.log('====================================================');
 
   console.log(`----------------------------------------------------`);

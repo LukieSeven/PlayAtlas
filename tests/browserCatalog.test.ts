@@ -7,7 +7,7 @@ import {
 } from '../src/utils/browserCatalogUtils';
 import zlib from 'zlib';
 
-function runBrowserCatalogUnitTests() {
+async function runBrowserCatalogUnitTests() {
   console.log('🧪 Running Browser Catalog Unit Tests...');
   let passed = 0;
   let failed = 0;
@@ -36,8 +36,10 @@ function runBrowserCatalogUnitTests() {
   assertEqual(tokens2.join(','), 'tom,clancy,rainbow,six', 'Strips punctuation & discards single letter "s"');
 
   // 3. Token Bucket Key Selection Tests (256 SHA-256 Buckets)
-  assertEqual(getTokenBucketKey('witcher').length, 2, 'witcher -> 2 hex chars');
-  assertEqual(getTokenBucketKey('zelda').length, 2, 'zelda -> 2 hex chars');
+  const witcherKey = await getTokenBucketKey('witcher');
+  const zeldaKey = await getTokenBucketKey('zelda');
+  assertEqual(witcherKey.length, 2, 'witcher -> 2 hex chars');
+  assertEqual(zeldaKey.length, 2, 'zelda -> 2 hex chars');
 
   // 4. Release-Year Partition Assignment Tests
   assertEqual(getReleaseYearKey('2026-07-31'), '2026', '2026-07-31 -> year "2026"');
@@ -70,4 +72,7 @@ function runBrowserCatalogUnitTests() {
   }
 }
 
-runBrowserCatalogUnitTests();
+runBrowserCatalogUnitTests().catch(err => {
+  console.error('❌ Browser Catalog Unit Test Failed:', err);
+  process.exit(1);
+});

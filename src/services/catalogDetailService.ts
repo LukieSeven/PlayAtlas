@@ -76,7 +76,7 @@ export function convertIgdbRecordToGameItem(rec: any): GameItem {
     normalizeEntityName(
       rec.involved_companies?.find((company: any) => company?.developer)?.company
     ) ||
-    'Unknown Developer';
+    '';
 
   const title = normalizeEntityName(rec.name) || normalizeEntityName(rec.title) || 'Untitled Game';
   
@@ -149,7 +149,8 @@ export async function getGameDetail(gameId: number): Promise<any | null> {
  * extracts full records, and converts them to GameItem while preserving exact search ranking order.
  */
 export async function fetchGameDetailsForCompactRecords(
-  records: CompactGameLookupRecord[]
+  records: CompactGameLookupRecord[],
+  chunkLoader?: (chunkFile: string) => Promise<any[]>
 ): Promise<GameItem[]> {
   if (!records || records.length === 0) return [];
 
@@ -168,46 +169,50 @@ export async function fetchGameDetailsForCompactRecords(
     Array.from(chunkToRecordsMap.keys()).map(async chunkFile => {
       let chunkData: any[] | null = null;
 
-      // 1. Check in-memory cache
-      if (inMemoryChunkCache.has(chunkFile)) {
-        chunkData = inMemoryChunkCache.get(chunkFile)!;
+      if (chunkLoader) {
+        chunkData = await chunkLoader(chunkFile);
       } else {
-        // 2. Check IndexedDB cache
-        try {
-          const db = await openIndexedDB();
-          const cachedObj: any = await new Promise((resolve, reject) => {
-            const tx = db.transaction('full_chunks', 'readonly');
-            const store = tx.objectStore('full_chunks');
-            const req = store.get(chunkFile);
-            req.onsuccess = () => resolve(req.result);
-            req.onerror = () => reject(req.error);
-          });
-
-          if (cachedObj && Array.isArray(cachedObj.records)) {
-            chunkData = cachedObj.records;
-            inMemoryChunkCache.set(chunkFile, chunkData!);
-          }
-        } catch {
-          // Fallback to network
-        }
-
-        // 3. Network fetch and decompress
-        if (!chunkData) {
-          const chunkUrl = getBasePathAwareUrl(`data/${chunkFile}`);
-          chunkData = await fetchAndDecompressJson<any[]>(chunkUrl);
-          inMemoryChunkCache.set(chunkFile, chunkData);
-
-          // Cache in IndexedDB asynchronously
+        // 1. Check in-memory cache
+        if (inMemoryChunkCache.has(chunkFile)) {
+          chunkData = inMemoryChunkCache.get(chunkFile)!;
+        } else {
+          // 2. Check IndexedDB cache
           try {
             const db = await openIndexedDB();
-            const tx = db.transaction('full_chunks', 'readwrite');
-            tx.objectStore('full_chunks').put({
-              chunkFile,
-              downloadedAt: new Date().toISOString(),
-              records: chunkData,
+            const cachedObj: any = await new Promise((resolve, reject) => {
+              const tx = db.transaction('full_chunks', 'readonly');
+              const store = tx.objectStore('full_chunks');
+              const req = store.get(chunkFile);
+              req.onsuccess = () => resolve(req.result);
+              req.onerror = () => reject(req.error);
             });
+
+            if (cachedObj && Array.isArray(cachedObj.records)) {
+              chunkData = cachedObj.records;
+              inMemoryChunkCache.set(chunkFile, chunkData!);
+            }
           } catch {
-            // Non-critical cache write error
+            // Fallback to network
+          }
+
+          // 3. Network fetch and decompress
+          if (!chunkData) {
+            const chunkUrl = getBasePathAwareUrl(`data/${chunkFile}`);
+            chunkData = await fetchAndDecompressJson<any[]>(chunkUrl);
+            inMemoryChunkCache.set(chunkFile, chunkData);
+
+            // Cache in IndexedDB asynchronously
+            try {
+              const db = await openIndexedDB();
+              const tx = db.transaction('full_chunks', 'readwrite');
+              tx.objectStore('full_chunks').put({
+                chunkFile,
+                downloadedAt: new Date().toISOString(),
+                records: chunkData,
+              });
+            } catch {
+              // Non-critical cache write error
+            }
           }
         }
       }
@@ -238,7 +243,7 @@ export async function fetchGameDetailsForCompactRecords(
         releaseDate: compactRec.year ? String(compactRec.year) : 'TBD',
         platforms: ['PC'],
         genres: ['Action'],
-        developer: 'Unknown Developer',
+        developer: '',
         summary: 'No summary available.',
         category: compactRec.defaultVisible ? 'Base Game' : 'DLC / Expansion',
       });
