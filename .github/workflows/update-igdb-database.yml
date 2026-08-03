@@ -1,26 +1,19 @@
 name: IGDB Database Pipeline Importer & Pages Deployment
 
 on:
-  push:
-    branches:
-      - main
   schedule:
     - cron: '0 0 * * 0' # Weekly automatic IGDB catalog update
   workflow_dispatch:
     inputs:
-      import_mode:
-        description: 'IGDB import mode (test or full)'
+      operation:
+        description: 'Catalog operation'
         required: true
         type: choice
         options:
           - test
           - full
-        default: full
-      skip_igdb_import:
-        description: 'Skip IGDB re-import (use existing full catalog)'
-        required: false
-        type: boolean
-        default: false
+          - deploy_existing
+        default: test
 
 concurrency:
   group: "pages"
@@ -53,9 +46,9 @@ jobs:
       - name: Run Unit Tests & Search Benchmarks
         run: npm test
 
-      # --- TEST MODE EXECUTION ---
+      # --- 1. TEST MODE EXECUTION ---
       - name: Run 500-Record Test Importer
-        if: ${{ inputs.import_mode == 'test' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
         env:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
@@ -64,11 +57,11 @@ jobs:
         run: npm run build:igdb-test
 
       - name: Run Production Build Validation (Test Mode)
-        if: ${{ inputs.import_mode == 'test' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
         run: npm run build
 
       - name: Upload Test Database & Build Artifact
-        if: ${{ inputs.import_mode == 'test' }}
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
         uses: actions/upload-artifact@v6
         with:
           name: igdb-test-database-${{ github.run_id }}
@@ -78,9 +71,9 @@ jobs:
             dist/
           retention-days: 14
 
-      # --- FULL CATALOG EXECUTION & PAGES DEPLOYMENT ---
+      # --- 2. FULL CATALOG EXECUTION & RE-BUILD ---
       - name: Run Complete IGDB Catalog Importer
-        if: ${{ (inputs.import_mode == 'full' && !inputs.skip_igdb_import) || github.event_name == 'schedule' }}
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         env:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
@@ -88,46 +81,32 @@ jobs:
           IGDB_OUTPUT_DIR: generated/igdb-full-test
         run: npm run build:igdb-full
 
-      - name: Verify Full Catalog Output
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+      - name: Verify Raw Full Catalog Output
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         run: npm run verify:igdb-full
 
-      - name: Build Partitioned Browser Catalog & Enforce 900 MB Ceiling
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+      - name: Build Partitioned Browser Catalog
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         env:
           IGDB_FULL_CATALOG_DIR: generated/igdb-full-test
           PLAY_ATLAS_BROWSER_DATA_DIR: generated/browser-catalog-test
         run: npm run build:browser-catalog
 
-      - name: Verify Partitioned Browser Catalog
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
-        run: npm run verify:browser-catalog
+      - name: Verify Partitioned Browser Catalog (Full Mode)
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
+        run: npm run verify:browser-catalog generated/browser-catalog-test
 
-      - name: Run Production Build
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
-        run: npm run build
-
-      - name: Copy Compressed Browser Catalog Files to Build Output (Excluding ZIP)
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+      - name: Prepare Build Output for Full Mode
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         run: |
+          npm run build
           mkdir -p dist/data
           cp -r generated/browser-catalog-test/* dist/data/
           rm -f dist/data/play-atlas-full-catalog.zip
           rm -f dist/data/play-atlas-full-catalog.zip.sha256
 
-      - name: Measure Exact Published Deployment Size & Enforce 900 MB Ceiling
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
-        run: |
-          TOTAL_BYTES=$(du -sb dist | cut -f1)
-          TOTAL_MB=$(echo "scale=2; $TOTAL_BYTES / 1048576" | bc)
-          echo "📊 Published Pages Directory Size: ${TOTAL_MB} MB"
-          if [ "$TOTAL_BYTES" -gt 943718400 ]; then
-            echo "❌ CUTOVER BLOCKED: Deployment size exceeds safe 900 MB limit!"
-            exit 1
-          fi
-
-      - name: Create or Update GitHub Release with Master ZIP Archive Asset
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+      - name: Create or Update GitHub Release with Master ZIP Archive Asset (Full Mode)
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.0-catalog
@@ -139,17 +118,53 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      # --- 3. DEPLOY EXISTING MODE EXECUTION ---
+      - name: Restore Existing Catalog Asset from GitHub Release (Deploy Existing Mode)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p generated/release-download
+          gh release download v1.0.0-catalog --pattern "play-atlas-full-catalog.zip" --dir generated/release-download --repo ${{ github.repository }}
+          mkdir -p generated/browser-catalog-restored
+          unzip -o generated/release-download/play-atlas-full-catalog.zip -d generated/browser-catalog-restored
+
+      - name: Verify Restored Browser Catalog (Deploy Existing Mode)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
+        run: npm run verify:browser-catalog generated/browser-catalog-restored
+
+      - name: Prepare Build Output for Deploy Existing Mode
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
+        run: |
+          npm run build
+          mkdir -p dist/data
+          cp -r generated/browser-catalog-restored/* dist/data/
+          rm -f dist/data/play-atlas-full-catalog.zip
+          rm -f dist/data/play-atlas-full-catalog.zip.sha256
+
+      # --- 4. COMMON PAGES DEPLOYMENT STEPS (Full or Deploy Existing) ---
+      - name: Measure Exact Published Deployment Size & Enforce 900 MB Ceiling
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
+        run: |
+          TOTAL_BYTES=$(du -sb dist | cut -f1)
+          TOTAL_MB=$(echo "scale=2; $TOTAL_BYTES / 1048576" | bc)
+          echo "📊 Published Pages Directory Size: ${TOTAL_MB} MB"
+          if [ "$TOTAL_BYTES" -gt 943718400 ]; then
+            echo "❌ CUTOVER BLOCKED: Deployment size exceeds safe 900 MB limit!"
+            exit 1
+          fi
+
       - name: Setup GitHub Pages Configuration
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         uses: actions/configure-pages@v5
 
       - name: Upload Pages Artifact
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         uses: actions/upload-pages-artifact@v3
         with:
           path: './dist'
 
       - name: Deploy to GitHub Pages
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         id: deployment
         uses: actions/deploy-pages@v4
