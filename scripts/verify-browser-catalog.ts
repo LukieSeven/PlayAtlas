@@ -13,7 +13,19 @@ function decompressGzipToJson<T>(buffer: Buffer): T {
 }
 
 async function verifyBrowserCatalog() {
-  const targetArg = process.argv[2] || 'generated/browser-catalog-test';
+  const rawArgs = process.argv.slice(2);
+
+  if (rawArgs.length === 0) {
+    console.error('❌ Usage: npm run verify:browser-catalog -- <catalog-directory>');
+    process.exit(1);
+  }
+
+  if (rawArgs.length > 1) {
+    console.error(`❌ ERROR: Multiple target directories supplied (${rawArgs.join(', ')}). Supply exactly one directory.`);
+    process.exit(1);
+  }
+
+  const targetArg = rawArgs[0];
   const targetDir = path.isAbsolute(targetArg) ? targetArg : path.join(process.cwd(), targetArg);
 
   console.log(`🔍 Verifying Gzipped Browser Catalog Output in: ${targetDir}`);

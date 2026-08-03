@@ -11,7 +11,7 @@
     "build:igdb-full": "IGDB_IMPORT_MODE=full tsx scripts/build-igdb-index.ts",
     "build:browser-catalog": "tsx scripts/build-browser-catalog.ts",
     "verify:igdb-full": "tsx scripts/verify-igdb-catalog.ts generated/igdb-full-test",
-    "verify:browser-catalog": "tsx scripts/verify-browser-catalog.ts generated/browser-catalog-test",
+    "verify:browser-catalog": "tsx scripts/verify-browser-catalog.ts",
     "lint": "eslint .",
     "preview": "vite preview"
   },

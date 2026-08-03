@@ -94,7 +94,7 @@ jobs:
 
       - name: Verify Partitioned Browser Catalog (Full Mode)
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
-        run: npm run verify:browser-catalog generated/browser-catalog-test
+        run: npm run verify:browser-catalog -- generated/browser-catalog-test
 
       # --- 3. DEPLOY EXISTING MODE EXECUTION (Recursive Structure Detection & Legacy Chunk Rebuilding) ---
       - name: Restore Existing Catalog
@@ -275,7 +275,7 @@ jobs:
 
       - name: Verify Restored Browser Catalog (Deploy Existing Mode)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'deploy_existing' }}
-        run: npm run verify:browser-catalog generated/browser-catalog-restored
+        run: npm run verify:browser-catalog -- generated/browser-catalog-restored
 
       # --- 4. COMMON RELEASE ASSET UPLOAD & PAGES DEPLOYMENT ---
       - name: Create or Update GitHub Release with Master ZIP Archive Asset
