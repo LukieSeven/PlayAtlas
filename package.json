@@ -6,10 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "test": "tsx tests/normalization.test.ts",
+    "test": "tsx tests/normalization.test.ts tests/browserCatalog.test.ts",
     "build:igdb-test": "IGDB_IMPORT_MODE=test tsx scripts/build-igdb-index.ts",
     "build:igdb-full": "IGDB_IMPORT_MODE=full tsx scripts/build-igdb-index.ts",
+    "build:browser-catalog": "tsx scripts/build-browser-catalog.ts",
     "verify:igdb-full": "tsx scripts/verify-igdb-catalog.ts generated/igdb-full-test",
+    "verify:browser-catalog": "tsx scripts/verify-browser-catalog.ts generated/browser-catalog-test",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -23,10 +25,12 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.0.5",
+    "@types/archiver": "^6.0.3",
     "@types/node": "^22.13.1",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "archiver": "^7.0.1",
     "tailwindcss": "^4.0.5",
     "tsx": "^4.19.2",
     "typescript": "~5.7.2",

@@ -78,8 +78,9 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
     compiledCatalogCache = await syncGameIndexCatalog();
   }
 
+  const catalog = compiledCatalogCache!;
   const { dateStr: userToday, timezone: userTimezone } = getUserLocalDate();
-  const records = compiledCatalogCache.records;
+  const records = catalog.records;
 
   console.log(`[Query Diagnostics] Selected date: ${userToday} (${userTimezone})`);
   console.log(`[Query Diagnostics] Selected release mode: ${options.viewType} | Timeframe: ${options.timeframe}`);
@@ -152,8 +153,8 @@ export async function queryGameIndex(options: QueryOptions): Promise<QueryResult
   return {
     games,
     records: finalFilteredRecords,
-    manifest: compiledCatalogCache.manifest,
-    diagnostics: compiledCatalogCache.diagnostics,
+    manifest: catalog.manifest,
+    diagnostics: catalog.diagnostics,
     selectedDate: userToday,
     userTimezone,
   };

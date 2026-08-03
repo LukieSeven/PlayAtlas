@@ -28,7 +28,7 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
-      - name: Run Normalization Unit Tests
+      - name: Run Normalization & Browser Catalog Unit Tests
         run: npm test
 
       # --- TEST MODE EXECUTION ---
@@ -70,16 +70,28 @@ jobs:
         if: ${{ inputs.import_mode == 'full' }}
         run: npm run verify:igdb-full
 
+      - name: Build Partitioned Browser Catalog & Master ZIP Archive
+        if: ${{ inputs.import_mode == 'full' }}
+        env:
+          IGDB_FULL_CATALOG_DIR: generated/igdb-full-test
+          PLAY_ATLAS_BROWSER_DATA_DIR: generated/browser-catalog-test
+        run: npm run build:browser-catalog
+
+      - name: Verify Partitioned Browser Catalog
+        if: ${{ inputs.import_mode == 'full' }}
+        run: npm run verify:browser-catalog
+
       - name: Run Production Build Validation (Full Mode)
         if: ${{ inputs.import_mode == 'full' }}
         run: npm run build
 
-      - name: Upload Full Catalog & Build Artifact
+      - name: Upload Browser Catalog & Build Artifact
         if: ${{ inputs.import_mode == 'full' }}
         uses: actions/upload-artifact@v6
         with:
-          name: igdb-full-catalog-${{ github.run_id }}
+          name: play-atlas-browser-catalog-${{ github.run_id }}
           path: |
+            generated/browser-catalog-test/**
             generated/igdb-full-test/**
             dist/**
           retention-days: 30
