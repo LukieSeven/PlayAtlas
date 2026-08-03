@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" fill="none">
+  <path d="M-10 40 C 40 10, 80 80, 130 50 C 180 20, 220 70, 260 40" stroke="currentColor" stroke-width="0.75" opacity="0.15" stroke-dasharray="3 3" />
+  <path d="M-10 90 C 50 60, 90 130, 140 100 C 190 70, 230 120, 260 90" stroke="currentColor" stroke-width="0.75" opacity="0.12" />
+  <path d="M-10 140 C 30 110, 100 170, 150 130 C 200 90, 220 180, 260 140" stroke="currentColor" stroke-width="0.75" opacity="0.15" />
+  <circle cx="160" cy="60" r="25" stroke="currentColor" stroke-width="0.5" opacity="0.1" stroke-dasharray="2 2" />
+</svg>

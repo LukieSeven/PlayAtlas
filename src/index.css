@@ -2,20 +2,38 @@
 @import "tailwindcss";
 
 :root {
-  --color-primary: #2b7a94;
-  --color-secondary: #366e57;
-  --color-accent: #d4af37;
-  --color-bg: #0c1626;
-  --color-panel-surface: #132238;
-  --color-panel-border: rgba(212, 175, 55, 0.25);
-  --color-text: #e2e8f0;
-  --color-text-muted: #94a3b8;
-  --color-heading: #f8fafc;
+  --app-bg: #f5f0e1;
+  --app-bg-secondary: #ece4d0;
+  --sidebar-bg: #0d1b2a;
+  --sidebar-text: #f1f5f9;
+  --sidebar-muted-text: #94a3b8;
+  --sidebar-active-bg: linear-gradient(135deg, rgba(43, 122, 148, 0.4) 0%, rgba(54, 110, 87, 0.4) 100%);
+  --header-bg: rgba(245, 240, 225, 0.88);
+  --panel-bg: #fefcf6;
+  --panel-elevated-bg: #ffffff;
+  --panel-border: rgba(212, 175, 55, 0.4);
+  --text-primary: #0f2b48;
+  --text-secondary: #2b4c6f;
+  --text-muted: #64748b;
+  --heading-color: #0c1e36;
+  --primary-action: #2b7a94;
+  --primary-action-hover: #1b5e75;
+  --accent-color: #d4af37;
+  --focus-ring: rgba(212, 175, 55, 0.5);
+  --input-bg: #fefcf6;
+  --input-border: rgba(43, 122, 148, 0.3);
+  --badge-bg: rgba(54, 110, 87, 0.15);
+  --badge-text: #1b5e75;
+  --overlay-bg: rgba(12, 22, 38, 0.75);
+  --status-success: #366e57;
+  --status-warning: #d4af37;
+  --status-danger: #c53030;
   --font-heading: 'Cinzel', 'Playfair Display', Georgia, serif;
   --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --texture-opacity: 0.15;
+  --shadow-style: 0 10px 25px -5px rgba(15, 43, 72, 0.1), 0 0 10px rgba(212, 175, 55, 0.15);
   --border-radius: 1rem;
-  --shadow-style: 0 10px 30px -5px rgba(12, 22, 38, 0.8), 0 0 15px rgba(212, 175, 55, 0.1);
+  --texture-opacity: 0.2;
+  --ornament-opacity: 0.25;
 }
 
 @layer base {
@@ -25,21 +43,22 @@
   }
 
   body {
-    background-color: var(--color-bg);
-    color: var(--color-text);
+    background-color: var(--app-bg);
+    color: var(--text-primary);
     font-family: var(--font-body);
     min-height: 100vh;
     background-image: 
-      radial-gradient(circle at 15% 15%, rgba(43, 122, 148, var(--texture-opacity)) 0%, transparent 45%),
-      radial-gradient(circle at 85% 85%, rgba(54, 110, 87, var(--texture-opacity)) 0%, transparent 45%),
-      radial-gradient(circle at 50% 50%, rgba(212, 175, 55, calc(var(--texture-opacity) * 0.4)) 0%, transparent 60%);
+      radial-gradient(circle at 15% 15%, rgba(43, 122, 148, calc(var(--texture-opacity) * 1.5)) 0%, transparent 45%),
+      radial-gradient(circle at 85% 85%, rgba(54, 110, 87, calc(var(--texture-opacity) * 1.5)) 0%, transparent 45%),
+      radial-gradient(circle at 50% 50%, rgba(212, 175, 55, calc(var(--texture-opacity) * 0.5)) 0%, transparent 60%);
     background-attachment: fixed;
+    transition: background-color 0.25s ease, color 0.25s ease;
   }
 
-  h1, h2, h3, .serif-heading {
+  h1, h2, h3, h4, .serif-heading {
     font-family: var(--font-heading);
-    letter-spacing: 0.025em;
-    color: var(--color-heading);
+    letter-spacing: 0.02em;
+    color: var(--heading-color);
   }
 }
 
@@ -52,47 +71,130 @@
   transition-duration: 0.001ms !important;
 }
 
-/* Glassmorphism Panels with Watercolor Border Accents */
-.glass-panel {
-  background: var(--color-panel-surface);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid var(--color-panel-border);
-  box-shadow: var(--shadow-style);
+/* Semantic Component Styling Classes */
+.themed-app-shell {
+  background-color: var(--app-bg);
+  color: var(--text-primary);
 }
 
-.glass-card {
-  background: var(--color-panel-surface);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--color-panel-border);
+.themed-sidebar {
+  background-color: var(--sidebar-bg);
+  color: var(--sidebar-text);
+  border-right: 1px solid var(--panel-border);
+}
+
+.themed-header {
+  background-color: var(--header-bg);
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.themed-panel {
+  background-color: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--border-radius);
   box-shadow: var(--shadow-style);
+  color: var(--text-primary);
+}
+
+.themed-card {
+  background-color: var(--panel-elevated-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-style);
+  color: var(--text-primary);
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.themed-card-hover:hover {
+  transform: translateY(-2px);
+  border-color: var(--accent-color);
+  box-shadow: 0 12px 30px -5px rgba(212, 175, 55, 0.25);
+}
+
+.themed-input {
+  background-color: var(--input-bg);
+  border: 1px solid var(--input-border);
+  color: var(--text-primary);
   border-radius: var(--border-radius);
 }
 
-.glass-card-hover {
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+.themed-input:focus {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--focus-ring);
 }
 
-.glass-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: var(--color-accent);
-  box-shadow: 0 12px 35px 0 rgba(212, 175, 55, 0.2);
+.themed-button-primary {
+  background-color: var(--primary-action);
+  color: #ffffff;
+  border: 1px solid var(--accent-color);
+  border-radius: calc(var(--border-radius) * 0.75);
+  font-weight: 700;
+  transition: background-color 0.2s ease, transform 0.15s ease;
 }
 
-/* Gold Cartographic Accents */
-.gold-accent-text {
-  color: var(--color-accent);
+.themed-button-primary:hover {
+  background-color: var(--primary-action-hover);
+  transform: translateY(-1px);
 }
 
-.gold-accent-border {
-  border-color: var(--color-accent);
+.themed-button-secondary {
+  background-color: var(--panel-bg);
+  color: var(--text-primary);
+  border: 1px solid var(--panel-border);
+  border-radius: calc(var(--border-radius) * 0.75);
+  font-weight: 600;
+  transition: background-color 0.2s ease;
 }
 
-.gold-badge {
-  background-color: rgba(212, 175, 55, 0.15);
-  color: var(--color-accent);
-  border: 1px solid rgba(212, 175, 55, 0.4);
+.themed-button-secondary:hover {
+  background-color: var(--app-bg-secondary);
+  border-color: var(--accent-color);
+}
+
+.themed-text-primary {
+  color: var(--text-primary);
+}
+
+.themed-text-secondary {
+  color: var(--text-secondary);
+}
+
+.themed-text-muted {
+  color: var(--text-muted);
+}
+
+.themed-heading {
+  color: var(--heading-color);
+  font-family: var(--font-heading);
+}
+
+.themed-active-nav {
+  background: var(--sidebar-active-bg);
+  color: #ffffff;
+  border: 1px solid var(--accent-color);
+}
+
+.themed-badge {
+  background-color: var(--badge-bg);
+  color: var(--badge-text);
+  border: 1px solid var(--panel-border);
+  border-radius: 0.5rem;
+}
+
+.themed-gold-accent {
+  color: var(--accent-color);
+}
+
+.themed-gold-border {
+  border-color: var(--accent-color);
+}
+
+/* Cartographic Decorative Ornaments */
+.cartographic-ornament {
+  opacity: var(--ornament-opacity);
+  pointer-events: none;
 }
 
 /* Custom Scrollbar */
@@ -102,14 +204,14 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--color-bg);
+  background: var(--app-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(212, 175, 55, 0.3);
+  background: var(--accent-color);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--color-accent);
+  background: var(--primary-action);
 }

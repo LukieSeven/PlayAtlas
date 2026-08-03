@@ -19,29 +19,54 @@ export interface ThemeTokens {
   name: string;
   description: string;
 
-  // Color Palette
-  primaryColor: string;
-  secondaryColor: string;
-  accentColor: string; // Gold for Play Atlas
-  backgroundColor: string;
-  panelSurfaceColor: string;
-  panelBorderColor: string;
-  textColor: string;
-  textMutedColor: string;
-  headingColor: string;
+  // Primary Structure Colors
+  appBackground: string;
+  appBackgroundSecondary: string;
+  sidebarBackground: string;
+  sidebarText: string;
+  sidebarMutedText: string;
+  sidebarActiveBackground: string;
+  headerBackground: string;
+  
+  // Panel & Card Surfaces
+  panelBackground: string;
+  panelElevatedBackground: string;
+  panelBorder: string;
 
   // Typography
+  textPrimary: string;
+  textSecondary: string;
+  textMuted: string;
+  headingColor: string;
+
+  // Actions & Focus
+  primaryAction: string;
+  primaryActionHover: string;
+  accent: string; // Gold for Play Atlas
+  focusRing: string;
+
+  // Inputs & Badges
+  inputBackground: string;
+  inputBorder: string;
+  badgeBackground: string;
+  badgeText: string;
+  overlayBackground: string;
+
+  // Status Colors
+  success: string;
+  warning: string;
+  danger: string;
+
+  // Typography Families
   headingFontFamily: string;
   bodyFontFamily: string;
 
-  // Stylistic Utilities
-  textureUrl?: string;
-  textureStrength: number; // 0.0 to 1.0
-  decorativeMotif: 'cartographic' | 'minimal' | 'neon' | 'retro' | 'none';
-  borderStyle: string;
+  // Utilities & Decorative Controls
+  shadow: string;
   cornerRadius: string;
-  shadowStyle: string;
+  textureOpacity: number;
+  ornamentOpacity: number;
+  decorativeMotif: 'cartographic' | 'minimal' | 'neon' | 'retro' | 'none';
 
-  // Mode Indicator
   isDark: boolean;
 }

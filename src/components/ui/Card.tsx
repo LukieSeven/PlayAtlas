@@ -21,10 +21,8 @@ export const Card: React.FC<CardProps> = ({
     <div
       className={twMerge(
         clsx(
-          'rounded-2xl p-5 overflow-hidden border transition-all duration-300',
-          glass ? 'glass-card' : 'bg-slate-900 border-slate-800',
-          interactive && 'glass-card-hover cursor-pointer',
-          glow && 'neon-glow-indigo',
+          'p-5 overflow-hidden transition-all duration-300 themed-card',
+          interactive && 'themed-card-hover cursor-pointer',
           className
         )
       )}

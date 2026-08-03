@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import {
   Home,
   Rocket,
@@ -11,14 +11,17 @@ import {
   Bookmark,
   Trophy,
   Layers,
-  Gamepad2
+  Gamepad2,
+  Settings,
+  Palette
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
+import { useTheme } from '../../context/ThemeContext';
 import { Badge } from '../ui/Badge';
 import { AddTabModal } from '../widgets/AddTabModal';
 
 const iconMap: Record<string, React.ReactNode> = {
-  Home: <Home className="w-5 h-5 text-indigo-400" />,
+  Home: <Home className="w-5 h-5 text-amber-400" />,
   Rocket: <Rocket className="w-4 h-4 text-cyan-400" />,
   Flame: <Flame className="w-4 h-4 text-amber-400" />,
   CalendarDays: <CalendarDays className="w-4 h-4 text-emerald-400" />,
@@ -31,28 +34,24 @@ const iconMap: Record<string, React.ReactNode> = {
 
 export const Sidebar: React.FC = () => {
   const { customTabs, addTab, deleteTab } = useSidebar();
+  const { activeTokens } = useTheme();
+  const navigate = useNavigate();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   const isDefaultSystemTab = (id: string) => {
-    return ['home', 'new-releases', 'upcoming', 'calendar', 'discounts', 'deals'].includes(id);
+    return ['home', 'new-releases', 'upcoming', 'calendar', 'discounts', 'deals', 'settings'].includes(id);
   };
 
   return (
-    <aside className="hidden lg:flex flex-col border-r border-slate-800/80 glass-panel w-64 md:w-72 h-screen sticky top-0 left-0 shrink-0 z-30 justify-between">
-      {/* Top Official Brand Header */}
-      <div className="p-4 border-b border-slate-800/80">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl overflow-hidden border border-indigo-500/30 shadow-lg shadow-indigo-500/20 shrink-0">
-            <img src="./logo.jpg" alt="Play Atlas Logo" className="w-full h-full object-cover" />
-          </div>
-          <div className="flex flex-col">
-            <span className="font-extrabold text-lg tracking-wider text-white leading-none">
-              PLAY<span className="text-indigo-400">ATLAS</span>
-            </span>
-            <span className="text-[9px] font-bold text-slate-400 font-mono tracking-tighter mt-1 uppercase">
-              DISCOVER • ORGANIZE • RANK • SHARE
-            </span>
-          </div>
+    <aside className="hidden lg:flex flex-col themed-sidebar w-64 md:w-72 h-screen sticky top-0 left-0 shrink-0 z-30 justify-between">
+      {/* Official Brand Logo Header */}
+      <div className="p-4 border-b border-[var(--panel-border)] bg-[rgba(0,0,0,0.15)]">
+        <div className="w-full flex items-center justify-center">
+          <img
+            src="./branding/play-atlas-watercolor-logo.jpg"
+            alt="Play Atlas - Personalized Gaming Hub"
+            className="w-full max-h-16 object-contain filter drop-shadow-md transition-transform duration-300 hover:scale-[1.02]"
+          />
         </div>
       </div>
 
@@ -65,22 +64,22 @@ export const Sidebar: React.FC = () => {
           className={({ isActive }) =>
             `flex items-center justify-between px-4 py-3 rounded-2xl font-extrabold text-sm transition-all duration-200 mb-3 shadow-md ${
               isActive
-                ? 'bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-600 text-white shadow-indigo-600/30 border border-indigo-400/50'
-                : 'bg-slate-900/90 text-slate-200 hover:bg-slate-800 hover:text-white border border-slate-800'
+                ? 'themed-active-nav shadow-lg'
+                : 'bg-[rgba(255,255,255,0.05)] text-[var(--sidebar-text)] hover:bg-[rgba(255,255,255,0.1)] border border-[var(--panel-border)]'
             }`
           }
         >
           <div className="flex items-center gap-3">
-            <Home className="w-5 h-5 text-indigo-300" />
-            <span className="text-base tracking-wide">Homepage</span>
+            <Home className="w-5 h-5 text-amber-400" />
+            <span className="text-base tracking-wide serif-heading">Homepage</span>
           </div>
-          <Badge variant="indigo">PRIMARY</Badge>
+          <Badge variant="amber">PRIMARY</Badge>
         </NavLink>
 
         {/* Discovery Feeds */}
         <nav className="space-y-1">
           {customTabs
-            .filter(t => t.id !== 'home')
+            .filter(t => t.id !== 'home' && t.id !== 'settings')
             .map(item => (
               <div key={item.id} className="relative group flex items-center">
                 <NavLink
@@ -88,8 +87,8 @@ export const Sidebar: React.FC = () => {
                   className={({ isActive }) =>
                     `flex-1 flex items-center justify-between px-3.5 py-2.5 rounded-xl font-semibold text-xs transition-all duration-200 ${
                       isActive
-                        ? 'bg-slate-800/90 text-white border border-indigo-500/30 shadow-md'
-                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                        ? 'bg-[rgba(255,255,255,0.15)] text-white border border-[var(--accent-color)] shadow-md'
+                        : 'text-[var(--sidebar-muted-text)] hover:text-[var(--sidebar-text)] hover:bg-[rgba(255,255,255,0.08)]'
                     }`
                   }
                 >
@@ -119,18 +118,46 @@ export const Sidebar: React.FC = () => {
         </nav>
       </div>
 
-      {/* Bottom Action Footer with Create Triggers */}
-      <div className="p-3 border-t border-slate-800/80 space-y-2">
+      {/* Bottom Action Footer with Create & Permanent Settings Triggers */}
+      <div className="p-3 border-t border-[var(--panel-border)] space-y-2 bg-[rgba(0,0,0,0.1)]">
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="w-full flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-dashed border-slate-700 text-slate-400 hover:text-indigo-300 hover:border-indigo-500/50 hover:bg-indigo-600/10 text-xs font-bold transition-all"
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl border border-dashed border-[var(--panel-border)] text-[var(--sidebar-muted-text)] hover:text-white hover:border-[var(--accent-color)] hover:bg-[rgba(255,255,255,0.08)] text-xs font-bold transition-all"
         >
-          <Plus className="w-4 h-4" />
+          <Plus className="w-4 h-4 text-amber-400" />
           <span>Create Custom Tab / List</span>
         </button>
 
-        <div className="text-[10px] text-slate-500 text-center font-mono pt-1">
-          GitHub Sync • LukieSeven/PlayAtlas
+        {/* Compact Theme Preview Selector Button */}
+        <button
+          onClick={() => navigate('/settings')}
+          className="w-full flex items-center justify-between py-2 px-3 rounded-xl bg-[rgba(255,255,255,0.06)] hover:bg-[rgba(255,255,255,0.12)] border border-[var(--panel-border)] text-xs text-[var(--sidebar-text)] transition-all group"
+          title="Open Theme Customizer"
+        >
+          <div className="flex items-center gap-2">
+            <Palette className="w-4 h-4 text-amber-400 group-hover:rotate-12 transition-transform" />
+            <span className="font-semibold truncate">{activeTokens.name}</span>
+          </div>
+          <span className="text-[10px] font-mono text-[var(--accent-color)] uppercase">Theme</span>
+        </button>
+
+        {/* Permanent Settings Navigation Item */}
+        <NavLink
+          to="/settings"
+          className={({ isActive }) =>
+            `flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+              isActive
+                ? 'bg-[rgba(255,255,255,0.2)] text-white border border-[var(--accent-color)]'
+                : 'text-[var(--sidebar-muted-text)] hover:text-white hover:bg-[rgba(255,255,255,0.08)]'
+            }`
+          }
+        >
+          <Settings className="w-4 h-4 text-slate-300" />
+          <span>Settings & Customization</span>
+        </NavLink>
+
+        <div className="text-[9px] text-[var(--sidebar-muted-text)] text-center font-mono pt-1">
+          Play Atlas • Personal Gaming Hub
         </div>
       </div>
 

@@ -7,8 +7,8 @@ import { Footer } from './Footer';
 
 export const AppLayout: React.FC = () => {
   return (
-    <div className="h-screen w-screen overflow-hidden flex bg-slate-950 text-slate-100 font-sans selection:bg-indigo-600 selection:text-white">
-      {/* Discord-Style Left Pinned Sidebar */}
+    <div className="h-screen w-screen overflow-hidden flex themed-app-shell font-sans selection:bg-[var(--primary-action)] selection:text-white">
+      {/* Left Pinned Sidebar */}
       <Sidebar />
 
       {/* Mobile Drawer Overlay */}

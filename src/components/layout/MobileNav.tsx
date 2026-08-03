@@ -6,13 +6,13 @@ import { useSidebar } from '../../context/SidebarContext';
 import { Badge } from '../ui/Badge';
 
 const iconMap: Record<string, React.ReactNode> = {
-  LayoutDashboard: <LayoutDashboard className="w-5 h-5" />,
-  Trophy: <Trophy className="w-5 h-5" />,
-  Layers: <Layers className="w-5 h-5" />,
-  Bookmark: <Bookmark className="w-5 h-5" />,
-  Gamepad2: <Gamepad2 className="w-5 h-5" />,
-  Share2: <Share2 className="w-5 h-5" />,
-  Settings: <Settings className="w-5 h-5" />,
+  LayoutDashboard: <LayoutDashboard className="w-5 h-5 text-amber-400" />,
+  Trophy: <Trophy className="w-5 h-5 text-amber-400" />,
+  Layers: <Layers className="w-5 h-5 text-rose-400" />,
+  Bookmark: <Bookmark className="w-5 h-5 text-indigo-400" />,
+  Gamepad2: <Gamepad2 className="w-5 h-5 text-cyan-400" />,
+  Share2: <Share2 className="w-5 h-5 text-emerald-400" />,
+  Settings: <Settings className="w-5 h-5 text-slate-300" />,
 };
 
 export const MobileNav: React.FC = () => {
@@ -29,15 +29,13 @@ export const MobileNav: React.FC = () => {
       />
 
       {/* Drawer Content */}
-      <div className="fixed inset-y-0 left-0 w-4/5 max-w-xs glass-panel border-r border-slate-800 p-6 flex flex-col justify-between z-50 animate-in slide-in-from-left duration-300">
+      <div className="fixed inset-y-0 left-0 w-4/5 max-w-xs themed-sidebar p-6 flex flex-col justify-between z-50 animate-in slide-in-from-left duration-300">
         <div className="space-y-6">
           {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          <div className="flex items-center justify-between border-b border-[var(--panel-border)] pb-4">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 flex items-center justify-center text-white">
-                <Compass className="w-4 h-4" />
-              </div>
-              <span className="font-extrabold text-lg text-white">PLAYATLAS</span>
+              <Compass className="w-5 h-5 text-amber-400" />
+              <span className="font-extrabold text-lg text-white serif-heading">PLAY ATLAS</span>
             </div>
             <button
               onClick={() => setMobileOpen(false)}
@@ -51,7 +49,7 @@ export const MobileNav: React.FC = () => {
           <nav className="space-y-6">
             {navigationConfig.map((section, idx) => (
               <div key={idx} className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                <h4 className="text-xs font-bold text-[var(--sidebar-muted-text)] uppercase tracking-wider">
                   {section.title}
                 </h4>
                 <div className="space-y-1">
@@ -64,8 +62,8 @@ export const MobileNav: React.FC = () => {
                       className={({ isActive }) =>
                         `flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                           isActive
-                            ? 'bg-indigo-600 text-white font-semibold'
-                            : 'text-slate-300 hover:bg-slate-800/60'
+                            ? 'themed-active-nav font-semibold'
+                            : 'text-[var(--sidebar-text)] hover:bg-[rgba(255,255,255,0.08)]'
                         }`
                       }
                     >
@@ -79,10 +77,28 @@ export const MobileNav: React.FC = () => {
                 </div>
               </div>
             ))}
+
+            {/* Permanent Settings Access in Mobile Drawer */}
+            <div className="pt-2 border-t border-[var(--panel-border)]">
+              <NavLink
+                to="/settings"
+                onClick={() => setMobileOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-bold transition-colors ${
+                    isActive
+                      ? 'themed-active-nav font-semibold'
+                      : 'text-[var(--sidebar-text)] hover:bg-[rgba(255,255,255,0.08)]'
+                  }`
+                }
+              >
+                <Settings className="w-5 h-5 text-slate-300" />
+                <span>Settings & Customization</span>
+              </NavLink>
+            </div>
           </nav>
         </div>
 
-        <div className="pt-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+        <div className="pt-4 border-t border-[var(--panel-border)] text-xs text-[var(--sidebar-muted-text)] text-center">
           Play Atlas © 2026 • GitHub Repository Sync
         </div>
       </div>

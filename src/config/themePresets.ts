@@ -4,133 +4,283 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
   watercolor_atlas: {
     presetKey: 'watercolor_atlas',
     name: 'Watercolor Atlas (Default)',
-    description: 'Fantasy-map visual language featuring ocean blue, teal, sea green, parchment beige, and gold accents.',
-    primaryColor: '#2b7a94',       // Ocean Blue
-    secondaryColor: '#366e57',     // Sea Green
-    accentColor: '#d4af37',        // Compass Gold
-    backgroundColor: '#0c1626',     // Deep Navy Night Sky
-    panelSurfaceColor: '#132238',   // Deep Parchment Slate
-    panelBorderColor: 'rgba(212, 175, 55, 0.25)', // Gold Accent Border
-    textColor: '#e2e8f0',
-    textMutedColor: '#94a3b8',
-    headingColor: '#f8fafc',
+    description: 'Fantasy cartography featuring warm parchment, watercolor ocean blue & sea green washes, deep navy ink, and compass gold accents.',
+    
+    appBackground: '#f5f0e1',               // Warm Parchment Base
+    appBackgroundSecondary: '#ece4d0',      // Aged Parchment Shadow
+    sidebarBackground: '#0d1b2a',            // Deep Navy Ink Sidebar
+    sidebarText: '#f1f5f9',                  // Parchment White Sidebar Text
+    sidebarMutedText: '#94a3b8',             // Muted Slate Navy
+    sidebarActiveBackground: 'linear-gradient(135deg, rgba(43, 122, 148, 0.4) 0%, rgba(54, 110, 87, 0.4) 100%)',
+    headerBackground: 'rgba(245, 240, 225, 0.88)', // Parchment Translucent Header
+    
+    panelBackground: '#fefcf6',              // Light Parchment Surface
+    panelElevatedBackground: '#ffffff',      // Pure Parchment Card
+    panelBorder: 'rgba(212, 175, 55, 0.4)',  // Fine Muted Gold Border
+    
+    textPrimary: '#0f2b48',                  // Deep Navy Ink Primary
+    textSecondary: '#2b4c6f',                // Muted Ocean Navy
+    textMuted: '#64748b',                    // Ink Slate
+    headingColor: '#0c1e36',                 // Deep Cartographic Navy
+    
+    primaryAction: '#2b7a94',                // Ocean Blue
+    primaryActionHover: '#1b5e75',           // Deep Ocean Blue
+    accent: '#d4af37',                       // Compass Gold Accent
+    focusRing: 'rgba(212, 175, 55, 0.5)',
+    
+    inputBackground: '#fefcf6',
+    inputBorder: 'rgba(43, 122, 148, 0.3)',
+    badgeBackground: 'rgba(54, 110, 87, 0.15)', // Sea Green Badge
+    badgeText: '#1b5e75',                    // Ocean Blue Badge Text
+    overlayBackground: 'rgba(12, 22, 38, 0.75)',
+    
+    success: '#366e57',                      // Sea Green
+    warning: '#d4af37',                      // Compass Gold
+    danger: '#c53030',                       // Wax Seal Red
+    
     headingFontFamily: "'Cinzel', 'Playfair Display', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
-    textureStrength: 0.15,
-    decorativeMotif: 'cartographic',
-    borderStyle: 'solid',
+    
+    shadow: '0 10px 25px -5px rgba(15, 43, 72, 0.1), 0 0 10px rgba(212, 175, 55, 0.15)',
     cornerRadius: '1rem',
-    shadowStyle: '0 10px 30px -5px rgba(12, 22, 38, 0.8), 0 0 15px rgba(212, 175, 55, 0.1)',
-    isDark: true,
+    textureOpacity: 0.2,
+    ornamentOpacity: 0.25,
+    decorativeMotif: 'cartographic',
+    isDark: false,
   },
   midnight_ocean: {
     presetKey: 'midnight_ocean',
     name: 'Midnight Ocean',
-    description: 'Deep oceanic blues and cyan glows for immersive night browsing.',
-    primaryColor: '#0ea5e9',
-    secondaryColor: '#0284c7',
-    accentColor: '#38bdf8',
-    backgroundColor: '#030712',
-    panelSurfaceColor: '#0f172a',
-    panelBorderColor: 'rgba(56, 189, 248, 0.2)',
-    textColor: '#f1f5f9',
-    textMutedColor: '#64748b',
+    description: 'Deep oceanic night sky, cyan glow highlights, and dark slate panels.',
+    
+    appBackground: '#030712',
+    appBackgroundSecondary: '#0b1329',
+    sidebarBackground: '#070f23',
+    sidebarText: '#f1f5f9',
+    sidebarMutedText: '#64748b',
+    sidebarActiveBackground: 'rgba(14, 165, 233, 0.2)',
+    headerBackground: 'rgba(3, 7, 18, 0.85)',
+    
+    panelBackground: '#0f172a',
+    panelElevatedBackground: '#1e293b',
+    panelBorder: 'rgba(56, 189, 248, 0.25)',
+    
+    textPrimary: '#f8fafc',
+    textSecondary: '#cbd5e1',
+    textMuted: '#64748b',
     headingColor: '#ffffff',
+    
+    primaryAction: '#0ea5e9',
+    primaryActionHover: '#0284c7',
+    accent: '#38bdf8',
+    focusRing: 'rgba(56, 189, 248, 0.5)',
+    
+    inputBackground: '#0f172a',
+    inputBorder: '#334155',
+    badgeBackground: 'rgba(14, 165, 233, 0.15)',
+    badgeText: '#38bdf8',
+    overlayBackground: 'rgba(3, 7, 18, 0.85)',
+    
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#ef4444',
+    
     headingFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-    textureStrength: 0.0,
-    decorativeMotif: 'minimal',
-    borderStyle: 'solid',
+    
+    shadow: '0 10px 30px -5px rgba(0, 0, 0, 0.5)',
     cornerRadius: '0.75rem',
-    shadowStyle: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
+    textureOpacity: 0.0,
+    ornamentOpacity: 0.0,
+    decorativeMotif: 'minimal',
     isDark: true,
   },
   clean_catalog: {
     presetKey: 'clean_catalog',
     name: 'Clean Catalog (Light)',
-    description: 'High-legibility light parchment and indigo for clean daytime curation.',
-    primaryColor: '#1e40af',
-    secondaryColor: '#047857',
-    accentColor: '#b45309',
-    backgroundColor: '#f8fafc',
-    panelSurfaceColor: '#ffffff',
-    panelBorderColor: '#e2e8f0',
-    textColor: '#0f172a',
-    textMutedColor: '#475569',
+    description: 'High-contrast light parchment and crisp indigo for daytime reading.',
+    
+    appBackground: '#f8fafc',
+    appBackgroundSecondary: '#f1f5f9',
+    sidebarBackground: '#ffffff',
+    sidebarText: '#0f172a',
+    sidebarMutedText: '#64748b',
+    sidebarActiveBackground: 'rgba(30, 64, 175, 0.1)',
+    headerBackground: 'rgba(255, 255, 255, 0.9)',
+    
+    panelBackground: '#ffffff',
+    panelElevatedBackground: '#ffffff',
+    panelBorder: '#e2e8f0',
+    
+    textPrimary: '#0f172a',
+    textSecondary: '#334155',
+    textMuted: '#64748b',
     headingColor: '#0f172a',
+    
+    primaryAction: '#1e40af',
+    primaryActionHover: '#1d4ed8',
+    accent: '#b45309',
+    focusRing: 'rgba(30, 64, 175, 0.4)',
+    
+    inputBackground: '#ffffff',
+    inputBorder: '#cbd5e1',
+    badgeBackground: 'rgba(30, 64, 175, 0.1)',
+    badgeText: '#1e40af',
+    overlayBackground: 'rgba(15, 23, 42, 0.5)',
+    
+    success: '#047857',
+    warning: '#b45309',
+    danger: '#b91c1c',
+    
     headingFontFamily: "'Cinzel', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-    textureStrength: 0.05,
-    decorativeMotif: 'cartographic',
-    borderStyle: 'solid',
+    
+    shadow: '0 4px 12px -2px rgba(0, 0, 0, 0.05)',
     cornerRadius: '0.75rem',
-    shadowStyle: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+    textureOpacity: 0.05,
+    ornamentOpacity: 0.1,
+    decorativeMotif: 'cartographic',
     isDark: false,
   },
   neon_arcade: {
     presetKey: 'neon_arcade',
     name: 'Neon Arcade',
-    description: 'Vibrant cyberpunk neon magenta, cyan, and dark grid aesthetic.',
-    primaryColor: '#ec4899',
-    secondaryColor: '#06b6d4',
-    accentColor: '#f59e0b',
-    backgroundColor: '#090514',
-    panelSurfaceColor: '#160d29',
-    panelBorderColor: 'rgba(236, 72, 153, 0.3)',
-    textColor: '#f472b6',
-    textMutedColor: '#a78bfa',
+    description: 'Cyberpunk neon magenta, cyan glow, and dark grid synth aesthetic.',
+    
+    appBackground: '#090514',
+    appBackgroundSecondary: '#13092b',
+    sidebarBackground: '#0d061e',
+    sidebarText: '#f472b6',
+    sidebarMutedText: '#a78bfa',
+    sidebarActiveBackground: 'rgba(236, 72, 153, 0.25)',
+    headerBackground: 'rgba(9, 5, 20, 0.88)',
+    
+    panelBackground: '#160d29',
+    panelElevatedBackground: '#21123d',
+    panelBorder: 'rgba(236, 72, 153, 0.35)',
+    
+    textPrimary: '#f472b6',
+    textSecondary: '#c084fc',
+    textMuted: '#a78bfa',
     headingColor: '#ffffff',
-    headingFontFamily: "'Orbitron', sans-serif",
+    
+    primaryAction: '#ec4899',
+    primaryActionHover: '#db2777',
+    accent: '#06b6d4',
+    focusRing: 'rgba(236, 72, 153, 0.6)',
+    
+    inputBackground: '#160d29',
+    inputBorder: 'rgba(236, 72, 153, 0.4)',
+    badgeBackground: 'rgba(236, 72, 153, 0.2)',
+    badgeText: '#f472b6',
+    overlayBackground: 'rgba(9, 5, 20, 0.9)',
+    
+    success: '#10b981',
+    warning: '#f59e0b',
+    danger: '#f43f5e',
+    
+    headingFontFamily: "'Cinzel', sans-serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-    textureStrength: 0.0,
-    decorativeMotif: 'neon',
-    borderStyle: 'solid',
+    
+    shadow: '0 0 25px rgba(236, 72, 153, 0.3)',
     cornerRadius: '0.5rem',
-    shadowStyle: '0 0 20px rgba(236, 72, 153, 0.25)',
+    textureOpacity: 0.0,
+    ornamentOpacity: 0.0,
+    decorativeMotif: 'neon',
     isDark: true,
   },
   retro_console: {
     presetKey: 'retro_console',
     name: 'Retro Console',
-    description: 'Nostalgic 16-bit parchment, warm amber, and classic arcade console vibes.',
-    primaryColor: '#d97706',
-    secondaryColor: '#059669',
-    accentColor: '#dc2626',
-    backgroundColor: '#18120c',
-    panelSurfaceColor: '#261c14',
-    panelBorderColor: 'rgba(217, 119, 6, 0.3)',
-    textColor: '#fef3c7',
-    textMutedColor: '#d97706',
+    description: 'Nostalgic 16-bit amber, parchment brown, and CRT console styling.',
+    
+    appBackground: '#18120c',
+    appBackgroundSecondary: '#211811',
+    sidebarBackground: '#140f09',
+    sidebarText: '#fef3c7',
+    sidebarMutedText: '#d97706',
+    sidebarActiveBackground: 'rgba(217, 119, 6, 0.3)',
+    headerBackground: 'rgba(24, 18, 12, 0.9)',
+    
+    panelBackground: '#261c14',
+    panelElevatedBackground: '#33251a',
+    panelBorder: 'rgba(217, 119, 6, 0.35)',
+    
+    textPrimary: '#fef3c7',
+    textSecondary: '#fde68a',
+    textMuted: '#d97706',
     headingColor: '#fffbeb',
-    headingFontFamily: "'Press Start 2P', monospace, sans-serif",
+    
+    primaryAction: '#d97706',
+    primaryActionHover: '#b45309',
+    accent: '#dc2626',
+    focusRing: 'rgba(217, 119, 6, 0.5)',
+    
+    inputBackground: '#261c14',
+    inputBorder: '#78350f',
+    badgeBackground: 'rgba(217, 119, 6, 0.2)',
+    badgeText: '#fef3c7',
+    overlayBackground: 'rgba(24, 18, 12, 0.85)',
+    
+    success: '#059669',
+    warning: '#d97706',
+    danger: '#dc2626',
+    
+    headingFontFamily: "'Cinzel', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-    textureStrength: 0.1,
-    decorativeMotif: 'retro',
-    borderStyle: 'solid',
+    
+    shadow: '4px 4px 0px rgba(0, 0, 0, 0.8)',
     cornerRadius: '0.375rem',
-    shadowStyle: '4px 4px 0px rgba(0, 0, 0, 0.8)',
+    textureOpacity: 0.1,
+    ornamentOpacity: 0.15,
+    decorativeMotif: 'retro',
     isDark: true,
   },
   forest_explorer: {
     presetKey: 'forest_explorer',
     name: 'Forest Explorer',
-    description: 'Natural emerald greens, earthy brown, and gold accents for wilderness maps.',
-    primaryColor: '#059669',
-    secondaryColor: '#10b981',
-    accentColor: '#eab308',
-    backgroundColor: '#061a12',
-    panelSurfaceColor: '#0d2d20',
-    panelBorderColor: 'rgba(16, 185, 129, 0.25)',
-    textColor: '#ecfdf5',
-    textMutedColor: '#6ee7b7',
+    description: 'Natural wilderness emerald green, earthy dark wood, and gold compass markers.',
+    
+    appBackground: '#061a12',
+    appBackgroundSecondary: '#0a261b',
+    sidebarBackground: '#04120c',
+    sidebarText: '#ecfdf5',
+    sidebarMutedText: '#6ee7b7',
+    sidebarActiveBackground: 'rgba(16, 185, 129, 0.25)',
+    headerBackground: 'rgba(6, 26, 18, 0.9)',
+    
+    panelBackground: '#0d2d20',
+    panelElevatedBackground: '#133e2d',
+    panelBorder: 'rgba(16, 185, 129, 0.3)',
+    
+    textPrimary: '#ecfdf5',
+    textSecondary: '#a7f3d0',
+    textMuted: '#6ee7b7',
     headingColor: '#ffffff',
+    
+    primaryAction: '#059669',
+    primaryActionHover: '#047857',
+    accent: '#eab308',
+    focusRing: 'rgba(16, 185, 129, 0.5)',
+    
+    inputBackground: '#0d2d20',
+    inputBorder: '#064e3b',
+    badgeBackground: 'rgba(16, 185, 129, 0.2)',
+    badgeText: '#ecfdf5',
+    overlayBackground: 'rgba(6, 26, 18, 0.85)',
+    
+    success: '#10b981',
+    warning: '#eab308',
+    danger: '#ef4444',
+    
     headingFontFamily: "'Cinzel', Georgia, serif",
     bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-    textureStrength: 0.1,
-    decorativeMotif: 'cartographic',
-    borderStyle: 'solid',
+    
+    shadow: '0 10px 25px -5px rgba(6, 26, 18, 0.7)',
     cornerRadius: '1rem',
-    shadowStyle: '0 10px 25px -5px rgba(6, 26, 18, 0.7)',
+    textureOpacity: 0.15,
+    ornamentOpacity: 0.2,
+    decorativeMotif: 'cartographic',
     isDark: true,
   },
 };
