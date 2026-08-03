@@ -28,11 +28,14 @@ export const NewReleasesPage: React.FC = () => {
   // Visible games state provided by GameListGrid (incremental batch rendering)
   const [visibleGames, setVisibleGames] = useState<CompactGameLookupRecord[]>([]);
 
+  // Track attempted hydration record IDs to prevent infinite hydration loops
+  const attemptedHydrationIdsRef = useRef<Set<number>>(new Set());
+
   // Stale async response protection ref
   const activeSearchQueryRef = useRef<string>('');
 
-  // Modal selection
-  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  // Modal selection state (stores full compact record for instant snapshot rendering)
+  const [selectedGame, setSelectedGame] = useState<CompactGameLookupRecord | null>(null);
 
   // Fetch release catalog partition feed
   const loadReleaseCatalog = useCallback(async () => {
@@ -105,6 +108,11 @@ export const NewReleasesPage: React.FC = () => {
 
   const isSearchActive = searchQuery.trim().length >= 2;
 
+  // Stable callback handler for GameListGrid visible games changes
+  const handleVisibleGamesChange = useCallback((vis: CompactGameLookupRecord[]) => {
+    setVisibleGames(vis);
+  }, []);
+
   // Targeted async hydration of currently VISIBLE games batch only
   useEffect(() => {
     if (visibleGames.length === 0) return;
@@ -112,20 +120,49 @@ export const NewReleasesPage: React.FC = () => {
     let isCurrent = true;
     const currentQuery = searchQuery.trim();
 
-    const needsHydration = visibleGames.some(r => !r.coverUrl || r.coverUrl.includes('nocover'));
-    if (!needsHydration) return;
+    // Filter to visible records whose hydration has not yet been attempted
+    const recordsToHydrate = visibleGames.filter(
+      r => (!r.coverUrl || r.coverUrl.includes('nocover')) && !attemptedHydrationIdsRef.current.has(r.id)
+    );
 
-    hydrateCompactRecordsBatch(visibleGames)
+    if (recordsToHydrate.length === 0) return;
+
+    // Mark as attempted to prevent infinite hydration loops for coverless titles
+    recordsToHydrate.forEach(r => attemptedHydrationIdsRef.current.add(r.id));
+
+    hydrateCompactRecordsBatch(recordsToHydrate)
       .then(hydratedBatch => {
         if (!isCurrent) return;
         if (isSearchActive && activeSearchQueryRef.current !== currentQuery) return;
 
         const hydratedMap = new Map(hydratedBatch.map(h => [h.id, h]));
 
+        const updateCollection = (prev: CompactGameLookupRecord[]) => {
+          let hasChange = false;
+          const next = prev.map(r => {
+            const hydrated = hydratedMap.get(r.id);
+            if (!hydrated) return r;
+
+            const isIdentical =
+              r.coverUrl === hydrated.coverUrl &&
+              r.rating === hydrated.rating &&
+              r.developer === hydrated.developer &&
+              JSON.stringify(r.genres) === JSON.stringify(hydrated.genres) &&
+              JSON.stringify(r.platforms) === JSON.stringify(hydrated.platforms);
+
+            if (isIdentical) return r;
+
+            hasChange = true;
+            return hydrated;
+          });
+
+          return hasChange ? next : prev;
+        };
+
         if (isSearchActive) {
-          setSearchResults(prev => prev.map(r => hydratedMap.get(r.id) || r));
+          setSearchResults(prev => updateCollection(prev));
         } else {
-          setReleaseGames(prev => prev.map(r => hydratedMap.get(r.id) || r));
+          setReleaseGames(prev => updateCollection(prev));
         }
       })
       .catch(err => {
@@ -140,6 +177,9 @@ export const NewReleasesPage: React.FC = () => {
   const { dateStr: userTodayDate, timezone: userTimezone } = getDynamicLocalDate();
 
   const activeGamesList = isSearchActive ? searchResults : releaseGames;
+  const collectionKey = isSearchActive
+    ? `search:${searchQuery.trim().toLowerCase()}`
+    : `release:${viewType}:${timeframe}`;
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -309,15 +349,16 @@ export const NewReleasesPage: React.FC = () => {
 
       {/* Always Rendered Filter & Card Grid Surface (GameListGrid) */}
       <GameListGrid
+        collectionKey={collectionKey}
         games={activeGamesList}
         isLoading={isSearchActive ? isSearching : loadingRelease}
-        onSelectGame={(id: number) => setSelectedGameId(id)}
-        onVisibleGamesChange={(vis: CompactGameLookupRecord[]) => setVisibleGames(vis)}
+        onSelectGame={(rec: CompactGameLookupRecord) => setSelectedGame(rec)}
+        onVisibleGamesChange={handleVisibleGamesChange}
       />
 
       <GameDetailModal
-        gameId={selectedGameId}
-        onClose={() => setSelectedGameId(null)}
+        selectedGame={selectedGame}
+        onClose={() => setSelectedGame(null)}
       />
     </div>
   );

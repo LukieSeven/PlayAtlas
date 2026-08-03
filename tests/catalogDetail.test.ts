@@ -2,9 +2,11 @@ import {
   normalizeEntityName,
   normalizeEntityNames,
   convertIgdbRecordToGameItem,
+  mapRawCatalogRecordToGameDetail,
+  getGameDetailForCompactRecord,
 } from '../src/services/catalogDetailService';
 
-function runCatalogDetailTests() {
+async function runCatalogDetailTests() {
   console.log('🧪 Running Catalog Detail Conversion & Entity Normalization Tests...');
   let passed = 0;
   let failed = 0;
@@ -19,14 +21,13 @@ function runCatalogDetailTests() {
     }
   }
 
-  function assertThrows(fn: () => void, testName: string) {
-    try {
-      fn();
-      failed++;
-      console.error(`  ❌ FAIL: ${testName} (Expected error, but function succeeded)`);
-    } catch (err: any) {
+  function assert(condition: boolean, testName: string) {
+    if (condition) {
       passed++;
-      console.log(`  ✅ PASS: ${testName} (${err?.message})`);
+      console.log(`  ✅ PASS: ${testName}`);
+    } else {
+      failed++;
+      console.error(`  ❌ FAIL: ${testName}`);
     }
   }
 
@@ -82,6 +83,32 @@ function runCatalogDetailTests() {
   const convertedInvolvedItem = convertIgdbRecordToGameItem(mockInvolvedCompanyRecord);
   assertEqual(convertedInvolvedItem.developer, 'Awesome Dev Studio', 'Resolves developer from involvedCompanies array');
 
+  // 5. GameDetailRecord Mapper & Exact Record.Chunk Detail Lookup Unit Tests
+  const compactRecord = {
+    id: 1942,
+    name: 'The Witcher 3: Wild Hunt',
+    year: 2015,
+    chunk: 35, // Chunk index > 20 to test no gameId-modulo chunk calculation
+    coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/co1wyy.jpg',
+  };
+
+  const mappedDetail = mapRawCatalogRecordToGameDetail(mockIgdbRecord, compactRecord as any);
+  assertEqual(mappedDetail.id, 1942, 'GameDetailRecord maps id correctly');
+  assertEqual(mappedDetail.name, 'The Witcher 3: Wild Hunt', 'GameDetailRecord maps name (not title)');
+  assertEqual(mappedDetail.releaseYear, 2015, 'GameDetailRecord maps releaseYear');
+  assertEqual(mappedDetail.summary, mockIgdbRecord.summary, 'GameDetailRecord maps summary');
+  assertEqual(mappedDetail.developer, 'CD Projekt RED', 'GameDetailRecord maps developer');
+
+  let loadedChunkFile = '';
+  const mockChunkLoader = async (chunkFile: string) => {
+    loadedChunkFile = chunkFile;
+    return [mockIgdbRecord];
+  };
+
+  const detailResult = await getGameDetailForCompactRecord(compactRecord as any, mockChunkLoader);
+  assertEqual(loadedChunkFile, 'chunks/game_index_0035.json.gz', 'getGameDetailForCompactRecord loads exact record.chunk file (0035)');
+  assert(Boolean(detailResult && detailResult.name === 'The Witcher 3: Wild Hunt'), 'getGameDetailForCompactRecord returns valid GameDetailRecord');
+
   console.log(`----------------------------------------------------`);
   console.log(`📊 Catalog Detail Test Results: ${passed} passed, ${failed} failed.`);
   console.log(`----------------------------------------------------`);
@@ -91,4 +118,7 @@ function runCatalogDetailTests() {
   }
 }
 
-runCatalogDetailTests();
+runCatalogDetailTests().catch(err => {
+  console.error('❌ Catalog Detail Test Failed:', err);
+  process.exit(1);
+});

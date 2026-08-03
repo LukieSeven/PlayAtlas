@@ -5,12 +5,13 @@ import { Badge } from '../ui/Badge';
 import { getGameTypeBadgeVariant } from '../../services/gameTypePresentationService';
 import { personalGameStore } from '../../services/personalGameStore';
 import { usePersonalGameRecord } from '../../hooks/usePersonalGameRecord';
+import { CompactGameLookupRecord } from '../../types/catalog';
 import { Gamepad2, Bookmark, Star } from 'lucide-react';
 
 interface GameCardProps {
   game?: unknown; // Raw catalog record or GameCardViewModel
   viewModel?: GameCardViewModel;
-  onSelect?: (gameId: number, name: string) => void;
+  onSelect?: (record: CompactGameLookupRecord) => void;
   className?: string;
 }
 
@@ -41,9 +42,26 @@ export const GameCard: React.FC<GameCardProps> = ({
     );
   };
 
+  const handleCardClick = () => {
+    if (!onSelect) return;
+
+    if (game && typeof game === 'object' && 'name' in game && 'id' in game) {
+      onSelect(game as CompactGameLookupRecord);
+    } else {
+      const compactRecord: CompactGameLookupRecord = {
+        id: liveVm.numericId,
+        name: liveVm.title,
+        year: liveVm.releaseYearDisplay !== 'TBA' ? parseInt(liveVm.releaseYearDisplay, 10) : undefined,
+        gameType: liveVm.gameType,
+        coverUrl: liveVm.coverUrl,
+      };
+      onSelect(compactRecord);
+    }
+  };
+
   return (
     <div
-      onClick={() => onSelect && onSelect(liveVm.numericId, liveVm.title)}
+      onClick={handleCardClick}
       className={`themed-card themed-card-hover group relative flex flex-col justify-between overflow-hidden cursor-pointer p-3 space-y-2.5 ${className}`}
     >
       {/* Top Cover Image Area */}

@@ -3,11 +3,12 @@ import { CalendarDays, Loader2 } from 'lucide-react';
 import { getUpcomingGames, ReleaseFeedPartition } from '../services/releaseCatalogService';
 import { GameCard } from '../components/common/GameCard';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
+import { CompactGameLookupRecord } from '../types/catalog';
 
 export const UpcomingPage: React.FC = () => {
   const [data, setData] = useState<ReleaseFeedPartition | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedGameId, setSelectedGameId] = useState<number | null>(null);
+  const [selectedGame, setSelectedGame] = useState<CompactGameLookupRecord | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -62,15 +63,15 @@ export const UpcomingPage: React.FC = () => {
             <GameCard
               key={item.record.id}
               game={item.record}
-              onSelect={(id: number) => setSelectedGameId(id)}
+              onSelect={(rec: CompactGameLookupRecord) => setSelectedGame(rec)}
             />
           ))}
         </div>
       )}
 
       <GameDetailModal
-        gameId={selectedGameId}
-        onClose={() => setSelectedGameId(null)}
+        selectedGame={selectedGame}
+        onClose={() => setSelectedGame(null)}
       />
     </div>
   );

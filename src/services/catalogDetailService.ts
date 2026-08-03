@@ -1,5 +1,6 @@
 import { CompactGameLookupRecord } from '../types/catalog';
 import { GameItem } from '../types/game';
+import { GameDetailRecord } from '../types/catalogDetail';
 import { fetchAndDecompressJson } from '../utils/decompression';
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { openIndexedDB } from './indexDbStorage';
@@ -103,7 +104,7 @@ export function convertIgdbRecordToGameItem(rec: any): GameItem {
   }
 
   const gameItem: GameItem = {
-    id: String(rec.sourceId || rec.id || Math.random().toString(36).slice(2)),
+    id: String(rec.sourceId || rec.id || 0),
     title,
     coverUrl,
     rating: typeof rec.rating === 'number' && !isNaN(rec.rating) && rec.rating > 0 ? Math.round(rec.rating) : 0,
@@ -115,33 +116,146 @@ export function convertIgdbRecordToGameItem(rec: any): GameItem {
     category,
   };
 
-  // Runtime assertion before returning GameItem
-  if (
-    typeof gameItem.title !== 'string' ||
-    typeof gameItem.developer !== 'string' ||
-    typeof gameItem.summary !== 'string' ||
-    typeof gameItem.coverUrl !== 'string' ||
-    typeof gameItem.releaseDate !== 'string' ||
-    !gameItem.genres.every(item => typeof item === 'string') ||
-    !gameItem.platforms.every(item => typeof item === 'string')
-  ) {
-    throw new Error(`Data Conversion Error: Non-primitive display object detected in converted GameItem for record ID ${gameItem.id}`);
-  }
-
   return gameItem;
 }
 
-export async function getGameDetail(gameId: number): Promise<any | null> {
-  const items = await fetchGameDetailsForCompactRecords([{
-    id: gameId,
-    name: '',
-    year: 0,
-    gameType: 'main_game',
-    defaultVisible: true,
-    chunk: Math.floor(gameId % 20) + 1,
-  }]);
+/**
+ * Maps a raw catalog record to GameDetailRecord schema with compact record fallback
+ */
+export function mapRawCatalogRecordToGameDetail(
+  rawRecord: any,
+  compactFallback?: CompactGameLookupRecord
+): GameDetailRecord {
+  const id = compactFallback?.id || rawRecord?.sourceId || rawRecord?.id || 0;
+  const name = normalizeEntityName(rawRecord?.name || rawRecord?.title || compactFallback?.name || 'Untitled Game');
 
-  return items.length > 0 ? items[0] : null;
+  let coverUrl = compactFallback?.coverUrl;
+  if (!coverUrl || coverUrl.includes('nocover')) {
+    if (typeof rawRecord?.coverUrl === 'string' && rawRecord.coverUrl.trim()) {
+      coverUrl = rawRecord.coverUrl.trim();
+    } else if (rawRecord?.cover_image_id || rawRecord?.cover?.image_id) {
+      const built = buildCoverUrl(rawRecord.cover_image_id || rawRecord.cover?.image_id);
+      if (built) coverUrl = built;
+    }
+  }
+
+  let releaseYear = compactFallback?.year || undefined;
+  if (!releaseYear) {
+    const rDate = rawRecord?.firstReleaseDate || rawRecord?.releaseDate;
+    if (typeof rDate === 'string' && rDate.length >= 4) {
+      const y = parseInt(rDate.slice(0, 4), 10);
+      if (!isNaN(y)) releaseYear = y;
+    }
+  }
+
+  let summary: string | undefined = undefined;
+  if (typeof rawRecord?.summary === 'string' && rawRecord.summary.trim()) {
+    summary = rawRecord.summary.trim();
+  }
+
+  const rating = typeof rawRecord?.rating === 'number' && !isNaN(rawRecord.rating) && rawRecord.rating > 0
+    ? Math.round(rawRecord.rating)
+    : compactFallback?.rating;
+
+  const platforms = normalizeEntityNames(rawRecord?.platforms);
+  const genres = normalizeEntityNames(rawRecord?.genres);
+
+  const developer =
+    normalizeEntityName(rawRecord?.developer) ||
+    normalizeEntityName(rawRecord?.developers?.[0]) ||
+    normalizeEntityName(rawRecord?.involvedCompanies?.find((c: any) => c?.developer)?.company) ||
+    compactFallback?.developer;
+
+  const gameType = rawRecord?.gameType || compactFallback?.gameType || 'main_game';
+
+  return {
+    id,
+    name,
+    coverUrl: coverUrl || undefined,
+    releaseYear,
+    summary,
+    rating,
+    platforms: platforms.length > 0 ? platforms : compactFallback?.platforms,
+    genres: genres.length > 0 ? genres : compactFallback?.genres,
+    developer,
+    gameType,
+  };
+}
+
+/**
+ * Loads the exact local catalog detail chunk specified by record.chunk without any guessed chunk calculation.
+ */
+export async function getGameDetailForCompactRecord(
+  record: CompactGameLookupRecord,
+  chunkLoader?: (chunkFile: string) => Promise<any[]>
+): Promise<GameDetailRecord | null> {
+  if (!record) return null;
+
+  // Use record.chunk directly if available
+  const chunkNumber = record.chunk !== undefined && record.chunk !== null ? record.chunk : 1;
+  const chunkFile = `chunks/game_index_${String(chunkNumber).padStart(4, '0')}.json.gz`;
+
+  let chunkData: any[] | null = null;
+  if (chunkLoader) {
+    chunkData = await chunkLoader(chunkFile);
+  } else {
+    // 1. Check in-memory cache
+    if (inMemoryChunkCache.has(chunkFile)) {
+      chunkData = inMemoryChunkCache.get(chunkFile)!;
+    } else {
+      // 2. Check IndexedDB cache
+      try {
+        const db = await openIndexedDB();
+        const cachedObj: any = await new Promise((resolve, reject) => {
+          const tx = db.transaction('full_chunks', 'readonly');
+          const store = tx.objectStore('full_chunks');
+          const req = store.get(chunkFile);
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
+        });
+
+        if (cachedObj && Array.isArray(cachedObj.records)) {
+          chunkData = cachedObj.records;
+          inMemoryChunkCache.set(chunkFile, chunkData!);
+        }
+      } catch {}
+
+      // 3. Network fetch and decompress
+      if (!chunkData) {
+        try {
+          const chunkUrl = getBasePathAwareUrl(`data/${chunkFile}`);
+          chunkData = await fetchAndDecompressJson<any[]>(chunkUrl);
+          inMemoryChunkCache.set(chunkFile, chunkData);
+
+          try {
+            const db = await openIndexedDB();
+            const tx = db.transaction('full_chunks', 'readwrite');
+            tx.objectStore('full_chunks').put({
+              chunkFile,
+              downloadedAt: new Date().toISOString(),
+              records: chunkData,
+            });
+          } catch {}
+        } catch (err) {
+          console.warn(`Failed to load chunk ${chunkFile}:`, err);
+        }
+      }
+    }
+  }
+
+  if (chunkData && Array.isArray(chunkData)) {
+    const rawMatch = chunkData.find(rec => {
+      const recId = rec.sourceId || parseInt(String(rec.id).replace(/\D/g, ''), 10);
+      return recId === record.id;
+    });
+
+    if (rawMatch) {
+      return mapRawCatalogRecordToGameDetail(rawMatch, record);
+    }
+  }
+
+  // Fallback if record was missing in chunk
+  return mapRawCatalogRecordToGameDetail(null, record);
 }
 
 /**
@@ -157,7 +271,7 @@ export async function fetchGameDetailsForCompactRecords(
   // Group by chunk file path
   const chunkToRecordsMap = new Map<string, CompactGameLookupRecord[]>();
   for (const r of records) {
-    const chunkFile = `chunks/game_index_${String(r.chunk).padStart(4, '0')}.json.gz`;
+    const chunkFile = `chunks/game_index_${String(r.chunk || 1).padStart(4, '0')}.json.gz`;
     if (!chunkToRecordsMap.has(chunkFile)) chunkToRecordsMap.set(chunkFile, []);
     chunkToRecordsMap.get(chunkFile)!.push(r);
   }
@@ -172,11 +286,9 @@ export async function fetchGameDetailsForCompactRecords(
       if (chunkLoader) {
         chunkData = await chunkLoader(chunkFile);
       } else {
-        // 1. Check in-memory cache
         if (inMemoryChunkCache.has(chunkFile)) {
           chunkData = inMemoryChunkCache.get(chunkFile)!;
         } else {
-          // 2. Check IndexedDB cache
           try {
             const db = await openIndexedDB();
             const cachedObj: any = await new Promise((resolve, reject) => {
@@ -191,38 +303,35 @@ export async function fetchGameDetailsForCompactRecords(
               chunkData = cachedObj.records;
               inMemoryChunkCache.set(chunkFile, chunkData!);
             }
-          } catch {
-            // Fallback to network
-          }
+          } catch {}
 
-          // 3. Network fetch and decompress
           if (!chunkData) {
-            const chunkUrl = getBasePathAwareUrl(`data/${chunkFile}`);
-            chunkData = await fetchAndDecompressJson<any[]>(chunkUrl);
-            inMemoryChunkCache.set(chunkFile, chunkData);
-
-            // Cache in IndexedDB asynchronously
             try {
-              const db = await openIndexedDB();
-              const tx = db.transaction('full_chunks', 'readwrite');
-              tx.objectStore('full_chunks').put({
-                chunkFile,
-                downloadedAt: new Date().toISOString(),
-                records: chunkData,
-              });
-            } catch {
-              // Non-critical cache write error
-            }
+              const chunkUrl = getBasePathAwareUrl(`data/${chunkFile}`);
+              chunkData = await fetchAndDecompressJson<any[]>(chunkUrl);
+              inMemoryChunkCache.set(chunkFile, chunkData);
+
+              try {
+                const db = await openIndexedDB();
+                const tx = db.transaction('full_chunks', 'readwrite');
+                tx.objectStore('full_chunks').put({
+                  chunkFile,
+                  downloadedAt: new Date().toISOString(),
+                  records: chunkData,
+                });
+              } catch {}
+            } catch {}
           }
         }
       }
 
-      // Map requested records in this chunk
-      const targetIds = new Set(chunkToRecordsMap.get(chunkFile)!.map(r => r.id));
-      for (const rec of chunkData) {
-        const id = rec.sourceId || parseInt(String(rec.id).replace(/\D/g, ''), 10);
-        if (targetIds.has(id)) {
-          foundDetailRecordsMap.set(id, rec);
+      if (chunkData && Array.isArray(chunkData)) {
+        const targetIds = new Set(chunkToRecordsMap.get(chunkFile)!.map(r => r.id));
+        for (const rec of chunkData) {
+          const id = rec.sourceId || parseInt(String(rec.id).replace(/\D/g, ''), 10);
+          if (targetIds.has(id)) {
+            foundDetailRecordsMap.set(id, rec);
+          }
         }
       }
     })
@@ -238,14 +347,14 @@ export async function fetchGameDetailsForCompactRecords(
       resultGameItems.push({
         id: String(compactRec.id),
         title: compactRec.name,
-        coverUrl: 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.jpg',
-        rating: 0,
+        coverUrl: compactRec.coverUrl || 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.jpg',
+        rating: compactRec.rating || 0,
         releaseDate: compactRec.year ? String(compactRec.year) : 'TBD',
-        platforms: ['PC'],
-        genres: ['Action'],
-        developer: '',
+        platforms: compactRec.platforms || ['PC'],
+        genres: compactRec.genres || ['Action'],
+        developer: compactRec.developer || '',
         summary: 'No summary available.',
-        category: compactRec.defaultVisible ? 'Base Game' : 'DLC / Expansion',
+        category: compactRec.defaultVisible !== false ? 'Base Game' : 'DLC / Expansion',
       });
     }
   }

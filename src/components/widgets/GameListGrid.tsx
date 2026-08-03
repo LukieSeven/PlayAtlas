@@ -6,9 +6,10 @@ import { GameCard } from '../common/GameCard';
 import { getAllFamilies, getPlatformFamily } from '../../services/platformTaxonomyService';
 
 interface GameListGridProps {
+  collectionKey?: string;
   games?: CompactGameLookupRecord[];
   totalMatches?: number;
-  onSelectGame?: (gameId: number, name: string) => void;
+  onSelectGame?: (record: CompactGameLookupRecord) => void;
   onVisibleGamesChange?: (visibleGames: CompactGameLookupRecord[]) => void;
   isLoading?: boolean;
   title?: string;
@@ -18,6 +19,7 @@ interface GameListGridProps {
 }
 
 export const GameListGrid: React.FC<GameListGridProps> = ({
+  collectionKey = 'default',
   games = [],
   onSelectGame,
   onVisibleGamesChange,
@@ -34,10 +36,10 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   // Real Incremental Rendering State (Initial batch: 40)
   const [visibleCount, setVisibleCount] = useState<number>(40);
 
-  // Reset visibleCount to 40 whenever input games, filters, or sorting change
+  // Reset visibleCount to 40 ONLY when collectionKey, filters, or sorting change (NOT on record hydration!)
   useEffect(() => {
     setVisibleCount(40);
-  }, [games, selectedPlatformFamily, selectedCategory, sortBy]);
+  }, [collectionKey, selectedPlatformFamily, selectedCategory, sortBy]);
 
   // Filter games dynamically using PlatformTaxonomyService
   const filteredGames = useMemo(() => {
