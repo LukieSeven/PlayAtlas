@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { GameListGrid } from '../components/widgets/GameListGrid';
-import { queryGameIndex, QueryResult, getUserLocalDate } from '../services/gameIndexQueryService';
+import { queryGameIndex, QueryResult } from '../services/gameIndexQueryService';
+import { queryReleaseCatalog, getDynamicLocalDate } from '../services/releaseCatalogService';
+import { getCatalogDataSourceMode } from '../services/catalogDataSource';
 import { IndexDiagnosticsPanel } from '../components/widgets/IndexDiagnosticsPanel';
 import { Loader2, Database, Clock, Sparkles, Layers } from 'lucide-react';
 import { Badge } from '../components/ui/Badge';
@@ -11,31 +13,56 @@ type ReleaseViewMode = 'first_release' | 'platform_release';
 
 export const NewReleasesPage: React.FC = () => {
   const [timeframe, setTimeframe] = useState<TimeFrame>('day');
-  const [viewType, setViewType] = useState<ReleaseViewMode>('first_release'); // Mode 1 vs Mode 2
+  const [viewType, setViewType] = useState<ReleaseViewMode>('first_release');
   const [queryResult, setQueryResult] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
 
-  // Query Local IndexedDB Catalog without scanning GameDB during browser use
+  const dataSourceMode = getCatalogDataSourceMode();
+
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
 
-    queryGameIndex({
-      viewType,
-      timeframe,
-    }).then(result => {
-      if (isMounted) {
-        setQueryResult(result);
-        setLoading(false);
-      }
-    });
+    if (dataSourceMode === 'igdb_browser_catalog') {
+      // Production IGDB Release Partition Query Service
+      queryReleaseCatalog({
+        viewType,
+        timeframe,
+      }).then(res => {
+        if (isMounted) {
+          setQueryResult({
+            games: res.games,
+            records: res.records as any,
+            manifest: null,
+            diagnostics: null,
+            selectedDate: res.selectedDate,
+            userTimezone: res.userTimezone,
+          });
+          setLoading(false);
+        }
+      }).catch(err => {
+        console.error('Release catalog query error:', err);
+        if (isMounted) setLoading(false);
+      });
+    } else {
+      // Legacy Rollback Query Path
+      queryGameIndex({
+        viewType,
+        timeframe,
+      }).then(result => {
+        if (isMounted) {
+          setQueryResult(result);
+          setLoading(false);
+        }
+      });
+    }
 
     return () => {
       isMounted = false;
     };
-  }, [timeframe, viewType]);
+  }, [timeframe, viewType, dataSourceMode]);
 
-  const { dateStr: userTodayDate, timezone: userTimezone } = getUserLocalDate();
+  const { dateStr: userTodayDate, timezone: userTimezone } = getDynamicLocalDate();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
@@ -46,7 +73,7 @@ export const NewReleasesPage: React.FC = () => {
             <h1 className="text-3xl font-extrabold text-white tracking-tight">New Releases</h1>
             <Badge variant="indigo" className="gap-1 font-mono text-[11px] py-1 px-2.5">
               <Database className="w-3 h-3 text-cyan-400" />
-              IndexedDB Catalog
+              {dataSourceMode === 'igdb_browser_catalog' ? 'Partitioned IGDB Catalog' : 'Legacy Catalog'}
             </Badge>
           </div>
           <span className="text-[10px] font-mono text-cyan-400 flex items-center gap-1">
@@ -122,18 +149,20 @@ export const NewReleasesPage: React.FC = () => {
       </div>
 
       {/* Index Diagnostics Display Panel */}
-      <IndexDiagnosticsPanel
-        manifest={queryResult?.manifest || null}
-        diagnostics={queryResult?.diagnostics || null}
-        userTimezone={userTimezone}
-      />
+      {queryResult?.diagnostics && (
+        <IndexDiagnosticsPanel
+          manifest={queryResult?.manifest || null}
+          diagnostics={queryResult?.diagnostics || null}
+          userTimezone={userTimezone}
+        />
+      )}
 
       {/* Loading Spinner */}
       {loading && (
         <div className="flex flex-col items-center justify-center p-12 glass-panel rounded-2xl border border-slate-800 space-y-3">
           <Loader2 className="w-8 h-8 text-indigo-400 animate-spin" />
           <span className="text-xs font-mono text-slate-400">
-            Querying IndexedDB catalog for {viewType === 'first_release' ? 'first-ever' : 'platform-specific'} {timeframe.toUpperCase()} releases...
+            Querying release partitions for {viewType === 'first_release' ? 'first-ever' : 'platform-specific'} {timeframe.toUpperCase()} releases...
           </span>
         </div>
       )}
@@ -147,7 +176,7 @@ export const NewReleasesPage: React.FC = () => {
           <div>
             <h4 className="text-lg font-bold text-white">0 games matching selected release criteria</h4>
             <p className="text-xs text-slate-400 mt-1">
-              No games in the IndexedDB catalog match your selected date ({userTodayDate}) and view mode.
+              No games in the release catalog match your selected date ({userTodayDate}) and view mode.
             </p>
           </div>
         </Card>

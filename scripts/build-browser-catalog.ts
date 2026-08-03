@@ -59,6 +59,11 @@ export interface ReleaseListingRecord {
   defaultVisible: boolean;
   firstReleaseDate: string | null;
   firstReleaseDatePrecision: string;
+  platformReleaseDates: Array<{
+    platformId: number | null;
+    platformName: string;
+    date: string | null;
+  }>;
   platforms: Array<{
     id: number;
     name: string;
@@ -186,8 +191,15 @@ async function runBrowserCatalogBuilder() {
         tokenPostingsMap.get(token)!.add(record.sourceId);
       }
 
-      // 3. Release Listing Record
+      // 3. Release Listing Record (with lightweight platformReleaseDates)
       const summaryPreview = record.summary ? (record.summary.length > 200 ? `${record.summary.slice(0, 197)}...` : record.summary) : null;
+      const platformReleaseDates = Array.isArray(record.platformReleaseDates)
+        ? record.platformReleaseDates.map((prd: any) => ({
+            platformId: prd.platformId || null,
+            platformName: prd.platformName || 'Unknown Platform',
+            date: prd.date || prd.dateStr || null,
+          }))
+        : [];
 
       const releaseRecord: ReleaseListingRecord = {
         id: record.id,
@@ -199,6 +211,7 @@ async function runBrowserCatalogBuilder() {
         defaultVisible: record.defaultVisible,
         firstReleaseDate: record.firstReleaseDate || null,
         firstReleaseDatePrecision: record.datePrecision || 'unknown',
+        platformReleaseDates,
         platforms: record.platforms || [],
         coverUrl: record.coverUrl || null,
         summaryPreview,
@@ -210,9 +223,9 @@ async function runBrowserCatalogBuilder() {
     }
   }
 
-  // --- BUILD 1: COMPACT GAME LOOKUP FILES (search/games/games_0001.json, etc.) ---
+  // --- BUILD 1: COMPACT GAME LOOKUP FILES ---
   console.log('🎮 Partitioning Compact Game Lookup Table...');
-  allCompactRecords.sort((a, b) => a.id - b.id); // Sorted by numeric source ID
+  allCompactRecords.sort((a, b) => a.id - b.id);
 
   const lookupFilesList: Array<{
     file: string;
@@ -249,7 +262,7 @@ async function runBrowserCatalogBuilder() {
     fileIndex++;
   }
 
-  // --- BUILD 2: 256 TOKEN POSTING BUCKETS (search/tokens/tokens_00.json to tokens_ff.json) ---
+  // --- BUILD 2: 256 TOKEN POSTING BUCKETS ---
   console.log('🔤 Partitioning 256 Token Posting Buckets...');
   const tokenBucketsMap = new Map<string, Record<string, number[]>>();
 
@@ -325,7 +338,7 @@ async function runBrowserCatalogBuilder() {
   const searchManifestPath = path.join(searchDir, 'token_manifest.json');
   fs.writeFileSync(searchManifestPath, JSON.stringify(searchTokenManifest, null, 2), 'utf-8');
 
-  // --- BUILD 3: SUBDIVIDED RELEASE PARTITIONS (releases/2026/01.json & releases/undated/undated_0001.json) ---
+  // --- BUILD 3: SUBDIVIDED RELEASE PARTITIONS ---
   console.log('📅 Subdividing Release Partitions & Writing Release Manifest...');
   const releaseManifestPartitions: Array<{
     key: string;
@@ -431,7 +444,7 @@ async function runBrowserCatalogBuilder() {
   const releaseManifestPath = path.join(releasesDir, 'release_manifest.json');
   fs.writeFileSync(releaseManifestPath, JSON.stringify(releaseManifest, null, 2), 'utf-8');
 
-  // --- BUILD 4: MASTER ZIP ARCHIVE (play-atlas-full-catalog.zip) ---
+  // --- BUILD 4: MASTER ZIP ARCHIVE ---
   console.log('📦 Generating Master ZIP Archive (play-atlas-full-catalog.zip)...');
   const zipPath = path.join(outputDir, 'play-atlas-full-catalog.zip');
 
@@ -483,7 +496,6 @@ async function runBrowserCatalogBuilder() {
   const browserManifestPath = path.join(outputDir, 'browser_catalog_manifest.json');
   fs.writeFileSync(browserManifestPath, JSON.stringify(browserCatalogManifest, null, 2), 'utf-8');
 
-  // Enforce 900 MB Deployment Ceiling (Excluding Zip)
   const publishedCatalogBytes = totalLookupBytes + totalTokenBytes + totalReleaseBytes + totalCatalogUncompressedBytes;
   const publishedCatalogMb = (publishedCatalogBytes / (1024 * 1024)).toFixed(2);
 
@@ -503,7 +515,6 @@ async function runBrowserCatalogBuilder() {
   console.log(`----------------------------------------------------`);
   console.log(`🚀 Total Published Deployment Size: ${publishedCatalogMb} MB (Ceiling: 900 MB)`);
   console.log(`⚖️ 900 MB Size Ceiling Check:       PASSED CLEANLY!`);
-  console.log(`🗜️ Master ZIP Archive Size:        ${(zipBuffer.length / (1024 * 1024)).toFixed(2)} MB (Offloaded to GitHub Release Asset)`);
   console.log('====================================================');
   console.log('✅ Production Browser Catalog Built Successfully!');
 }

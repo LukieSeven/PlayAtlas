@@ -1,6 +1,9 @@
-name: IGDB Database Pipeline Importer & Deployment
+name: IGDB Database Pipeline Importer & Pages Deployment
 
 on:
+  push:
+    branches:
+      - main
   schedule:
     - cron: '0 0 * * 0' # Weekly automatic IGDB catalog update
   workflow_dispatch:
@@ -14,8 +17,15 @@ on:
           - full
         default: full
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: true
+
 jobs:
   run-importer-and-deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -63,9 +73,9 @@ jobs:
             dist/
           retention-days: 14
 
-      # --- FULL CATALOG EXECUTION ---
+      # --- FULL CATALOG EXECUTION & PAGES DEPLOYMENT ---
       - name: Run Complete IGDB Catalog Importer
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         env:
           IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
           IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
@@ -74,26 +84,26 @@ jobs:
         run: npm run build:igdb-full
 
       - name: Verify Full Catalog Output
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         run: npm run verify:igdb-full
 
       - name: Build Partitioned Browser Catalog & Enforce 900 MB Ceiling
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         env:
           IGDB_FULL_CATALOG_DIR: generated/igdb-full-test
           PLAY_ATLAS_BROWSER_DATA_DIR: generated/browser-catalog-test
         run: npm run build:browser-catalog
 
       - name: Verify Partitioned Browser Catalog
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         run: npm run verify:browser-catalog
 
       - name: Run Production Build
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         run: npm run build
 
       - name: Copy Browser Catalog Files to Build Output (Excluding ZIP)
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         run: |
           mkdir -p dist/data
           cp -r generated/browser-catalog-test/* dist/data/
@@ -101,7 +111,7 @@ jobs:
           rm -f dist/data/play-atlas-full-catalog.zip.sha256
 
       - name: Measure Exact Published Deployment Size & Enforce 900 MB Ceiling
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         run: |
           TOTAL_BYTES=$(du -sb dist | cut -f1)
           TOTAL_MB=$(echo "scale=2; $TOTAL_BYTES / 1048576" | bc)
@@ -112,7 +122,7 @@ jobs:
           fi
 
       - name: Create or Update GitHub Release with Master ZIP Archive Asset
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.0-catalog
@@ -124,10 +134,17 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload Published Pages Artifact
-        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' }}
-        uses: actions/upload-artifact@v6
+      - name: Setup GitHub Pages Configuration
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+        uses: actions/configure-pages@v5
+
+      - name: Upload Pages Artifact
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+        uses: actions/upload-pages-artifact@v3
         with:
-          name: play-atlas-published-pages-${{ github.run_id }}
-          path: dist/**
-          retention-days: 30
+          path: './dist'
+
+      - name: Deploy to GitHub Pages
+        if: ${{ inputs.import_mode == 'full' || github.event_name == 'schedule' || github.event_name == 'push' }}
+        id: deployment
+        uses: actions/deploy-pages@v4
