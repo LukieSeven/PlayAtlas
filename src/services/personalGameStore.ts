@@ -97,6 +97,7 @@ class PersonalGameStore {
   private cache: Map<string, PersonalGameRecord> = new Map();
   private isInitialized: boolean = false;
   private initPromise: Promise<void> | null = null;
+  private initError: Error | null = null;
   private cachedRecordsArray: PersonalGameRecord[] | null = null;
   
   // Per-game listener sets & global listeners
@@ -110,25 +111,61 @@ class PersonalGameStore {
     this.init();
   }
 
+  public isReady(): boolean {
+    return this.isInitialized;
+  }
+
+  public getInitError(): Error | null {
+    return this.initError;
+  }
+
+  public async retryInit(): Promise<void> {
+    this.isInitialized = false;
+    this.initPromise = null;
+    this.initError = null;
+    return this.init();
+  }
+
+  public resetForTesting(): void {
+    this.cache.clear();
+    this.isInitialized = false;
+    this.initPromise = null;
+    this.initError = null;
+    this.cachedRecordsArray = null;
+  }
+
   public async init(): Promise<void> {
     if (this.isInitialized) return;
     if (this.initPromise) return this.initPromise;
 
     this.initPromise = (async () => {
-      const records = await personalDataRepository.getAll();
-      for (const rec of records) {
-        const canonicalId = normalizePersonalGameId(rec.gameId);
-        this.cache.set(canonicalId, {
-          ...rec,
-          gameId: canonicalId,
-          ownerships: Array.isArray(rec.ownerships) ? [...rec.ownerships] : [],
-          customTags: Array.isArray(rec.customTags) ? [...rec.customTags] : [],
-          playSessions: Array.isArray(rec.playSessions) ? [...rec.playSessions] : [],
-          completionHistory: Array.isArray(rec.completionHistory) ? [...rec.completionHistory] : [],
-        });
+      try {
+        const records = await personalDataRepository.getAll();
+        for (const rec of records) {
+          const canonicalId = normalizePersonalGameId(rec.gameId);
+          this.cache.set(canonicalId, {
+            ...rec,
+            gameId: canonicalId,
+            ownerships: Array.isArray(rec.ownerships) ? [...rec.ownerships] : [],
+            customTags: Array.isArray(rec.customTags) ? [...rec.customTags] : [],
+            playSessions: Array.isArray(rec.playSessions) ? [...rec.playSessions] : [],
+            completionHistory: Array.isArray(rec.completionHistory) ? [...rec.completionHistory] : [],
+          });
+        }
+        this.initError = null;
+
+        // Invalidate cached records array BEFORE marking initialized & notifying subscribers
+        // so that useSyncExternalStore sees a new array reference instead of stale []
+        this.invalidateAllRecordsCache();
+        this.isInitialized = true;
+        this.notifyGlobal();
+      } catch (err: any) {
+        console.error('Failed to initialize PersonalGameStore from repository:', err);
+        this.initError = err instanceof Error ? err : new Error(String(err));
+        this.initPromise = null;
+        this.notifyGlobal();
+        throw err;
       }
-      this.isInitialized = true;
-      this.notifyGlobal();
     })();
 
     return this.initPromise;

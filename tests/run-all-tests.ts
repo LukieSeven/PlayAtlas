@@ -17,6 +17,7 @@ const testFiles = [
   'releaseCatalog.test.ts',
   'personalData.test.ts',
   'catalogResolution.test.ts',
+  'personalInitialization.test.ts',
 ];
 
 interface TestSuiteSummary {
