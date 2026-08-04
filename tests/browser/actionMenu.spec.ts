@@ -14,49 +14,52 @@
  *   - clamps correctly at right viewport edge
  *   - flips above trigger at bottom viewport edge
  *
- * Navigation strategy: Go to New Releases which always renders game cards with
- * action-menu triggers regardless of user's personal library (IndexedDB empty
- * in fresh Playwright contexts). Wait up to 25s for the catalog to hydrate
- * from cold-start before interacting.
+ * Strategy: All tests share a SINGLE browser page (not isolated contexts) so
+ * the catalog JSON is fetched once and cached by the browser. This avoids
+ * repeated cold-start fetches that would each timeout 25s.
  */
-import { test, expect, Page } from '@playwright/test';
+import { test as base, expect, Browser, Page } from '@playwright/test';
 
-/**
- * Navigate directly to the New Releases hash route and click the first trigger.
- * New Releases always renders game cards regardless of user's personal library
- * (IndexedDB is empty in fresh Playwright browser contexts). Waits up to 25s
- * for the async catalog JSON to load from cold start.
- */
-async function goToNewReleasesAndOpenMenu(page: Page): Promise<void> {
-  // Navigate directly to the hash route — no need to find/click a nav link
-  await page.goto('/#/new-releases');
-  await page.waitForLoadState('domcontentloaded');
+// Shared page across all tests in this file
+let sharedPage: Page;
 
-  // Wait for game cards to appear (catalog hydrates asynchronously from JSON)
+// Custom test fixture that reuses the shared page
+const test = base.extend<{ page: Page }>({
+  page: async ({ browser }, use) => {
+    // If the shared page is already set up and still open, reuse it
+    if (!sharedPage || sharedPage.isClosed()) {
+      sharedPage = await browser.newPage();
+      // Load New Releases once and wait for cards to appear
+      await sharedPage.goto('/#/new-releases');
+      await sharedPage.waitForLoadState('domcontentloaded');
+      // Wait up to 30s for catalog to hydrate (first fetch, cold start)
+      await sharedPage
+        .locator('[data-testid="action-menu-trigger"]')
+        .first()
+        .waitFor({ state: 'visible', timeout: 30_000 });
+    }
+    // Close any open menu before each test
+    await sharedPage.keyboard.press('Escape');
+    await sharedPage.waitForTimeout(100);
+    await use(sharedPage);
+  },
+});
+
+/** Click the first trigger and wait for the portal dropdown to settle. */
+async function openMenu(page: Page): Promise<void> {
   const trigger = page.locator('[data-testid="action-menu-trigger"]').first();
-  await trigger.waitFor({ state: 'visible', timeout: 25_000 });
-
   await trigger.click();
-  // Allow portal mount and RAF positioning to settle
-  await page.waitForTimeout(150);
+  await page.waitForTimeout(150); // RAF positioning settles
 }
 
 test.describe('UniversalActionMenu portal visibility', () => {
-  test.beforeEach(async ({ page }) => {
-    // beforeEach is intentionally minimal — each test navigates via
-    // goToNewReleasesAndOpenMenu which handles its own load sequencing
-    await page.goto('/');
-    await page.waitForLoadState('domcontentloaded');
-  });
-
   // ── Point 1–3: Portal mounts under document.body ─────────────────────────
   test('portal element is attached to document.body', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
     const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
     await expect(dropdown).toBeVisible({ timeout: 5_000 });
 
-    // Verify it is a direct child of body (portal rendering)
     const isBodyChild = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
       return el?.parentElement === document.body;
@@ -66,10 +69,9 @@ test.describe('UniversalActionMenu portal visibility', () => {
 
   // ── Point 4: position === 'fixed' ────────────────────────────────────────
   test('computed position is fixed (not relative/absolute/static)', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
-    const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
-    await expect(dropdown).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="action-menu-dropdown"]')).toBeVisible({ timeout: 5_000 });
 
     const computedPosition = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
@@ -81,10 +83,9 @@ test.describe('UniversalActionMenu portal visibility', () => {
 
   // ── Points 5–6: display and visibility ───────────────────────────────────
   test('computed display is not none and visibility is not hidden', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
-    const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
-    await expect(dropdown).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="action-menu-dropdown"]')).toBeVisible({ timeout: 5_000 });
 
     const { display, visibility } = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
@@ -99,13 +100,10 @@ test.describe('UniversalActionMenu portal visibility', () => {
 
   // ── Point 7: opacity is visibly nonzero ──────────────────────────────────
   test('computed opacity is greater than zero', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
-    const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
-    await expect(dropdown).toBeVisible({ timeout: 5_000 });
-
-    // Extra frame so position RAF has fired and opacity:1 is applied
-    await page.waitForTimeout(80);
+    await expect(page.locator('[data-testid="action-menu-dropdown"]')).toBeVisible({ timeout: 5_000 });
+    await page.waitForTimeout(80); // extra frame so RAF opacity:1 is applied
 
     const opacity = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
@@ -117,12 +115,10 @@ test.describe('UniversalActionMenu portal visibility', () => {
 
   // ── Points 8–10: bounding rect inside viewport, positive size, not -9999 ─
   test('bounding rect is inside viewport with positive dimensions', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
-    const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
-    await expect(dropdown).toBeVisible({ timeout: 5_000 });
-
-    await page.waitForTimeout(80); // ensure RAF positioning has settled
+    await expect(page.locator('[data-testid="action-menu-dropdown"]')).toBeVisible({ timeout: 5_000 });
+    await page.waitForTimeout(80);
 
     const { rect, vpWidth, vpHeight } = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
@@ -139,47 +135,39 @@ test.describe('UniversalActionMenu portal visibility', () => {
     expect(rect).not.toBeNull();
     if (!rect) return;
 
-    // Width and height are positive
     expect(rect.width).toBeGreaterThan(0);
     expect(rect.height).toBeGreaterThan(0);
-
-    // Not at the off-screen -9999 sentinel position
-    expect(rect.top).toBeGreaterThan(-100);
-    expect(rect.left).toBeGreaterThan(-100);
-
-    // At least partially inside the viewport
+    expect(rect.top).toBeGreaterThan(-100);  // not at -9999 sentinel
+    expect(rect.left).toBeGreaterThan(-100); // not at -9999 sentinel
     expect(rect.top).toBeLessThan(vpHeight);
     expect(rect.left).toBeLessThan(vpWidth);
     expect(rect.bottom).toBeGreaterThan(0);
     expect(rect.right).toBeGreaterThan(0);
   });
 
-  // ── Point 11: Clicking an action inside works (doesn't crash) ────────────
+  // ── Point 11: Clicking a non-closing action inside doesn't crash ──────────
   test('clicking a non-closing action inside the dropdown does not error', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
     const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
     await expect(dropdown).toBeVisible({ timeout: 5_000 });
 
-    // Click the Backlog toggle (does not call handleClose, menu may stay open)
     const backlogBtn = dropdown.locator('button').filter({ hasText: /backlog/i }).first();
     if (await backlogBtn.count() > 0) {
       await backlogBtn.click();
       await page.waitForTimeout(200);
-      // No assertion on open/closed — we just verify no JS error / crash
+      // No assertion on open/closed — just verifying no JS error / crash
     }
   });
 
   // ── Point 12: Outside click closes the menu ──────────────────────────────
   test('clicking outside the dropdown closes it', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
     const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
     await expect(dropdown).toBeVisible({ timeout: 5_000 });
+    await page.waitForTimeout(100); // RAF-deferred pointerdown listener is attached
 
-    await page.waitForTimeout(100); // RAF-deferred pointerdown listener is now attached
-
-    // Click top-left corner — always outside any menu
     await page.mouse.click(10, 10);
     await page.waitForTimeout(200);
 
@@ -188,7 +176,7 @@ test.describe('UniversalActionMenu portal visibility', () => {
 
   // ── Point 13: Escape key closes the menu ─────────────────────────────────
   test('pressing Escape closes the dropdown', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
     const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
     await expect(dropdown).toBeVisible({ timeout: 5_000 });
@@ -201,44 +189,32 @@ test.describe('UniversalActionMenu portal visibility', () => {
 
   // ── Point 14: Right-edge card remains viewport-clamped ───────────────────
   test('right-edge clamping remains inside viewport', async ({ page }) => {
-    await goToNewReleasesAndOpenMenu(page);
+    await openMenu(page);
 
-    const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
-    await expect(dropdown).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('[data-testid="action-menu-dropdown"]')).toBeVisible({ timeout: 5_000 });
     await page.waitForTimeout(80);
 
     const { right, vpWidth } = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
       const r = el?.getBoundingClientRect();
-      return {
-        right: r?.right ?? -1,
-        vpWidth: window.innerWidth,
-      };
+      return { right: r?.right ?? -1, vpWidth: window.innerWidth };
     });
 
-    // Menu must not overflow the right edge (allow 1px subpixel tolerance)
-    expect(right).toBeLessThanOrEqual(vpWidth + 1);
+    expect(right).toBeLessThanOrEqual(vpWidth + 1); // +1 for subpixel tolerance
   });
 
   // ── Point 15: Bottom-edge card flips above trigger ───────────────────────
   test('bottom-edge flip stays visible (flips or scrolls)', async ({ page }) => {
-    // Navigate directly to New Releases so cards are present
-    await page.goto('/#/new-releases');
-    await page.waitForLoadState('domcontentloaded');
-
-    // Wait for cards
-    await page.locator('[data-testid="action-menu-trigger"]').first().waitFor({ state: 'visible', timeout: 25_000 });
-
-    // Scroll to the bottom of the page
+    // Scroll to bottom to simulate bottom-edge card scenario
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(300);
 
     const triggerCount = await page.locator('[data-testid="action-menu-trigger"]').count();
-    if (triggerCount === 0) return; // No triggers at bottom — skip gracefully
+    if (triggerCount === 0) return; // No triggers visible — skip gracefully
 
-    const trigger = page.locator('[data-testid="action-menu-trigger"]').last();
-    await trigger.scrollIntoViewIfNeeded();
-    await trigger.click();
+    const lastTrigger = page.locator('[data-testid="action-menu-trigger"]').last();
+    await lastTrigger.scrollIntoViewIfNeeded();
+    await lastTrigger.click();
     await page.waitForTimeout(200);
 
     const dropdownCount = await page.locator('[data-testid="action-menu-dropdown"]').count();
@@ -247,13 +223,9 @@ test.describe('UniversalActionMenu portal visibility', () => {
     const { bottom, vpHeight } = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
       const r = el?.getBoundingClientRect();
-      return {
-        bottom: r?.bottom ?? -1,
-        vpHeight: window.innerHeight,
-      };
+      return { bottom: r?.bottom ?? -1, vpHeight: window.innerHeight };
     });
 
-    // Menu must not extend below the viewport
     expect(bottom).toBeLessThanOrEqual(vpHeight + 1);
   });
 });
