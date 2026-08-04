@@ -30,8 +30,8 @@ export function useAnchoredPopover(
     }
 
     const triggerRect = triggerRef.current.getBoundingClientRect();
-    const viewportWidth = window.innerWidth || 1024;
-    const viewportHeight = window.innerHeight || 768;
+    const viewportWidth = (typeof window !== 'undefined' && window.innerWidth) ? window.innerWidth : 1024;
+    const viewportHeight = (typeof window !== 'undefined' && window.innerHeight) ? window.innerHeight : 768;
 
     const popoverWidth = popoverRef.current ? popoverRef.current.offsetWidth : defaultWidth;
     const popoverHeight = popoverRef.current ? popoverRef.current.offsetHeight : 340;
@@ -86,6 +86,7 @@ export function useAnchoredPopover(
     };
   }, [isOpen, updatePosition]);
 
+  // Outside pointerdown & Escape key listeners
   useEffect(() => {
     if (!isOpen) return;
 
@@ -95,14 +96,25 @@ export function useAnchoredPopover(
       }
     };
 
-    const handlePointerDown = (e: MouseEvent | TouchEvent) => {
+    const handlePointerDown = (e: PointerEvent) => {
       const target = e.target as Node | null;
-      if (!target) return;
+      const path = typeof e.composedPath === 'function' ? e.composedPath() : [];
 
-      if (
-        triggerRef.current?.contains(target) ||
-        popoverRef.current?.contains(target)
-      ) {
+      const isInsideTrigger = Boolean(
+        triggerRef.current && (
+          (target && triggerRef.current.contains(target)) ||
+          path.includes(triggerRef.current)
+        )
+      );
+
+      const isInsidePopover = Boolean(
+        popoverRef.current && (
+          (target && popoverRef.current.contains(target)) ||
+          path.includes(popoverRef.current)
+        )
+      );
+
+      if (isInsideTrigger || isInsidePopover) {
         return;
       }
 
@@ -110,11 +122,18 @@ export function useAnchoredPopover(
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    document.addEventListener('mousedown', handlePointerDown);
+
+    // Defer listener registration to next animation frame so opening event doesn't trigger outside-close
+    let rafId: number | null = requestAnimationFrame(() => {
+      document.addEventListener('pointerdown', handlePointerDown, true);
+    });
 
     return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
       window.removeEventListener('keydown', handleKeyDown);
-      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('pointerdown', handlePointerDown, true);
     };
   }, [isOpen, onClose, triggerRef, popoverRef]);
 

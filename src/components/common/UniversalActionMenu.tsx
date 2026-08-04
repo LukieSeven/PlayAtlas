@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useSyncExternalStore } from 'react';
 import { createPortal } from 'react-dom';
 import {
   MoreVertical,
@@ -33,7 +33,6 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
   personalRecord: providedPersonalRecord,
 }) => {
   const strId = String(gameId);
-  const [isOpen, setIsOpen] = useState(false);
   const [isOwnershipModalOpen, setIsOwnershipModalOpen] = useState(false);
 
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -43,32 +42,30 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
   const hookRecord = usePersonalGameRecord(providedPersonalRecord ? null : gameId);
   const personalRecord = providedPersonalRecord || hookRecord;
 
-  // Single open menu coordination across all cards
+  // Single open menu coordination across all cards via useSyncExternalStore
   const instanceIdRef = useRef(`menu_${strId}_${Math.random().toString(36).substring(2, 9)}`);
   const menuId = instanceIdRef.current;
 
-  useEffect(() => {
-    return actionMenuCoordinator.subscribe(activeId => {
-      if (activeId !== menuId) {
-        setIsOpen(false);
-      }
-    });
+  const activeMenuId = useSyncExternalStore(
+    actionMenuCoordinator.subscribe,
+    actionMenuCoordinator.getSnapshot,
+    actionMenuCoordinator.getSnapshot
+  );
+
+  const isOpen = activeMenuId === menuId;
+
+  const handleClose = useCallback(() => {
+    actionMenuCoordinator.closeMenu(menuId);
   }, [menuId]);
 
-  const handleClose = () => {
-    setIsOpen(false);
-    actionMenuCoordinator.closeMenu(menuId);
-  };
-
-  const handleToggle = (e: React.MouseEvent) => {
+  const handleToggle = useCallback((e: React.MouseEvent) => {
     e.stopPropagation();
     if (isOpen) {
-      handleClose();
+      actionMenuCoordinator.closeMenu(menuId);
     } else {
-      setIsOpen(true);
       actionMenuCoordinator.openMenu(menuId);
     }
-  };
+  }, [isOpen, menuId]);
 
   const { position } = useAnchoredPopover(isOpen, handleClose, triggerRef, popoverRef, {
     margin: 12,
@@ -104,7 +101,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
         <MoreVertical className="w-4 h-4" />
       </button>
 
-      {/* Action Menu Dropdown - Rendered through portal to document.body to break out of card overflow clipping */}
+      {/* Action Menu Dropdown - Rendered through portal to document.body */}
       {isOpen && portalTarget && createPortal(
         <div
           ref={popoverRef}
@@ -250,7 +247,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
         portalTarget
       )}
 
-      {/* Add Ownership Modal Dialog - Also rendered through portal so it stays floating above page when menu closes */}
+      {/* Add Ownership Modal Dialog */}
       {isOwnershipModalOpen && portalTarget && createPortal(
         <div
           className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
