@@ -233,6 +233,20 @@
   position: relative;
 }
 
+/* Action menu popover surface — visual-only, no positioning.
+   Must NOT declare position/top/left/display/visibility/opacity/transform
+   so it cannot override the portal's inline position:fixed. */
+.action-menu-popover {
+  background-color: var(--panel-bg);
+  background-image: var(--paper-texture-url);
+  background-size: 500px 500px;
+  background-repeat: repeat;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-style);
+  color: var(--text-primary);
+}
+
 .themed-card {
   background-color: var(--panel-elevated-bg);
   background-image: var(--paper-texture-url);
