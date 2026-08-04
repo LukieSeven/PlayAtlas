@@ -5,8 +5,8 @@ import {
 } from '../utils/browserCatalogUtils';
 import { fetchAndDecompressJson } from '../utils/decompression';
 import { getBasePathAwareUrl } from './catalogDataSource';
-import { CompactGameLookupRecord } from '../../scripts/build-browser-catalog';
 import { openIndexedDB } from './indexDbStorage';
+import { CompactGameLookupRecord } from '../types/catalog';
 
 export type { CompactGameLookupRecord };
 
@@ -219,6 +219,31 @@ export function findLookupFileForId(id: number, lookupFiles: TokenManifestLookup
   return null;
 }
 
+/**
+ * Locates the authoritative compact browser-catalog entry for a numeric game ID
+ * using existing lookup index files without loading all catalog records into memory.
+ */
+export async function resolveCompactRecordByGameId(
+  numericId: number
+): Promise<CompactGameLookupRecord | null> {
+  if (!numericId || typeof numericId !== 'number' || numericId <= 0 || isNaN(numericId)) {
+    return null;
+  }
+
+  try {
+    const manifest = await fetchTokenManifest();
+    const lookupInfo = findLookupFileForId(numericId, manifest.lookupFiles);
+    if (!lookupInfo) return null;
+
+    const records = await fetchLookupFile(lookupInfo.file);
+    const match = records.find(r => r.id === numericId);
+    return match || null;
+  } catch (err) {
+    console.warn(`Failed to resolve compact record for game ID ${numericId}:`, err);
+    return null;
+  }
+}
+
 function stripLeadingArticle(str: string): string {
   return str.replace(/^(the|a|an)\s+/i, '').trim();
 }
@@ -226,7 +251,7 @@ function stripLeadingArticle(str: string): string {
 /**
  * Game-type numerical priority mapping for deterministic ranking
  */
-export function getGameTypePriority(gameType?: string): number {
+export function getGameTypePriority(gameType?: string | null): number {
   if (!gameType) return 1;
   const gt = gameType.toLowerCase();
   if (gt === 'main_game') return 10;

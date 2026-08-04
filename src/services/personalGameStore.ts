@@ -34,6 +34,65 @@ export function normalizePersonalGameId(gameId: string | number | unknown): stri
   return str;
 }
 
+export function isSyntheticTitle(name?: string | null): boolean {
+  if (!name || !name.trim()) return true;
+  const trimmed = name.trim();
+  if (trimmed === 'Unknown Game' || trimmed === 'Untitled Game' || trimmed === 'Unknown Title') return true;
+  if (/^Game\s*#\s*\d+$/i.test(trimmed)) return true;
+  return false;
+}
+
+export function mergeCatalogSnapshots(
+  existing?: { name: string; coverUrl?: string; releaseYear?: number },
+  incoming?: { name?: string; coverUrl?: string; releaseYear?: number }
+): { snapshot: { name: string; coverUrl?: string; releaseYear?: number } | undefined; changed: boolean } {
+  if (!incoming) return { snapshot: existing, changed: false };
+  if (!existing) {
+    if (incoming.name && incoming.name.trim()) {
+      return {
+        snapshot: {
+          name: incoming.name.trim(),
+          coverUrl: incoming.coverUrl?.trim() || undefined,
+          releaseYear: typeof incoming.releaseYear === 'number' && incoming.releaseYear > 0 ? incoming.releaseYear : undefined,
+        },
+        changed: true,
+      };
+    }
+    return { snapshot: existing, changed: false };
+  }
+
+  let changed = false;
+  const merged = { ...existing };
+
+  // 1. Title repair: replace synthetic or empty name with real incoming title
+  if (incoming.name && incoming.name.trim()) {
+    const incName = incoming.name.trim();
+    if (isSyntheticTitle(existing.name) && !isSyntheticTitle(incName)) {
+      merged.name = incName;
+      changed = true;
+    }
+  }
+
+  // 2. Cover URL repair: replace missing or nocover URL with real cover URL
+  if (incoming.coverUrl && incoming.coverUrl.trim() && !incoming.coverUrl.includes('nocover')) {
+    const incCover = incoming.coverUrl.trim();
+    if (!existing.coverUrl || existing.coverUrl.includes('nocover')) {
+      merged.coverUrl = incCover;
+      changed = true;
+    }
+  }
+
+  // 3. Release year repair: set release year if missing in existing
+  if (typeof incoming.releaseYear === 'number' && incoming.releaseYear > 0) {
+    if (!existing.releaseYear) {
+      merged.releaseYear = incoming.releaseYear;
+      changed = true;
+    }
+  }
+
+  return { snapshot: merged, changed };
+}
+
 class PersonalGameStore {
   private cache: Map<string, PersonalGameRecord> = new Map();
   private isInitialized: boolean = false;
@@ -233,15 +292,36 @@ class PersonalGameStore {
     }
   }
 
+  public async updateCatalogSnapshot(
+    gameId: string | number,
+    snapshot?: { name?: string; coverUrl?: string; releaseYear?: number }
+  ): Promise<void> {
+    await this.init();
+    const canonicalId = normalizePersonalGameId(gameId);
+    const existing = this.cache.get(canonicalId);
+    if (!existing || !snapshot) return;
+
+    const { snapshot: mergedSnapshot, changed } = mergeCatalogSnapshots(existing.catalogSnapshot, snapshot);
+    if (!changed || !mergedSnapshot) return;
+
+    const updated: PersonalGameRecord = {
+      ...existing,
+      catalogSnapshot: mergedSnapshot,
+    };
+
+    this.commitRecordUpdate(updated);
+  }
+
   public async setInterestStatus(gameId: string | number, status?: InterestStatus, catalogSnapshot?: { name: string; coverUrl?: string; releaseYear?: number }): Promise<void> {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const updated: PersonalGameRecord = {
       ...existing,
       interestStatus: status,
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);
@@ -251,11 +331,12 @@ class PersonalGameStore {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const updated: PersonalGameRecord = {
       ...existing,
       currentPlayStatus: status,
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);
@@ -265,6 +346,7 @@ class PersonalGameStore {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const ownerships = [...existing.ownerships];
     const idx = ownerships.findIndex(o => o.platformId === ownership.platformId && o.ownershipType === ownership.ownershipType);
@@ -277,7 +359,7 @@ class PersonalGameStore {
     const updated: PersonalGameRecord = {
       ...existing,
       ownerships,
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);
@@ -328,11 +410,12 @@ class PersonalGameStore {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const updated: PersonalGameRecord = {
       ...existing,
       inBacklogQueue: enabled,
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);
@@ -342,11 +425,12 @@ class PersonalGameStore {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const updated: PersonalGameRecord = {
       ...existing,
       userRating: rating !== undefined && rating !== null ? Math.max(0, Math.min(10, rating)) : undefined,
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);
@@ -356,11 +440,12 @@ class PersonalGameStore {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const updated: PersonalGameRecord = {
       ...existing,
       userNotes: notes,
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);
@@ -370,12 +455,13 @@ class PersonalGameStore {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const updated: PersonalGameRecord = {
       ...existing,
       customTags,
       backlogPriority,
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);
@@ -385,12 +471,13 @@ class PersonalGameStore {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const updated: PersonalGameRecord = {
       ...existing,
       completionHistory: [...existing.completionHistory, completion],
       currentPlayStatus: 'completed',
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);
@@ -400,12 +487,13 @@ class PersonalGameStore {
     await this.init();
     const canonicalId = normalizePersonalGameId(gameId);
     const existing = this.cache.get(canonicalId) || this.createDefaultRecord(canonicalId, catalogSnapshot);
+    const { snapshot: mergedSnapshot } = mergeCatalogSnapshots(existing.catalogSnapshot, catalogSnapshot);
 
     const updated: PersonalGameRecord = {
       ...existing,
       playSessions: [...existing.playSessions, session],
       currentPlayStatus: 'playing',
-      catalogSnapshot: catalogSnapshot || existing.catalogSnapshot,
+      catalogSnapshot: mergedSnapshot || existing.catalogSnapshot,
     };
 
     this.commitRecordUpdate(updated);

@@ -16,6 +16,7 @@ const testFiles = [
   'stagingSearch.test.ts',
   'releaseCatalog.test.ts',
   'personalData.test.ts',
+  'catalogResolution.test.ts',
 ];
 
 interface TestSuiteSummary {

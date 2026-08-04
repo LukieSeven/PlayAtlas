@@ -293,7 +293,7 @@ export const MyGamesPage: React.FC = () => {
 
     let isCurrent = true;
     const recordsToHydrate = visibleCompactGames.filter(
-      r => (!r.coverUrl || r.coverUrl.includes('nocover')) && !attemptedHydrationIdsRef.current.has(r.id)
+      r => (!r.coverUrl || r.coverUrl.includes('nocover') || typeof r.chunk !== 'number') && !attemptedHydrationIdsRef.current.has(r.id)
     );
 
     if (recordsToHydrate.length === 0) return;

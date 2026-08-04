@@ -5,8 +5,96 @@ import { fetchAndDecompressJson } from '../utils/decompression';
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { openIndexedDB } from './indexDbStorage';
 import { buildCoverUrl } from '../utils/browserCatalogUtils';
+import { resolveCompactRecordByGameId } from './tokenSearchService';
+import { personalGameStore, isSyntheticTitle } from './personalGameStore';
+
+export { resolveCompactRecordByGameId };
 
 const inMemoryChunkCache = new Map<string, any[]>();
+const hydratedRecordsCache = new Map<number, CompactGameLookupRecord>();
+
+/**
+ * Clears in-memory hydration cache (for testing and cache invalidation)
+ */
+export function clearHydrationCache(): void {
+  hydratedRecordsCache.clear();
+}
+
+/**
+ * Calculates a quality score for a compact game lookup record.
+ * Authoritative records (real title, valid chunk, valid cover, metadata) score higher
+ * than generic/unresolved fallback records (Game #ID, missing chunk, missing cover).
+ */
+export function calculateRecordQualityScore(rec: CompactGameLookupRecord): number {
+  if (!rec) return -1;
+  let score = 0;
+
+  // Real title vs synthetic title (Game #ID / Unknown Game)
+  if (!isSyntheticTitle(rec.name)) {
+    score += 100;
+  }
+
+  // Authoritative chunk present
+  if (typeof rec.chunk === 'number' && rec.chunk > 0) {
+    score += 50;
+  }
+
+  // Valid cover URL vs missing/generic cover
+  if (rec.coverUrl && !rec.coverUrl.includes('nocover')) {
+    score += 40;
+  }
+
+  // Metadata presence
+  if (Array.isArray(rec.platforms) && rec.platforms.length > 0) {
+    score += 10;
+  }
+
+  if (Array.isArray(rec.genres) && rec.genres.length > 0) {
+    score += 10;
+  }
+
+  if (rec.gameType && rec.gameType !== 'unknown') {
+    score += 10;
+  }
+
+  if (typeof rec.year === 'number' && rec.year > 0) {
+    score += 10;
+  }
+
+  return score;
+}
+
+/**
+ * Returns true if the incoming record has higher or equal quality compared to existing cached record.
+ * A lower-quality record (e.g. Game #ID, missing chunk) must NEVER overwrite a better record.
+ */
+export function isBetterRecord(
+  incoming: CompactGameLookupRecord,
+  existing?: CompactGameLookupRecord | null
+): boolean {
+  if (!existing) return true;
+  return calculateRecordQualityScore(incoming) > calculateRecordQualityScore(existing);
+}
+
+/**
+ * Updates shared in-memory hydration cache only if the incoming record is valid and higher quality.
+ * Prevents caching failed lookups, unresolved personal fallbacks, or synthetic Game #ID records.
+ */
+export function updateHydrationCacheIfBetter(record: CompactGameLookupRecord): boolean {
+  if (!record || !record.id) return false;
+
+  // Do not cache failed lookups or synthetic records without an authoritative title or chunk
+  if (isSyntheticTitle(record.name) || typeof record.chunk !== 'number') {
+    return false;
+  }
+
+  const existing = hydratedRecordsCache.get(record.id);
+  if (isBetterRecord(record, existing)) {
+    hydratedRecordsCache.set(record.id, record);
+    return true;
+  }
+  return false;
+}
 
 /**
  * Safely extracts a primitive display string from unknown entity representations
@@ -109,8 +197,8 @@ export function convertIgdbRecordToGameItem(rec: any): GameItem {
     coverUrl,
     rating: typeof rec.rating === 'number' && !isNaN(rec.rating) && rec.rating > 0 ? Math.round(rec.rating) : 0,
     releaseDate,
-    platforms: platformsList.length > 0 ? platformsList : ['PC'],
-    genres: genresList.length > 0 ? genresList : ['Action'],
+    platforms: platformsList,
+    genres: genresList,
     developer,
     summary,
     category,
@@ -184,6 +272,7 @@ export function mapRawCatalogRecordToGameDetail(
 
 /**
  * Loads the exact local catalog detail chunk specified by record.chunk without any guessed chunk calculation.
+ * Never guesses chunk 1 or uses mathematical fallbacks.
  */
 export async function getGameDetailForCompactRecord(
   record: CompactGameLookupRecord,
@@ -191,9 +280,12 @@ export async function getGameDetailForCompactRecord(
 ): Promise<GameDetailRecord | null> {
   if (!record) return null;
 
-  // Use record.chunk directly if available
-  const chunkNumber = record.chunk !== undefined && record.chunk !== null ? record.chunk : 1;
-  const chunkFile = `chunks/game_index_${String(chunkNumber).padStart(4, '0')}.json.gz`;
+  // A missing chunk must remain unresolved. Do not request chunk 1 as a fallback.
+  if (typeof record.chunk !== 'number' || record.chunk <= 0) {
+    return mapRawCatalogRecordToGameDetail(null, record);
+  }
+
+  const chunkFile = `chunks/game_index_${String(record.chunk).padStart(4, '0')}.json.gz`;
 
   let chunkData: any[] | null = null;
   if (chunkLoader) {
@@ -261,6 +353,7 @@ export async function getGameDetailForCompactRecord(
 /**
  * Accepts ranked compact search results, groups by chunk, downloads each required detail chunk once,
  * extracts full records, and converts them to GameItem while preserving exact search ranking order.
+ * Never defaults missing chunks to chunk 1.
  */
 export async function fetchGameDetailsForCompactRecords(
   records: CompactGameLookupRecord[],
@@ -268,10 +361,11 @@ export async function fetchGameDetailsForCompactRecords(
 ): Promise<GameItem[]> {
   if (!records || records.length === 0) return [];
 
-  // Group by chunk file path
+  // Group by chunk file path for records with authoritative chunks ONLY
   const chunkToRecordsMap = new Map<string, CompactGameLookupRecord[]>();
   for (const r of records) {
-    const chunkFile = `chunks/game_index_${String(r.chunk || 1).padStart(4, '0')}.json.gz`;
+    if (typeof r.chunk !== 'number' || r.chunk <= 0) continue;
+    const chunkFile = `chunks/game_index_${String(r.chunk).padStart(4, '0')}.json.gz`;
     if (!chunkToRecordsMap.has(chunkFile)) chunkToRecordsMap.set(chunkFile, []);
     chunkToRecordsMap.get(chunkFile)!.push(r);
   }
@@ -350,8 +444,8 @@ export async function fetchGameDetailsForCompactRecords(
         coverUrl: compactRec.coverUrl || 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.jpg',
         rating: compactRec.rating || 0,
         releaseDate: compactRec.year ? String(compactRec.year) : 'TBD',
-        platforms: compactRec.platforms || ['PC'],
-        genres: compactRec.genres || ['Action'],
+        platforms: compactRec.platforms || [],
+        genres: compactRec.genres || [],
         developer: compactRec.developer || '',
         summary: 'No summary available.',
         category: compactRec.defaultVisible !== false ? 'Base Game' : 'DLC / Expansion',
@@ -363,25 +457,25 @@ export async function fetchGameDetailsForCompactRecords(
 }
 
 /**
- * Converts a PersonalGameRecord into a CompactGameLookupRecord for card rendering and batch hydration
+ * Converts a PersonalGameRecord into a CompactGameLookupRecord for card rendering.
+ * Does not invent synthetic catalog metadata (PC, Action, Base Game, chunk, rating, or release year).
  */
 export function convertPersonalRecordToCompact(rec: any): CompactGameLookupRecord {
   const numericId = rec.numericId || parseInt(String(rec.gameId).replace(/\D/g, ''), 10) || 0;
   return {
     id: numericId,
-    name: rec.catalogSnapshot?.name || `Game #${numericId}`,
+    name: rec.catalogSnapshot?.name || (numericId ? `Game #${numericId}` : 'Unknown Game'),
     year: rec.catalogSnapshot?.releaseYear || undefined,
     coverUrl: rec.catalogSnapshot?.coverUrl || undefined,
-    gameType: 'main_game',
-    defaultVisible: true,
+    platforms: [],
+    genres: [],
   };
 }
 
-const hydratedRecordsCache = new Map<number, CompactGameLookupRecord>();
-
 /**
- * Hydrates a displayed batch (e.g., 20–40 games) of compact records with real cover art,
- * genres, platforms, rating, and developer from local catalog detail chunks while preserving exact array ordering.
+ * Hydrates a displayed batch of compact records with authoritative compact lookup & real catalog detail chunk metadata.
+ * Resolves personal records through compact browser catalog lookup by numeric ID.
+ * Caches only authoritative records using cache-quality protection.
  */
 export async function hydrateCompactRecordsBatch(
   records: CompactGameLookupRecord[],
@@ -389,26 +483,67 @@ export async function hydrateCompactRecordsBatch(
 ): Promise<CompactGameLookupRecord[]> {
   if (!records || records.length === 0) return [];
 
-  const unhydrated = records.filter(r => !hydratedRecordsCache.has(r.id));
+  // Step 1: Pre-resolution pass for personal/unresolved records
+  const resolvedRecords: CompactGameLookupRecord[] = await Promise.all(
+    records.map(async r => {
+      // Check if we already have a high-quality cached authoritative record
+      const cached = hydratedRecordsCache.get(r.id);
+      if (cached && !isSyntheticTitle(cached.name) && typeof cached.chunk === 'number') {
+        return { ...r, ...cached };
+      }
+
+      // If record is missing an authoritative chunk or has a synthetic title, resolve through compact catalog
+      if (typeof r.chunk !== 'number' || isSyntheticTitle(r.name)) {
+        const compactLookup = await resolveCompactRecordByGameId(r.id);
+        if (compactLookup) {
+          // Safely repair stored catalogSnapshot in PersonalGameStore
+          personalGameStore.updateCatalogSnapshot(r.id, {
+            name: compactLookup.name,
+            coverUrl: compactLookup.coverUrl || undefined,
+            releaseYear: compactLookup.year || undefined,
+          });
+          return { ...r, ...compactLookup };
+        }
+      }
+
+      return r;
+    })
+  );
+
+  // Step 2: Determine which records need detail chunk hydration
+  const unhydrated = resolvedRecords.filter(r => {
+    if (typeof r.chunk !== 'number' || r.chunk <= 0) return false;
+    const cached = hydratedRecordsCache.get(r.id);
+    if (!cached) return true;
+    return !cached.coverUrl || cached.coverUrl.includes('nocover');
+  });
 
   if (unhydrated.length > 0) {
     const details = await fetchGameDetailsForCompactRecords(unhydrated, chunkLoader);
     for (let i = 0; i < unhydrated.length; i++) {
       const orig = unhydrated[i];
       const detail = details[i];
-      if (detail) {
+
+      // Cache ONLY if a matching raw catalog record was actually found in the chunk
+      if (detail && (detail.id === String(orig.id) || detail.id === String(orig.id)) && !isSyntheticTitle(detail.title)) {
         const hydrated: CompactGameLookupRecord = {
           ...orig,
-          coverUrl: detail.coverUrl && detail.coverUrl !== 'https://images.igdb.com/igdb/image/upload/t_cover_big/nocover.jpg' ? detail.coverUrl : orig.coverUrl,
+          name: !isSyntheticTitle(orig.name) ? orig.name : (detail.title && !isSyntheticTitle(detail.title) ? detail.title : orig.name),
+          coverUrl: detail.coverUrl && !detail.coverUrl.includes('nocover') ? detail.coverUrl : orig.coverUrl,
           rating: detail.rating > 0 ? detail.rating : orig.rating,
           genres: detail.genres && detail.genres.length > 0 ? detail.genres : orig.genres,
           platforms: detail.platforms && detail.platforms.length > 0 ? detail.platforms : orig.platforms,
           developer: detail.developer || orig.developer,
         };
-        hydratedRecordsCache.set(orig.id, hydrated);
+
+        updateHydrationCacheIfBetter(hydrated);
       }
     }
   }
 
-  return records.map(r => hydratedRecordsCache.get(r.id) || r);
+  // Step 3: Return records matching exact caller array order
+  return resolvedRecords.map(r => {
+    const cached = hydratedRecordsCache.get(r.id);
+    return cached && isBetterRecord(cached, r) ? { ...r, ...cached } : r;
+  });
 }
