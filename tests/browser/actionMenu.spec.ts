@@ -14,38 +14,129 @@
  *   - clamps correctly at right viewport edge
  *   - flips above trigger at bottom viewport edge
  *
- * Strategy: `test.describe.configure({ mode: 'serial' })` plus `test.beforeAll`
- * sets up a single shared browser page for the whole suite. The catalog JSON is
- * fetched exactly once (beforeAll, up to 60s on cold start). All tests reuse the
- * same live page, resetting menu state with Escape in beforeEach. This avoids
- * per-test cold-start re-fetches that would individually time out.
+ * Environment-independence strategy:
+ *   The New Releases page requires generated catalog JSON files
+ *   (public/releases/, public/data/browser_catalog_manifest.json) that are NOT
+ *   committed to the repo. Without them the page shows no cards and triggers
+ *   never appear. We mock both catalog endpoints via page.route() to return a
+ *   minimal in-memory dataset, making the test completely self-contained.
+ *
+ *   The partition file is served as real gzip (Node zlib) because
+ *   fetchAndDecompressJson always decompresses the partition response.
  */
 import { test, expect, Page } from '@playwright/test';
+import { gzipSync } from 'zlib';
 
-// Run tests serially so the shared page is created once and reused.
+// Run tests serially so one shared page is loaded once.
 test.describe.configure({ mode: 'serial' });
 
 let page: Page;
 
+/** Build today's date string in YYYY-MM-DD format (local time). */
+function todayStr(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const d = String(now.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Synthetic release partition: one game whose firstReleaseDate is today so it
+ * always falls inside the current-month date range that New Releases uses.
+ */
+const TODAY = todayStr();
+const MOCK_PARTITION_RECORDS = [
+  {
+    id: 99999,
+    name: 'Test Action Menu Game',
+    firstReleaseDate: TODAY,
+    coverUrl: null,
+    summaryPreview: 'A test fixture game used by Playwright.',
+    gameType: 'Main Game',
+    gameTypeLabel: 'Main Game',
+    defaultVisible: true,
+    platforms: [{ name: 'PC' }],
+    platformReleaseDates: [],
+  },
+];
+
+const MOCK_MANIFEST = {
+  schemaVersion: 1,
+  generatedAt: TODAY,
+  recordCount: 1,
+  partitionCount: 1,
+  partitions: [
+    {
+      key: TODAY.slice(0, 4),          // e.g. "2026"
+      file: 'releases/mock-partition.json.gz',
+      recordCount: 1,
+      compressedByteSize: 100,
+      uncompressedByteSize: 200,
+      sha256: null,                    // null → sha256 check skipped
+      compression: 'gzip',
+    },
+  ],
+};
+
+/** Register page.route() mocks before navigation. */
+async function installCatalogMocks(p: Page): Promise<void> {
+  const gzippedPartition = gzipSync(Buffer.from(JSON.stringify(MOCK_PARTITION_RECORDS)));
+
+  // 1. browser_catalog_manifest.json — not needed (no releaseManifest redirect field)
+  //    We let this 404 so fetchReleaseManifest falls through to the next fetch.
+  await p.route('**/data/browser_catalog_manifest.json', async (route) => {
+    await route.fulfill({ status: 404, body: 'Not found' });
+  });
+
+  // 2. release_manifest.json — return our minimal manifest (plain JSON)
+  await p.route('**/data/releases/release_manifest.json', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(MOCK_MANIFEST),
+    });
+  });
+
+  // 3. Partition file — must be gzip-compressed (fetchAndDecompressJson always decompresses)
+  await p.route('**/data/releases/mock-partition.json.gz', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/octet-stream',
+      body: gzippedPartition,
+    });
+  });
+
+  // 4. Platforms metadata — return an empty map (our mock game uses inline platform names)
+  await p.route('**/data/metadata/platforms.json.gz', async (route) => {
+    const gzippedEmpty = gzipSync(Buffer.from(JSON.stringify({})));
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/octet-stream',
+      body: gzippedEmpty,
+    });
+  });
+}
+
 test.beforeAll(async ({ browser }) => {
-  // Give beforeAll extra time: cold-start catalog load can take up to 30s
-  // on top of Vite's own startup time.
-  test.setTimeout(90_000);
+  test.setTimeout(60_000);
 
   page = await browser.newPage();
+
+  // Install mocks BEFORE navigation so the first fetch is intercepted
+  await installCatalogMocks(page);
+
   await page.goto('/#/new-releases');
   await page.waitForLoadState('domcontentloaded');
 
-  // Wait for catalog to hydrate and cards to appear.
-  // New Releases always renders cards regardless of personal library state.
+  // With mocked catalog the card should appear within a few seconds
   await page
     .locator('[data-testid="action-menu-trigger"]')
     .first()
-    .waitFor({ state: 'visible', timeout: 60_000 });
+    .waitFor({ state: 'visible', timeout: 15_000 });
 });
 
 test.beforeEach(async () => {
-  // Close any lingering open menu between tests
   await page.keyboard.press('Escape');
   await page.waitForTimeout(100);
 });
@@ -58,7 +149,7 @@ test.afterAll(async () => {
 async function openMenu(): Promise<void> {
   const trigger = page.locator('[data-testid="action-menu-trigger"]').first();
   await trigger.click();
-  await page.waitForTimeout(150); // RAF positioning settles
+  await page.waitForTimeout(150);
 }
 
 test.describe('UniversalActionMenu portal visibility', () => {
@@ -112,7 +203,7 @@ test.describe('UniversalActionMenu portal visibility', () => {
     await openMenu();
 
     await expect(page.locator('[data-testid="action-menu-dropdown"]')).toBeVisible({ timeout: 5_000 });
-    await page.waitForTimeout(80); // extra frame so RAF opacity:1 is applied
+    await page.waitForTimeout(80);
 
     const opacity = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
@@ -165,7 +256,6 @@ test.describe('UniversalActionMenu portal visibility', () => {
     if (await backlogBtn.count() > 0) {
       await backlogBtn.click();
       await page.waitForTimeout(200);
-      // Just verifying no JS error/crash; menu close state is action-dependent
     }
   });
 
@@ -175,7 +265,7 @@ test.describe('UniversalActionMenu portal visibility', () => {
 
     const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
     await expect(dropdown).toBeVisible({ timeout: 5_000 });
-    await page.waitForTimeout(100); // RAF-deferred pointerdown listener is now attached
+    await page.waitForTimeout(100);
 
     await page.mouse.click(10, 10);
     await page.waitForTimeout(200);
@@ -209,17 +299,16 @@ test.describe('UniversalActionMenu portal visibility', () => {
       return { right: r?.right ?? -1, vpWidth: window.innerWidth };
     });
 
-    expect(right).toBeLessThanOrEqual(vpWidth + 1); // +1 for subpixel tolerance
+    expect(right).toBeLessThanOrEqual(vpWidth + 1);
   });
 
   // ── Point 15: Bottom-edge card flips above trigger ───────────────────────
   test('bottom-edge flip stays visible (flips or scrolls)', async () => {
-    // Scroll to bottom to force bottom-edge trigger scenario
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
     await page.waitForTimeout(300);
 
     const triggerCount = await page.locator('[data-testid="action-menu-trigger"]').count();
-    if (triggerCount === 0) return; // No visible triggers at bottom — skip
+    if (triggerCount === 0) return;
 
     const lastTrigger = page.locator('[data-testid="action-menu-trigger"]').last();
     await lastTrigger.scrollIntoViewIfNeeded();
@@ -227,7 +316,7 @@ test.describe('UniversalActionMenu portal visibility', () => {
     await page.waitForTimeout(200);
 
     const dropdownCount = await page.locator('[data-testid="action-menu-dropdown"]').count();
-    if (dropdownCount === 0) return; // Menu not opened — skip
+    if (dropdownCount === 0) return;
 
     const { bottom, vpHeight } = await page.evaluate(() => {
       const el = document.querySelector('[data-testid="action-menu-dropdown"]');
