@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   MoreVertical,
   CheckCircle2,
@@ -10,6 +11,8 @@ import {
 } from 'lucide-react';
 import { personalGameStore } from '../../services/personalGameStore';
 import { usePersonalGameRecord } from '../../hooks/usePersonalGameRecord';
+import { useAnchoredPopover } from '../../hooks/useAnchoredPopover';
+import { actionMenuCoordinator } from '../../services/actionMenuCoordinator';
 import { OwnershipType, PhysicalCondition, PlayStatus, InterestStatus, PersonalGameRecord } from '../../types/personal';
 
 interface UniversalActionMenuProps {
@@ -33,9 +36,44 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const [isOwnershipModalOpen, setIsOwnershipModalOpen] = useState(false);
 
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
   // Subscribe to per-game store updates ONLY if parent did not already supply the record prop
   const hookRecord = usePersonalGameRecord(providedPersonalRecord ? null : gameId);
   const personalRecord = providedPersonalRecord || hookRecord;
+
+  // Single open menu coordination across all cards
+  const instanceIdRef = useRef(`menu_${strId}_${Math.random().toString(36).substring(2, 9)}`);
+  const menuId = instanceIdRef.current;
+
+  useEffect(() => {
+    return actionMenuCoordinator.subscribe(activeId => {
+      if (activeId !== menuId) {
+        setIsOpen(false);
+      }
+    });
+  }, [menuId]);
+
+  const handleClose = () => {
+    setIsOpen(false);
+    actionMenuCoordinator.closeMenu(menuId);
+  };
+
+  const handleToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isOpen) {
+      handleClose();
+    } else {
+      setIsOpen(true);
+      actionMenuCoordinator.openMenu(menuId);
+    }
+  };
+
+  const { position } = useAnchoredPopover(isOpen, handleClose, triggerRef, popoverRef, {
+    margin: 12,
+    width: 224,
+  });
 
   // Ownership form state
   const [platformId, setPlatformId] = useState<number>(6); // Default PC
@@ -51,22 +89,36 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
   const interestStatus = personalRecord?.interestStatus;
   const userRating = personalRecord?.userRating;
 
+  // Portal target element (document.body in browser environment)
+  const portalTarget = typeof document !== 'undefined' ? document.body : null;
+
   return (
     <div className={`relative ${className}`} onClick={e => e.stopPropagation()}>
       <button
-        onClick={e => {
-          e.stopPropagation();
-          setIsOpen(!isOpen);
-        }}
+        ref={triggerRef}
+        onClick={handleToggle}
         className="p-1.5 rounded-xl bg-[rgba(0,0,0,0.3)] hover:bg-[rgba(0,0,0,0.6)] text-white/80 hover:text-white border border-white/20 backdrop-blur-md transition-all"
         title="Universal Action Menu"
+        data-testid="action-menu-trigger"
       >
         <MoreVertical className="w-4 h-4" />
       </button>
 
-      {/* Action Menu Dropdown */}
-      {isOpen && (
-        <div className="absolute right-0 top-full mt-2 w-56 themed-panel rounded-2xl border border-[var(--panel-border)] shadow-2xl p-2 z-50 animate-in fade-in zoom-in-95 duration-150 space-y-1">
+      {/* Action Menu Dropdown - Rendered through portal to document.body to break out of card overflow clipping */}
+      {isOpen && portalTarget && createPortal(
+        <div
+          ref={popoverRef}
+          onClick={e => e.stopPropagation()}
+          data-testid="action-menu-dropdown"
+          className="fixed w-56 themed-panel rounded-2xl border border-[var(--panel-border)] shadow-2xl p-2 z-[9999] animate-in fade-in zoom-in-95 duration-150 space-y-1 overflow-y-auto"
+          style={{
+            top: position ? `${position.top}px` : '-9999px',
+            left: position ? `${position.left}px` : '-9999px',
+            maxHeight: position ? `${position.maxHeight}px` : '340px',
+            backgroundColor: 'var(--card-bg)',
+            opacity: position ? 1 : 0,
+          }}
+        >
           <div className="px-2 py-1 border-b border-[var(--panel-border)] text-[10px] font-mono text-[var(--text-muted)] uppercase flex justify-between items-center">
             <span className="truncate">{gameTitle}</span>
             <span className="text-[var(--accent-color)] font-bold">Actions</span>
@@ -74,9 +126,10 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
           {/* Own It */}
           <button
-            onClick={() => {
+            onClick={e => {
+              e.stopPropagation();
               setIsOwnershipModalOpen(true);
-              setIsOpen(false);
+              handleClose();
             }}
             className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
               isOwned
@@ -93,7 +146,8 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
           {/* Backlog Toggle */}
           <button
-            onClick={async () => {
+            onClick={async e => {
+              e.stopPropagation();
               await personalGameStore.setBacklog(strId, !inBacklog, catalogSnapshot);
             }}
             className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-xl text-xs font-semibold transition-colors ${
@@ -116,7 +170,8 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
               {(['playing', 'completed', 'dropped'] as PlayStatus[]).map(st => (
                 <button
                   key={st}
-                  onClick={async () => {
+                  onClick={async e => {
+                    e.stopPropagation();
                     await personalGameStore.setPlayStatus(strId, playStatus === st ? undefined : st, catalogSnapshot);
                   }}
                   className={`py-1 text-[10px] font-bold rounded-lg capitalize transition-colors ${
@@ -138,7 +193,8 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
               {(['wanted', 'wishlist'] as InterestStatus[]).map(st => (
                 <button
                   key={st}
-                  onClick={async () => {
+                  onClick={async e => {
+                    e.stopPropagation();
                     await personalGameStore.setInterestStatus(strId, interestStatus === st ? undefined : st, catalogSnapshot);
                   }}
                   className={`flex-1 py-1 text-[10px] font-bold rounded-lg capitalize flex items-center justify-center gap-1 transition-colors ${
@@ -155,7 +211,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
           </div>
 
           {/* Rating Slider */}
-          <div className="pt-1 border-t border-[var(--panel-border)] px-2">
+          <div className="pt-1 border-t border-[var(--panel-border)] px-2" onClick={e => e.stopPropagation()}>
             <div className="flex justify-between items-center text-[9px] font-mono text-[var(--text-muted)]">
               <span>Personal Rating</span>
               <span className="font-bold text-[var(--accent-color)]">{userRating !== undefined ? `${userRating} ★` : 'Not Rated'}</span>
@@ -178,9 +234,10 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
           {personalRecord && (
             <div className="pt-1 border-t border-[var(--panel-border)]">
               <button
-                onClick={async () => {
+                onClick={async e => {
+                  e.stopPropagation();
                   await personalGameStore.removePersonalRecord(strId);
-                  setIsOpen(false);
+                  handleClose();
                 }}
                 className="w-full text-left px-2 py-1 rounded-lg text-[10px] font-bold text-rose-500 hover:bg-rose-500/10 flex items-center gap-1.5 transition-colors"
               >
@@ -189,16 +246,18 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
               </button>
             </div>
           )}
-        </div>
+        </div>,
+        portalTarget
       )}
 
-      {/* Add Ownership Modal Dialog */}
-      {isOwnershipModalOpen && (
+      {/* Add Ownership Modal Dialog - Also rendered through portal so it stays floating above page when menu closes */}
+      {isOwnershipModalOpen && portalTarget && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
           onClick={e => e.stopPropagation()}
+          data-testid="ownership-modal"
         >
-          <div className="relative w-full max-w-sm themed-panel rounded-3xl p-6 border border-[var(--panel-border)] shadow-2xl space-y-4">
+          <div className="relative w-full max-w-sm themed-panel rounded-3xl p-6 border border-[var(--panel-border)] shadow-2xl space-y-4" style={{ backgroundColor: 'var(--card-bg)' }}>
             <div className="flex items-center justify-between border-b border-[var(--panel-border)] pb-3">
               <h4 className="font-bold themed-heading text-sm">Add Platform Ownership</h4>
               <button
@@ -274,7 +333,8 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
             <div className="flex gap-2 pt-2">
               <button
-                onClick={async () => {
+                onClick={async e => {
+                  e.stopPropagation();
                   await personalGameStore.addOwnership(
                     strId,
                     {
@@ -293,7 +353,8 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        portalTarget
       )}
     </div>
   );

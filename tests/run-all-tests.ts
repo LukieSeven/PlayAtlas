@@ -18,6 +18,7 @@ const testFiles = [
   'personalData.test.ts',
   'catalogResolution.test.ts',
   'personalInitialization.test.ts',
+  'actionMenuPortal.test.ts',
 ];
 
 interface TestSuiteSummary {
