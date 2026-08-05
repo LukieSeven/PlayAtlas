@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 36" fill="none" aria-hidden="true" focusable="false">
+  <!-- Dark Teal Ribbon Flag -->
+  <path d="M0 0 H24 V36 L12 28 L0 36 Z" fill="#0B2B3C" stroke="#C5A059" stroke-width="1.5" />
+  <!-- Inner Gold Four-Point Star -->
+  <path d="M12 6C12 9 9.5 11 7 11C9.5 11 12 13 12 16C12 13 14.5 11 17 11C14.5 11 12 9 12 6Z" fill="#C5A059" />
+</svg>

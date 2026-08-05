@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 24" fill="none" aria-hidden="true" focusable="false">
+  <!-- Left Line -->
+  <line x1="0" y1="12" x2="175" y2="12" stroke="#C5A059" stroke-width="1" opacity="0.6" />
+  <circle cx="175" cy="12" r="2" fill="#C5A059" opacity="0.8" />
+  
+  <!-- Center Star Emblem -->
+  <path d="M200 4C200 8.5 195.5 12 191 12C195.5 12 200 15.5 200 20C200 15.5 204.5 12 209 12C204.5 12 200 8.5 200 4Z" fill="#C5A059" />
+  <circle cx="200" cy="12" r="1.5" fill="#0B2B3C" />
+
+  <!-- Right Line -->
+  <circle cx="225" cy="12" r="2" fill="#C5A059" opacity="0.8" />
+  <line x1="225" y1="12" x2="400" y2="12" stroke="#C5A059" stroke-width="1" opacity="0.6" />
+</svg>

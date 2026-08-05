@@ -15,6 +15,7 @@ import { BacklogPage } from './pages/BacklogPage';
 import { SharedListPage } from './pages/SharedListPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { MyGamesPage } from './pages/MyGamesPage';
+import { DevThemeShowcasePage } from './pages/DevThemeShowcasePage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const App: React.FC = () => {
@@ -37,6 +38,7 @@ export const App: React.FC = () => {
               <Route path="my-games" element={<MyGamesPage />} />
               <Route path="share/:listId" element={<SharedListPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="dev-theme-showcase" element={<DevThemeShowcasePage />} />
               <Route path="404" element={<NotFoundPage />} />
               <Route path="*" element={<Navigate to="/404" replace />} />
             </Route>

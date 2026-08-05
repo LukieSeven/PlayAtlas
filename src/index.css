@@ -1,85 +1,86 @@
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;0,700;1,600;1,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import "tailwindcss";
 
 :root {
-  --app-bg: #f5f0e1;
-  --app-bg-secondary: #ece4d0;
-  --sidebar-bg: #0d1b2a;
-  --sidebar-text: #f1f5f9;
-  --sidebar-muted-text: #94a3b8;
-  --sidebar-active-bg: linear-gradient(135deg, rgba(43, 122, 148, 0.45) 0%, rgba(54, 110, 87, 0.45) 100%);
-  --header-bg: #f5f0e1;
-  
-  /* Semantic Light Surface & Contrast Pairs */
-  --surface-light: #fefcf6;
-  --surface-light-elevated: #ffffff;
-  --surface-light-text: #0f2b48;
-  --surface-light-muted: #475569;
-  
-  /* Semantic Dark Surface & Contrast Pairs */
-  --surface-dark: #0d1b2a;
-  --surface-dark-elevated: #162a40;
-  --surface-dark-text: #f8fafc;
-  --surface-dark-muted: #94a3b8;
+  /* Canvas & Base Parchment Surfaces */
+  --atlas-canvas-bg: #F4EFE6;
+  --atlas-panel-bg: #FDFBF7;
+  --atlas-panel-raised-bg: #FFFFFF;
+  --atlas-panel-inset-bg: #EFE8D8;
+  --atlas-panel-featured-bg: #FDFBF5;
 
-  /* Input & Control Surfaces */
-  --input-surface: #ffffff;
-  --input-border: #b8c7d9;
-  --input-text: #0f2b48;
-  --dropdown-surface: #fefcf6;
-  --dropdown-text: #0f2b48;
+  /* Typography & Ink Colors */
+  --atlas-ink-primary: #0C1D2D;
+  --atlas-ink-secondary: #213547;
+  --atlas-ink-muted: #47586A;
+  --atlas-ink-subdued: #718294;
 
-  --paper-base: #f7f4ea;
-  --paper-highlight: #fefcf5;
+  /* Nautical & Cartographic Deep Teal Palette */
+  --atlas-teal-deep: #0B2B3C;
+  --atlas-teal-dark: #0F4C5C;
+  --atlas-teal-medium: #145063;
+  --atlas-teal-light: #1E6B80;
+  --atlas-teal-subtle: rgba(15, 76, 92, 0.1);
+
+  /* Antique Gold & Bronze Accent Palette */
+  --atlas-gold-antique: #C5A059;
+  --atlas-gold-light: #EBD99F;
+  --atlas-gold-dark: #8C6D37;
+  --atlas-gold-bronze: #6E5326;
+  --atlas-gold-subtle: rgba(197, 160, 89, 0.15);
+
+  /* Status Colors */
+  --atlas-status-success: #2B6E4E;
+  --atlas-status-warning: #B88928;
+  --atlas-status-danger: #991B1B;
+
+  /* Borders & Shadows */
+  --atlas-border-gold: #C5A059;
+  --atlas-border-panel: #D9C8A9;
+  --atlas-border-subtle: #E6D7BD;
+  --atlas-shadow-sm: 0 2px 8px rgba(12, 29, 45, 0.06);
+  --atlas-shadow-md: 0 4px 16px rgba(12, 29, 45, 0.09);
+  --atlas-shadow-lg: 0 8px 24px rgba(12, 29, 45, 0.12);
+
+  /* Focus & Accessibility */
+  --atlas-focus-ring: rgba(197, 160, 89, 0.6);
+
+  /* Radii & Dimensions */
+  --atlas-radius-sm: 0.5rem;
+  --atlas-radius-md: 0.75rem;
+  --atlas-radius-lg: 1rem;
+  --atlas-radius-xl: 1.25rem;
+  --atlas-radius-full: 9999px;
+  --sidebar-width: 260px;
+  --header-height: 64px;
+
+  /* Font Families */
+  --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-body: 'Source Sans 3', 'Plus Jakarta Sans', system-ui, sans-serif;
+
+  /* Legacy Compatibility Mapping */
+  --app-bg: var(--atlas-canvas-bg);
+  --app-bg-secondary: var(--atlas-panel-inset-bg);
+  --sidebar-bg: var(--atlas-canvas-bg);
+  --sidebar-text: var(--atlas-ink-primary);
+  --sidebar-muted-text: var(--atlas-ink-muted);
+  --sidebar-active-bg: var(--atlas-teal-deep);
+  --header-bg: var(--atlas-canvas-bg);
+  --panel-bg: var(--atlas-panel-bg);
+  --panel-elevated-bg: var(--atlas-panel-raised-bg);
+  --panel-border: var(--atlas-border-panel);
+  --text-primary: var(--atlas-ink-primary);
+  --text-secondary: var(--atlas-ink-secondary);
+  --text-muted: var(--atlas-ink-muted);
+  --heading-color: var(--atlas-ink-primary);
+  --primary-action: var(--atlas-teal-dark);
+  --primary-action-hover: var(--atlas-teal-deep);
+  --accent-color: var(--atlas-gold-antique);
+  --focus-ring: var(--atlas-focus-ring);
+  --shadow-style: var(--atlas-shadow-md);
+  --border-radius: var(--atlas-radius-lg);
   --paper-texture-url: url('/branding/watercolor-parchment-base.webp');
   --paper-texture-opacity: 0.85;
-  --paper-grain-opacity: 0.35;
-  --wash-blue: #2b7a94;
-  --wash-teal: #1b5e75;
-  --wash-green: #366e57;
-  --wash-navy: #0f2b48;
-  --wash-opacity: 0.85;
-  --pigment-edge-opacity: 0.6;
-  --landmass-texture-url: url('/branding/watercolor-landmass-forest.svg');
-  --coastline-texture-url: url('/branding/watercolor-coastline.svg');
-  --map-label-opacity: 0.14;
-  --atlas-line-color: #2b4c6f;
   --atlas-line-opacity: 0.35;
-  --route-line-color: #d4af37;
-  --route-line-opacity: 0.45;
-  --ornament-color: #d4af37;
-  --ornament-opacity: 0.4;
-  --panel-paper-color: #fefcf6;
-  --panel-texture-opacity: 0.25;
-  
-  /* Solid High-Contrast Surfaces */
-  --panel-bg: #fefcf6;
-  --panel-elevated-bg: #ffffff;
-  --panel-border: #c8b584;
-  --sidebar-edge-primary: #d4af37;
-  --sidebar-edge-secondary: #1b5e75;
-  
-  --text-primary: #0f2b48;
-  --text-secondary: #1b3a5c;
-  --text-muted: #475569;
-  --heading-color: #0c1e36;
-  
-  --primary-action: #1b5e75;
-  --primary-action-hover: #0f3c4d;
-  --accent-color: #b89228;
-  --focus-ring: rgba(184, 146, 40, 0.5);
-  
-  --badge-bg: rgba(27, 94, 117, 0.12);
-  --badge-text: #1b5e75;
-  --overlay-bg: rgba(12, 22, 38, 0.85);
-  --status-success: #2d6a4f;
-  --status-warning: #b89228;
-  --status-danger: #991b1b;
-  --font-heading: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
-  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --shadow-style: 0 4px 20px rgba(15, 43, 72, 0.12);
-  --border-radius: 1rem;
-  --texture-opacity: 0.35;
 }
 
 @layer base {
@@ -89,16 +90,16 @@
   }
 
   body {
-    background-color: var(--app-bg);
-    color: var(--text-primary);
+    background-color: var(--atlas-canvas-bg);
+    color: var(--atlas-ink-primary);
     font-family: var(--font-body);
     min-height: 100vh;
   }
 
-  h1, h2, h3, h4, .serif-heading {
-    font-family: var(--font-heading);
+  h1, h2, h3, h4, .atlas-heading-display {
+    font-family: var(--font-display);
     letter-spacing: 0.01em;
-    color: var(--heading-color);
+    color: var(--atlas-ink-primary);
   }
 }
 
@@ -111,15 +112,15 @@
   transition-duration: 0.001ms !important;
 }
 
-/* Semantic Application Shell with Layered Parchment & Rich Atlas System */
+/* Semantic Application Shell */
 .themed-app-shell {
-  background-color: var(--app-bg);
-  color: var(--text-primary);
+  background-color: var(--atlas-canvas-bg);
+  color: var(--atlas-ink-primary);
   position: relative;
   overflow: hidden;
 }
 
-/* Layer 1 & 2 - Authentic Parchment Base & Noise Grain Texture */
+/* Layered Parchment Base & Noise Texture */
 .themed-app-shell::before {
   content: '';
   position: absolute;
@@ -136,33 +137,15 @@
   mix-blend-mode: multiply;
 }
 
-/* Layer 3 & 4 - Organic Ocean, Teal & Sea-Green Watercolor Washes */
-.themed-app-shell::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background-image: 
-    url('/branding/watercolor-wash-ocean.svg'),
-    url('/branding/watercolor-wash-teal.svg');
-  background-position: -60px -50px, right -40px bottom -40px;
-  background-repeat: no-repeat;
-  background-size: 800px 600px, 700px 700px;
-  opacity: var(--wash-opacity);
-  pointer-events: none;
-  z-index: 0;
-  transition: opacity 0.25s ease;
-  mix-blend-mode: multiply;
-}
-
-/* Layer 5 - Rich Forest Landmass, Coastlines & Faded Atlas Map Script Container */
+/* Cartographic Background Overlay */
 .cartographic-bg-overlay {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 0;
   background-image: 
-    var(--landmass-texture-url),
-    var(--coastline-texture-url),
+    url('/branding/watercolor-wash-ocean.svg'),
+    url('/branding/watercolor-wash-teal.svg'),
     url('/branding/dotted-route.svg');
   background-position: left -50px bottom -50px, top 10px right 10px, bottom 40px left 260px;
   background-repeat: no-repeat;
@@ -170,67 +153,6 @@
   opacity: var(--atlas-line-opacity);
   transition: opacity 0.25s ease;
   mix-blend-mode: multiply;
-}
-
-/* Play-Arrow Inspired Beveled Sidebar Edge Rail (14px wide) */
-.beveled-sidebar-rail {
-  position: absolute;
-  top: 0;
-  right: -14px;
-  bottom: 0;
-  width: 14px;
-  pointer-events: none;
-  z-index: 25;
-  background: linear-gradient(180deg, 
-    var(--sidebar-edge-primary) 0%, 
-    var(--sidebar-edge-secondary) 40%, 
-    var(--sidebar-edge-primary) 80%,
-    var(--sidebar-edge-secondary) 100%
-  );
-  clip-path: polygon(
-    0 0, 
-    100% 0, 
-    75% 15px, 
-    100% 35px, 
-    80% 45%, 
-    100% 50%, 
-    75% 55%, 
-    100% 85%, 
-    75% 95%, 
-    100% 100%, 
-    0 100%
-  );
-  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.4);
-}
-
-/* UI Components & Solid Surface Styling */
-.themed-sidebar {
-  background-color: var(--sidebar-bg);
-  color: var(--sidebar-text);
-  box-shadow: 6px 0 30px rgba(0, 0, 0, 0.35);
-  position: relative;
-  z-index: 10;
-}
-
-.themed-header {
-  background-color: var(--header-bg);
-  color: var(--text-primary);
-  border-bottom: 1px solid var(--panel-border);
-  box-shadow: 0 2px 10px rgba(15, 43, 72, 0.08);
-  position: relative;
-  z-index: 20;
-}
-
-.themed-panel {
-  background-color: var(--panel-bg);
-  background-image: var(--paper-texture-url);
-  background-size: 500px 500px;
-  background-repeat: repeat;
-  border: 1px solid var(--panel-border);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-style);
-  color: var(--text-primary);
-  position: relative;
 }
 
 /* Action menu popover surface — visual-only, no positioning.
@@ -243,15 +165,69 @@
   background-size: 500px 500px;
   background-repeat: repeat;
   background-blend-mode: multiply;
-  border: 1px solid var(--panel-border);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow-style);
-  color: var(--text-primary);
+  border: 1px solid var(--atlas-border-gold);
+  border-radius: var(--atlas-radius-lg);
+  box-shadow: var(--atlas-shadow-lg);
+  color: var(--atlas-ink-primary);
 }
 
 .dark .action-menu-popover {
   background-color: #162a40;
   color: #f8fafc;
+}
+
+/* Visual Surface Classes (SAFE RULES: Background, Border, Shadow, Color ONLY) */
+.atlas-surface-standard {
+  background-color: var(--atlas-panel-bg);
+  background-image: var(--paper-texture-url);
+  background-size: 500px 500px;
+  background-repeat: repeat;
+  border: 1px solid var(--atlas-border-panel);
+  border-radius: var(--atlas-radius-lg);
+  box-shadow: var(--atlas-shadow-md);
+  color: var(--atlas-ink-primary);
+}
+
+.atlas-surface-raised {
+  background-color: var(--atlas-panel-raised-bg);
+  background-image: var(--paper-texture-url);
+  background-size: 450px 450px;
+  background-repeat: repeat;
+  border: 1px solid var(--atlas-border-gold);
+  border-radius: var(--atlas-radius-lg);
+  box-shadow: var(--atlas-shadow-lg);
+  color: var(--atlas-ink-primary);
+}
+
+.atlas-surface-inset {
+  background-color: var(--atlas-panel-inset-bg);
+  border: 1px solid var(--atlas-border-subtle);
+  border-radius: var(--atlas-radius-md);
+  box-shadow: inset 0 2px 6px rgba(12, 29, 45, 0.08);
+  color: var(--atlas-ink-primary);
+}
+
+.atlas-surface-featured {
+  background-color: var(--atlas-panel-featured-bg);
+  background-image: var(--paper-texture-url);
+  background-size: 500px 500px;
+  background-repeat: repeat;
+  border: 1.5px solid var(--atlas-border-gold);
+  border-radius: var(--atlas-radius-xl);
+  box-shadow: var(--atlas-shadow-lg);
+  color: var(--atlas-ink-primary);
+}
+
+/* Legacy Theme Utility Bindings */
+.themed-panel {
+  background-color: var(--panel-bg);
+  background-image: var(--paper-texture-url);
+  background-size: 500px 500px;
+  background-repeat: repeat;
+  border: 1px solid var(--panel-border);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-style);
+  color: var(--text-primary);
 }
 
 .themed-card {
@@ -263,110 +239,37 @@
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-style);
   color: var(--text-primary);
-  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.themed-card-hover:hover {
-  transform: translateY(-2px);
-  border-color: var(--primary-action);
-  box-shadow: 0 8px 25px -4px rgba(27, 94, 117, 0.25);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .themed-input {
-  background-color: var(--input-surface);
-  border: 1px solid var(--input-border);
-  color: var(--input-text);
-  border-radius: var(--border-radius);
+  background-color: #FFFFFF;
+  border: 1px solid var(--atlas-border-panel);
+  color: var(--atlas-ink-primary);
+  border-radius: var(--atlas-radius-md);
 }
 
 .themed-input:focus {
   outline: none;
-  border-color: var(--primary-action);
-  box-shadow: 0 0 0 2px var(--focus-ring);
+  border-color: var(--atlas-gold-antique);
+  box-shadow: 0 0 0 2px var(--atlas-focus-ring);
 }
 
-.themed-button-primary {
-  background-color: var(--primary-action);
-  color: #ffffff;
-  border: 1px solid var(--primary-action);
-  border-radius: calc(var(--border-radius) * 0.75);
-  font-weight: 700;
-  transition: background-color 0.2s ease, transform 0.15s ease;
-}
-
-.themed-button-primary:hover {
-  background-color: var(--primary-action-hover);
-  transform: translateY(-1px);
-}
-
-.themed-button-secondary {
-  background-color: var(--panel-bg);
-  color: var(--text-primary);
-  border: 1px solid var(--panel-border);
-  border-radius: calc(var(--border-radius) * 0.75);
-  font-weight: 600;
-  transition: background-color 0.2s ease;
-}
-
-.themed-button-secondary:hover {
-  background-color: var(--app-bg-secondary);
-  border-color: var(--accent-color);
-}
-
-.themed-text-primary {
-  color: var(--text-primary);
-}
-
-.themed-text-secondary {
-  color: var(--text-secondary);
-}
-
-.themed-text-muted {
-  color: var(--text-muted);
-}
-
-.themed-heading {
-  color: var(--heading-color);
-  font-family: var(--font-heading);
-  font-weight: 700;
-}
-
-.themed-active-nav {
-  background: var(--sidebar-active-bg);
-  color: #ffffff;
-  border: 1px solid var(--accent-color);
-}
-
-.themed-badge {
-  background-color: var(--badge-bg);
-  color: var(--badge-text);
-  border: 1px solid var(--panel-border);
-  border-radius: 0.5rem;
-}
-
-.themed-gold-accent {
-  color: var(--accent-color);
-}
-
-.themed-gold-border {
-  border-color: var(--accent-color);
-}
-
-/* Custom Scrollbar */
+/* Custom Cartographic Scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--app-bg);
+  background: var(--atlas-canvas-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--accent-color);
+  background: var(--atlas-gold-antique);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--primary-action);
+  background: var(--atlas-teal-dark);
 }

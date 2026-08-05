@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" fill="none" aria-hidden="true" focusable="false">
+  <!-- Outer Gold Ring -->
+  <circle cx="50" cy="50" r="46" stroke="#C5A059" stroke-width="2.5" opacity="0.9" />
+  <circle cx="50" cy="50" r="41" stroke="#8C6D37" stroke-width="1" opacity="0.6" stroke-dasharray="2 2" />
+  
+  <!-- Cardinal Points Star -->
+  <!-- North (Dark Teal & Gold) -->
+  <polygon points="50,6 54,46 50,44 46,46" fill="#0B2B3C" />
+  <polygon points="50,6 54,46 50,44" fill="#C5A059" />
+  
+  <!-- South -->
+  <polygon points="50,94 54,54 50,56 46,54" fill="#0B2B3C" />
+  <polygon points="50,94 46,54 50,56" fill="#C5A059" />
+  
+  <!-- East -->
+  <polygon points="94,50 54,54 56,50 54,46" fill="#0B2B3C" />
+  <polygon points="94,50 54,54 56,50" fill="#C5A059" />
+  
+  <!-- West -->
+  <polygon points="6,50 46,54 44,50 46,46" fill="#0B2B3C" />
+  <polygon points="6,50 46,46 44,50" fill="#C5A059" />
+
+  <!-- Ordinal Points (Smaller Stars) -->
+  <polygon points="80,20 53,47 50,50" fill="#C5A059" opacity="0.85" />
+  <polygon points="80,20 47,53 50,50" fill="#0B2B3C" opacity="0.85" />
+
+  <polygon points="20,80 47,53 50,50" fill="#C5A059" opacity="0.85" />
+  <polygon points="20,80 53,47 50,50" fill="#0B2B3C" opacity="0.85" />
+
+  <polygon points="20,20 47,47 50,50" fill="#C5A059" opacity="0.85" />
+  <polygon points="20,20 53,53 50,50" fill="#0B2B3C" opacity="0.85" />
+
+  <polygon points="80,80 53,53 50,50" fill="#C5A059" opacity="0.85" />
+  <polygon points="80,80 47,47 50,50" fill="#0B2B3C" opacity="0.85" />
+
+  <!-- Center Hub -->
+  <circle cx="50" cy="50" r="7" fill="#0B2B3C" stroke="#C5A059" stroke-width="1.5" />
+  <circle cx="50" cy="50" r="3" fill="#D4AF37" />
+</svg>
