@@ -235,16 +235,23 @@
 
 /* Action menu popover surface — visual-only, no positioning.
    Must NOT declare position/top/left/display/visibility/opacity/transform
-   so it cannot override the portal's inline position:fixed. */
+   so it cannot override the portal's inline position:fixed.
+   The background MUST be fully opaque (alpha=1) so card artwork never shows through. */
 .action-menu-popover {
-  background-color: var(--panel-bg);
+  background-color: #fefcf6;
   background-image: var(--paper-texture-url);
   background-size: 500px 500px;
   background-repeat: repeat;
+  background-blend-mode: multiply;
   border: 1px solid var(--panel-border);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-style);
   color: var(--text-primary);
+}
+
+.dark .action-menu-popover {
+  background-color: #162a40;
+  color: #f8fafc;
 }
 
 .themed-card {

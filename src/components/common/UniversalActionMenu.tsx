@@ -107,14 +107,15 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
           ref={popoverRef}
           onClick={e => e.stopPropagation()}
           data-testid="action-menu-dropdown"
-          className="w-56 action-menu-popover rounded-2xl border border-[var(--panel-border)] shadow-2xl p-2 z-[9999] animate-in fade-in zoom-in-95 duration-150 space-y-1 overflow-y-auto"
+          className={`w-56 action-menu-popover rounded-2xl border border-[var(--panel-border)] shadow-2xl p-2 z-[9999] space-y-1 overflow-y-auto${position ? ' animate-in fade-in zoom-in-95 duration-150' : ''}`}
           style={{
             position: 'fixed',
             top: position ? `${position.top}px` : '-9999px',
             left: position ? `${position.left}px` : '-9999px',
             maxHeight: position ? `${position.maxHeight}px` : '340px',
-            backgroundColor: 'var(--card-bg)',
             opacity: position ? 1 : 0,
+            visibility: position ? 'visible' : 'hidden',
+            pointerEvents: position ? 'auto' : 'none',
           }}
         >
           <div className="px-2 py-1 border-b border-[var(--panel-border)] text-[10px] font-mono text-[var(--text-muted)] uppercase flex justify-between items-center">
