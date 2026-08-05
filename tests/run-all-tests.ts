@@ -15,6 +15,7 @@ const testFiles = [
   'visualTheme.test.ts',
   'stagingSearch.test.ts',
   'releaseCatalog.test.ts',
+  'upcomingGamesPage.test.ts',
   'personalData.test.ts',
   'catalogResolution.test.ts',
   'personalInitialization.test.ts',

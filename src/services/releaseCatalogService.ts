@@ -1,6 +1,7 @@
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { fetchAndDecompressJson } from '../utils/decompression';
 import { GameItem } from '../types/game';
+import { CompactGameLookupRecord } from '../types/catalog';
 import { openIndexedDB } from './indexDbStorage';
 
 export interface CompactPlatformReleaseDate {
@@ -242,6 +243,48 @@ export function convertReleaseRecordToGameItem(
   };
 }
 
+/**
+ * Extracts the authoritative numeric chunk index from a production browser-catalog path.
+ * Invalid paths remain unresolved rather than being guessed from unrelated digits.
+ */
+export function getReleaseRecordChunkNumber(dataChunk: string): number | undefined {
+  const match = /^chunks\/game_index_(\d+)\.json\.gz$/.exec(dataChunk);
+  if (!match) return undefined;
+
+  const chunkNumber = Number.parseInt(match[1], 10);
+  return Number.isSafeInteger(chunkNumber) && chunkNumber > 0 ? chunkNumber : undefined;
+}
+
+export function convertReleaseRecordToCompactRecord(
+  record: ReleaseListingRecord
+): CompactGameLookupRecord {
+  const releaseYear = record.firstReleaseDate
+    ? Number.parseInt(record.firstReleaseDate.slice(0, 4), 10)
+    : undefined;
+
+  return {
+    id: record.sourceId,
+    name: record.name,
+    year: Number.isSafeInteger(releaseYear) ? releaseYear : undefined,
+    gameType: record.gameType,
+    defaultVisible: record.defaultVisible,
+    chunk: getReleaseRecordChunkNumber(record.dataChunk),
+    coverUrl: record.coverUrl || undefined,
+    platforms: record.platforms.map(platform => platform.name),
+  };
+}
+
+export function sortReleaseRecordsChronologically(
+  records: ReleaseListingRecord[],
+  direction: 'ascending' | 'descending'
+): ReleaseListingRecord[] {
+  return [...records].sort((a, b) => {
+    const comparison = (a.firstReleaseDate || '').localeCompare(b.firstReleaseDate || '');
+    if (comparison !== 0) return direction === 'ascending' ? comparison : -comparison;
+    return a.sourceId - b.sourceId;
+  });
+}
+
 export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise<ReleaseQueryResult> {
   const { dateStr: localToday, timezone: userTimezone } = getDynamicLocalDate();
   const { startDate, endDate } = calculateDynamicDateRange(options.timeframe, localToday);
@@ -270,7 +313,7 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
     loadedRecords.push(...pRecords);
   }
 
-  const filteredRecords = loadedRecords.filter(record => {
+  const matchingRecords = loadedRecords.filter(record => {
     if (!options.includeHidden && record.defaultVisible === false) {
       return false;
     }
@@ -288,7 +331,13 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
         prd => prd.d != null && prd.d >= startDate && prd.d <= endDate
       );
     }
-  }).sort((a, b) => (b.firstReleaseDate || '').localeCompare(a.firstReleaseDate || ''));
+  });
+
+  const isUpcoming = options.timeframe === 'upcoming' || options.timeframe === 'next_30_days';
+  const filteredRecords = sortReleaseRecordsChronologically(
+    matchingRecords,
+    isUpcoming ? 'ascending' : 'descending'
+  );
 
   const games = filteredRecords.map(r => convertReleaseRecordToGameItem(r, platformsMap));
 
