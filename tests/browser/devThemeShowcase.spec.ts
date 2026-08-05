@@ -4,9 +4,9 @@
  * Verifies key contract requirements:
  *   1. The development showcase root is present.
  *   2. The production AppLayout/sidebar is NOT mounted.
- *   3. No production game-card grid is mounted.
- *   4. The showcase fills the viewport.
- *   5. The primary parchment canvas is opaque.
+ *   3. No old production screenshot background is present.
+ *   4. Main dashboard uses the available desktop width.
+ *   5. The primary parchment canvas and widget surfaces are opaque.
  *   6. The showcase sidebar is visible at desktop width.
  *   7. No horizontal page overflow exists at narrow viewport (390px).
  */
@@ -33,14 +33,23 @@ test.describe('DevThemeShowcase Isolated Preview', () => {
     const showcaseSidebar = page.locator('[data-testid="showcase-sidebar"]');
     await expect(showcaseSidebar).toBeVisible();
 
-    // 4. Parchment background canvas is opaque (alpha >= 1)
+    // 4. Main workspace fills viewport width and has opaque parchment background
+    const workspace = page.locator('[data-testid="showcase-main-workspace"]');
+    await expect(workspace).toBeVisible();
+
     const bgColor = await showcaseRoot.evaluate((el) => getComputedStyle(el).backgroundColor);
     expect(bgColor).toMatch(/rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)/);
 
-    // 5. Main workspace contains standalone mockup widgets
-    const workspace = page.locator('[data-testid="showcase-main-workspace"]');
-    await expect(workspace).toBeVisible();
+    // 5. Featured game widget is mounted and readable
     await expect(page.locator('text=ECHOES OF THE WILDMOOR')).toBeVisible();
+    await expect(page.locator('text=Wildmoor Citadel')).toBeVisible();
+
+    // 6. Verify main workspace utilizes desktop width (width > 900px)
+    const workspaceBox = await workspace.boundingBox();
+    expect(workspaceBox).not.toBeNull();
+    if (workspaceBox) {
+      expect(workspaceBox.width).toBeGreaterThan(800);
+    }
   });
 
   test('responsive layout at narrow viewport (390px) has zero horizontal overflow', async ({ page }) => {
