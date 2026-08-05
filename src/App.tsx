@@ -16,6 +16,7 @@ import { SharedListPage } from './pages/SharedListPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { MyGamesPage } from './pages/MyGamesPage';
 import { DevThemeShowcasePage } from './pages/DevThemeShowcasePage';
+import { DevComponentReviewPage } from './pages/DevComponentReviewPage';
 import { NotFoundPage } from './pages/NotFoundPage';
 
 export const App: React.FC = () => {
@@ -26,6 +27,9 @@ export const App: React.FC = () => {
           <Routes>
             {/* Standalone Isolated Theme Showcase Route (Dev-Only Preview) */}
             <Route path="dev-theme-showcase" element={<DevThemeShowcasePage />} />
+
+            {/* Standalone Development Component Review Route (Dev-Only) */}
+            <Route path="dev-component-review" element={<DevComponentReviewPage />} />
 
             {/* Standard Production Application Shell Routes */}
             <Route path="/" element={<AppLayout />}>
