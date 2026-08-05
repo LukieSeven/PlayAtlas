@@ -10,7 +10,7 @@ export const GlassContainer: React.FC<{
     <div
       className={twMerge(
         clsx(
-          'glass-panel rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden',
+          'atlas-surface-raised rounded-3xl p-6 md:p-8 shadow-md relative overflow-hidden bg-[#FDFBF7] text-[#0C1D2D] border border-[#D9C8A9]',
           className
         )
       )}

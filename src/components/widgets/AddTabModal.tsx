@@ -40,16 +40,16 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md glass-panel rounded-3xl p-6 md:p-8 border border-indigo-500/30 shadow-2xl space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0C1D2D]/60 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md bg-[#FDFBF7] text-[#0C1D2D] rounded-3xl p-6 md:p-8 border border-[#C5A059] shadow-2xl space-y-6">
+        <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-4">
           <div className="flex items-center gap-2">
-            <FolderPlus className="w-5 h-5 text-indigo-400" />
-            <h3 className="text-xl font-bold text-white">Add Custom Taskbar Tab</h3>
+            <FolderPlus className="w-5 h-5 text-[#C5A059]" />
+            <h3 className="text-xl font-bold font-serif text-[#0C1D2D]">Add Custom Taskbar Tab</h3>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-colors"
+            className="p-1 rounded-lg text-[#718294] hover:text-[#0C1D2D] hover:bg-[#EFE8D8] transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -57,7 +57,7 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-bold text-[#8C6D37] uppercase tracking-wider block mb-1.5 font-sans">
               Tab / List Title
             </label>
             <Input
@@ -69,7 +69,7 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
           </div>
 
           <div>
-            <label className="text-xs font-semibold text-slate-400 uppercase tracking-wider block mb-1.5">
+            <label className="text-xs font-bold text-[#8C6D37] uppercase tracking-wider block mb-1.5 font-sans">
               Tab Preset Type
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -82,10 +82,10 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
                   type="button"
                   key={item.id}
                   onClick={() => setCategory(item.id as any)}
-                  className={`p-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                  className={`p-2.5 rounded-xl border text-xs font-bold transition-all cursor-pointer ${
                     category === item.id
-                      ? 'bg-indigo-600/30 border-indigo-500 text-white shadow-lg'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                      ? 'bg-[#0B2B3C] border-[#C5A059] text-white shadow-xs'
+                      : 'bg-[#FFFFFF] border-[#D9C8A9] text-[#213547] hover:text-[#0C1D2D] hover:bg-[#EFE8D8]'
                   }`}
                 >
                   {item.label}
@@ -98,7 +98,7 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
             <Button type="button" variant="ghost" size="md" onClick={onClose}>
               Cancel
             </Button>
-            <Button type="submit" variant="glow" size="md" icon={<Plus className="w-4 h-4" />}>
+            <Button type="submit" variant="primary" size="md" icon={<Plus className="w-4 h-4 text-[#C5A059]" />}>
               Create Tab
             </Button>
           </div>

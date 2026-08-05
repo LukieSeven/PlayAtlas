@@ -26,12 +26,12 @@ export const Button: React.FC<ButtonProps> = ({
   };
 
   const variantStyles = {
-    primary: 'themed-button-primary shadow-md',
-    secondary: 'themed-button-secondary',
-    outline: 'bg-transparent text-[var(--text-primary)] border border-[var(--panel-border)] hover:bg-[rgba(0,0,0,0.06)] dark:hover:bg-[rgba(255,255,255,0.08)]',
-    ghost: 'bg-transparent text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[rgba(0,0,0,0.05)] dark:hover:bg-[rgba(255,255,255,0.06)]',
-    danger: 'bg-rose-700 hover:bg-rose-600 text-white shadow-md',
-    glow: 'themed-button-primary shadow-lg border border-[var(--accent-color)]',
+    primary: 'bg-[#0B2B3C] hover:bg-[#0F4C5C] text-white border border-[#C5A059] shadow-xs cursor-pointer font-bold',
+    secondary: 'bg-[#FDFBF7] hover:bg-[#EFE8D8] text-[#0C1D2D] border border-[#D9C8A9] hover:border-[#C5A059] shadow-xs cursor-pointer font-bold',
+    outline: 'bg-transparent text-[#0C1D2D] border border-[#D9C8A9] hover:bg-[#EFE8D8] hover:border-[#C5A059] cursor-pointer font-bold',
+    ghost: 'bg-transparent text-[#213547] hover:text-[#0C1D2D] hover:bg-[#EFE8D8] cursor-pointer font-bold',
+    danger: 'bg-[#991B1B] hover:bg-rose-800 text-white shadow-xs cursor-pointer font-bold',
+    glow: 'bg-[#0B2B3C] hover:bg-[#0F4C5C] text-white border border-[#C5A059] shadow-md cursor-pointer font-bold',
   };
 
   return (

@@ -14,13 +14,13 @@ export const Badge: React.FC<BadgeProps> = ({
   ...props
 }) => {
   const variantStyles = {
-    indigo: 'themed-badge',
-    cyan: 'bg-cyan-500/15 text-cyan-700 dark:text-cyan-300 border-cyan-500/30',
-    emerald: 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
-    amber: 'gold-badge',
-    rose: 'bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30',
-    purple: 'bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30',
-    slate: 'bg-slate-500/15 text-slate-700 dark:text-slate-300 border-slate-500/30',
+    indigo: 'bg-[#0B2B3C]/10 text-[#0B2B3C] border-[#0B2B3C]/30 font-bold',
+    cyan: 'bg-teal-500/15 text-teal-900 border-teal-500/30 font-bold',
+    emerald: 'bg-emerald-500/15 text-emerald-900 border-emerald-500/30 font-bold',
+    amber: 'bg-[#C5A059]/20 text-[#8C6D37] border-[#C5A059]/40 font-bold',
+    rose: 'bg-rose-500/15 text-rose-900 border-rose-500/30 font-bold',
+    purple: 'bg-purple-500/15 text-purple-900 border-purple-500/30 font-bold',
+    slate: 'bg-[#EFE8D8] text-[#213547] border-[#D9C8A9] font-bold',
   };
 
   return (

@@ -208,54 +208,54 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0C1D2D]/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={e => e.stopPropagation()}
     >
-      <div className="relative w-full max-w-lg themed-panel rounded-3xl p-6 border border-[#c8b584] shadow-2xl space-y-5 bg-[#fefcf6] text-[#0f2b48]">
+      <div className="relative w-full max-w-lg rounded-3xl p-6 border border-[#C5A059] shadow-2xl space-y-5 bg-[#FDFBF7] text-[#0C1D2D]">
         {/* Top Header */}
-        <div className="flex items-center justify-between border-b border-[#c8b584] pb-3">
-          <h3 className="font-extrabold text-base themed-heading text-[#0c1e36]">
+        <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+          <h3 className="font-bold text-base font-serif text-[#0C1D2D]">
             Personal Data Backup & Restore
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-xl bg-[#ece4d0] text-[#0f2b48] hover:bg-[#e4d8bc]">
+          <button onClick={onClose} className="p-1.5 rounded-xl bg-[#EFE8D8] text-[#0C1D2D] hover:bg-[#D9C8A9] cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Segmented Mode Selector */}
-        <div className="flex bg-[#ece4d0] p-1 rounded-2xl border border-[#c8b584]">
+        <div className="flex bg-[#EFE8D8] p-1 rounded-2xl border border-[#D9C8A9]">
           <button
             onClick={() => setActiveTab('export')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'export' ? 'bg-[var(--primary-action)] text-white shadow-md' : 'text-[#0f2b48] hover:bg-white/50'
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'export' ? 'bg-[#0B2B3C] text-white shadow-xs border border-[#C5A059]' : 'text-[#0C1D2D] hover:bg-white/50'
             }`}
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-4 h-4 text-[#C5A059]" />
             <span>Export Backup (JSON)</span>
           </button>
           <button
             onClick={() => setActiveTab('import')}
-            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              activeTab === 'import' ? 'bg-[var(--primary-action)] text-white shadow-md' : 'text-[#0f2b48] hover:bg-white/50'
+            className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+              activeTab === 'import' ? 'bg-[#0B2B3C] text-white shadow-xs border border-[#C5A059]' : 'text-[#0C1D2D] hover:bg-white/50'
             }`}
           >
-            <Upload className="w-4 h-4" />
+            <Upload className="w-4 h-4 text-[#C5A059]" />
             <span>Import / Restore Data</span>
           </button>
         </div>
 
         {/* Export Tab Content */}
         {activeTab === 'export' && (
-          <div className="space-y-4 text-xs">
-            <p className="text-[#475569] leading-relaxed font-medium">
+          <div className="space-y-4 text-xs font-sans">
+            <p className="text-[#47586A] leading-relaxed font-medium">
               Download your complete Play Atlas personal game library as a portable JSON backup file. Includes all platform ownerships, play statuses, ratings, review notes, custom tags, backlog entries, and completion histories.
             </p>
-            <div className="p-4 rounded-2xl bg-[#f5f0e1] border border-[#c8b584] flex items-center justify-between font-mono">
+            <div className="p-4 rounded-2xl bg-[#EFE8D8] border border-[#D9C8A9] flex items-center justify-between font-sans">
               <div>
-                <span className="block font-bold text-[#0f2b48]">Personal Games Count</span>
-                <span className="text-[11px] text-[#475569]">{personalGameStore.getAllRecords().length} tracked records</span>
+                <span className="block font-bold text-[#0C1D2D]">Personal Games Count</span>
+                <span className="text-[11px] text-[#47586A]">{personalGameStore.getAllRecords().length} tracked records</span>
               </div>
-              <FileText className="w-8 h-8 text-[var(--primary-action)] opacity-80" />
+              <FileText className="w-8 h-8 text-[#0B2B3C] opacity-80" />
             </div>
             <button
               onClick={handleExportData}

@@ -358,23 +358,23 @@ export const MyGamesPage: React.FC = () => {
   return (
     <div className="space-y-6 animate-in fade-in duration-300">
       {/* Parchment Header Dashboard */}
-      <div className="themed-panel p-6 md:p-8 rounded-3xl border border-[#c8b584] shadow-xl relative overflow-hidden bg-[#fefcf6] text-[#0f2b48]">
+      <div className="p-6 md:p-8 rounded-3xl border border-[#D9C8A9] shadow-md relative overflow-hidden bg-[#FDFBF7] text-[#0C1D2D]">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
           <div className="space-y-2 max-w-xl">
-            <div className="flex items-center gap-2 text-xs font-mono text-[var(--primary-action)] font-bold uppercase">
-              <Gamepad2 className="w-4 h-4" />
+            <div className="flex items-center gap-2 text-xs font-sans text-[#8C6D37] font-bold uppercase tracking-wider">
+              <Gamepad2 className="w-4 h-4 text-[#C5A059]" />
               <span>Personal Game Library</span>
             </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold themed-heading text-[#0c1e36]">
+            <h1 className="text-3xl md:text-4xl font-bold font-serif text-[#0C1D2D]">
               My Games
             </h1>
-            <p className="text-xs text-[#475569] font-medium leading-relaxed">
+            <p className="text-xs text-[#47586A] font-medium leading-relaxed font-sans">
               Your authoritative personal video game collection. Track platform ownership, backlog priorities, play statuses, personal ratings, journal notes, and completion histories.
             </p>
 
             {/* Quick Live Stats Pills */}
-            <div className="flex flex-wrap items-center gap-2 pt-2 text-[11px] font-mono font-bold">
-              <span className="bg-[#ece4d0] px-2.5 py-1 rounded-xl border border-[#c8b584] text-[#0f2b48]">
+            <div className="flex flex-wrap items-center gap-2 pt-2 text-[11px] font-sans font-bold">
+              <span className="bg-[#EFE8D8] px-2.5 py-1 rounded-xl border border-[#D9C8A9] text-[#0C1D2D]">
                 Tracked: {counts.all}
               </span>
               <span className="bg-emerald-500/15 px-2.5 py-1 rounded-xl border border-emerald-600/30 text-emerald-900">
@@ -399,9 +399,9 @@ export const MyGamesPage: React.FC = () => {
           <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <button
               onClick={() => setIsExportModalOpen(true)}
-              className="px-4 py-2.5 rounded-2xl bg-[var(--primary-action)] hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
+              className="px-4 py-2.5 rounded-xl bg-[#0B2B3C] hover:bg-[#0F4C5C] text-white font-bold text-xs shadow-xs border border-[#C5A059] transition-all flex items-center justify-center gap-2 cursor-pointer"
             >
-              <Download className="w-4 h-4" />
+              <Download className="w-4 h-4 text-[#C5A059]" />
               <span>Backup / Export JSON</span>
             </button>
           </div>
@@ -409,7 +409,7 @@ export const MyGamesPage: React.FC = () => {
       </div>
 
       {/* Primary Tab Views Segmented Bar */}
-      <div className="themed-panel p-1.5 rounded-2xl border border-[#c8b584] bg-[#fefcf6] shadow-md overflow-x-auto">
+      <div className="p-1.5 rounded-2xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs overflow-x-auto">
         <div className="flex items-center gap-1 min-w-max">
           {(
             [
@@ -428,17 +428,17 @@ export const MyGamesPage: React.FC = () => {
               <button
                 key={tab.key}
                 onClick={() => handleTabChange(tab.key)}
-                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ${
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2 cursor-pointer ${
                   isActive
-                    ? 'bg-[var(--primary-action)] text-white shadow-md'
-                    : 'text-[#0f2b48] hover:bg-[#ece4d0]'
+                    ? 'bg-[#0B2B3C] text-white shadow-xs border border-[#C5A059]'
+                    : 'text-[#0C1D2D] hover:bg-[#EFE8D8]'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className={`w-4 h-4 ${isActive ? 'text-[#C5A059]' : 'text-[#8C6D37]'}`} />
                 <span>{tab.label}</span>
                 <span
                   className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-[#ece4d0] text-[#0f2b48]'
+                    isActive ? 'bg-white/20 text-white' : 'bg-[#EFE8D8] text-[#0C1D2D]'
                   }`}
                 >
                   {tab.count}
@@ -450,22 +450,22 @@ export const MyGamesPage: React.FC = () => {
       </div>
 
       {/* Solid High-Contrast Local Search & Filter Control Surface */}
-      <div className="themed-panel p-4 rounded-2xl border border-[#c8b584] shadow-md bg-[#fefcf6] space-y-3 text-xs font-semibold">
+      <div className="p-4 rounded-2xl border border-[#D9C8A9] shadow-xs bg-[#FDFBF7] space-y-3 text-xs font-semibold">
         {/* Row 1: Search Bar & Primary Actions */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1">
-            <Search className="absolute left-3.5 w-4 h-4 text-[#475569] pointer-events-none" />
+            <Search className="absolute left-3.5 w-4 h-4 text-[#8C6D37] pointer-events-none" />
             <input
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search library by title, notes, custom tags, storefronts, or platforms..."
-              className="w-full pl-10 pr-9 py-2.5 rounded-2xl text-xs font-semibold bg-white text-[#0f2b48] border border-[#c8b584] placeholder:text-[#64748b] focus:ring-2 focus:ring-[var(--focus-ring)] transition-all shadow-inner"
+              className="w-full pl-10 pr-9 py-2.5 rounded-xl text-xs font-semibold bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9] placeholder:text-[#718294] focus:outline-none focus:ring-2 focus:ring-[#C5A059] focus:border-[#C5A059] transition-all shadow-xs"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 p-1 text-[#475569] hover:text-[#0f2b48]"
+                className="absolute right-3 p-1 text-[#718294] hover:text-[#0C1D2D]"
               >
                 <XCircle className="w-3.5 h-3.5" />
               </button>
@@ -473,16 +473,16 @@ export const MyGamesPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold text-[#0f2b48] shrink-0">
+            <span className="text-xs font-mono font-bold text-[#0C1D2D] shrink-0">
               Showing {Math.min(visibleCount, sortedRecords.length)} of {sortedRecords.length}
             </span>
 
             {/* Grid / List Mode Controls */}
-            <div className="flex items-center bg-[#ece4d0] p-0.5 rounded-xl border border-[#c8b584]">
+            <div className="flex items-center bg-[#EFE8D8] p-0.5 rounded-xl border border-[#D9C8A9]">
               <button
                 onClick={() => handleViewModeChange('grid')}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  viewMode === 'grid' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[#0f2b48] hover:bg-white/50'
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  viewMode === 'grid' ? 'bg-[#0B2B3C] text-white shadow-xs' : 'text-[#0C1D2D] hover:bg-white/50'
                 }`}
                 title="Grid View"
               >
@@ -490,8 +490,8 @@ export const MyGamesPage: React.FC = () => {
               </button>
               <button
                 onClick={() => handleViewModeChange('list')}
-                className={`p-1.5 rounded-lg transition-colors ${
-                  viewMode === 'list' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[#0f2b48] hover:bg-white/50'
+                className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
+                  viewMode === 'list' ? 'bg-[#0B2B3C] text-white shadow-xs' : 'text-[#0C1D2D] hover:bg-white/50'
                 }`}
                 title="List View"
               >
@@ -502,13 +502,13 @@ export const MyGamesPage: React.FC = () => {
         </div>
 
         {/* Row 2: Detailed Filters and Sorting */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#c8b584]">
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-[#D9C8A9]/60">
           <div className="flex flex-wrap items-center gap-2">
             {/* Platform Family */}
             <select
               value={selectedPlatformFamily}
               onChange={e => setSelectedPlatformFamily(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9]"
             >
               <option value="all">All Platform Families</option>
               {platformFamilies.map(fam => (
@@ -522,7 +522,7 @@ export const MyGamesPage: React.FC = () => {
             <select
               value={selectedOwnershipType}
               onChange={e => setSelectedOwnershipType(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9]"
             >
               <option value="all">All Formats</option>
               <option value="digital">Digital Only</option>
@@ -536,7 +536,7 @@ export const MyGamesPage: React.FC = () => {
             <select
               value={selectedRatingRange}
               onChange={e => setSelectedRatingRange(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9]"
             >
               <option value="all">All Ratings</option>
               <option value="rated">Has Personal Rating</option>
@@ -549,7 +549,7 @@ export const MyGamesPage: React.FC = () => {
               <select
                 value={selectedTag}
                 onChange={e => setSelectedTag(e.target.value)}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9]"
               >
                 <option value="all">All Custom Tags</option>
                 {allCustomTags.map(t => (
@@ -561,22 +561,22 @@ export const MyGamesPage: React.FC = () => {
             )}
 
             {/* Toggles */}
-            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#c8b584] cursor-pointer text-[11px]">
+            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FFFFFF] border border-[#D9C8A9] cursor-pointer text-[11px] text-[#0C1D2D]">
               <input
                 type="checkbox"
                 checked={hasNotesOnly}
                 onChange={e => setHasNotesOnly(e.target.checked)}
-                className="rounded accent-[var(--primary-action)]"
+                className="rounded accent-[#0B2B3C]"
               />
               <span>Has Notes</span>
             </label>
 
-            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white border border-[#c8b584] cursor-pointer text-[11px]">
+            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FFFFFF] border border-[#D9C8A9] cursor-pointer text-[11px] text-[#0C1D2D]">
               <input
                 type="checkbox"
                 checked={hasCompletionsOnly}
                 onChange={e => setHasCompletionsOnly(e.target.checked)}
-                className="rounded accent-[var(--primary-action)]"
+                className="rounded accent-[#0B2B3C]"
               />
               <span>Has Completions</span>
             </label>
@@ -584,7 +584,7 @@ export const MyGamesPage: React.FC = () => {
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearAllFilters}
-                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 text-rose-900 border border-rose-600/30 text-[11px] font-bold hover:bg-rose-500/20"
+                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 text-rose-900 border border-rose-600/30 text-[11px] font-bold hover:bg-rose-500/20 cursor-pointer"
               >
                 Clear Filters ({activeFiltersCount})
               </button>
@@ -593,11 +593,11 @@ export const MyGamesPage: React.FC = () => {
 
           {/* Sort Selector */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <SortAsc className="w-3.5 h-3.5 text-[#475569]" />
+            <SortAsc className="w-3.5 h-3.5 text-[#8C6D37]" />
             <select
               value={sortBy}
               onChange={e => setSortBy(e.target.value as any)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584]"
+              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9]"
             >
               <option value="recently_updated">Recently Updated</option>
               <option value="recently_added">Recently Added</option>
@@ -615,25 +615,25 @@ export const MyGamesPage: React.FC = () => {
 
       {/* Main Content Area */}
       {meaningfulRecords.length === 0 ? (
-        <div className="themed-panel p-12 text-center rounded-3xl space-y-4 border border-[#c8b584] bg-[#fefcf6]">
-          <Gamepad2 className="w-12 h-12 mx-auto text-[var(--primary-action)] opacity-80" />
+        <div className="p-12 text-center rounded-3xl space-y-4 border border-[#D9C8A9] bg-[#FDFBF7] shadow-md">
+          <Gamepad2 className="w-12 h-12 mx-auto text-[#0B2B3C] opacity-80" />
           <div className="space-y-1 max-w-md mx-auto">
-            <h3 className="text-base font-bold themed-heading text-[#0c1e36]">Your Personal Library is Empty</h3>
-            <p className="text-xs text-[#475569]">
+            <h3 className="text-base font-bold font-serif text-[#0C1D2D]">Your Personal Library is Empty</h3>
+            <p className="text-xs text-[#47586A] font-sans">
               Games you bookmark or update via the Universal Action Menu will automatically appear in your personal library.
             </p>
           </div>
         </div>
       ) : sortedRecords.length === 0 ? (
-        <div className="themed-panel p-12 text-center rounded-3xl space-y-3 border border-[#c8b584] bg-[#fefcf6]">
-          <ShieldAlert className="w-10 h-10 mx-auto text-amber-600 opacity-80" />
-          <h3 className="text-base font-bold themed-heading text-[#0c1e36]">No Tracked Games Match Filters</h3>
-          <p className="text-xs text-[#475569] max-w-sm mx-auto">
+        <div className="p-12 text-center rounded-3xl space-y-3 border border-[#D9C8A9] bg-[#FDFBF7] shadow-md">
+          <ShieldAlert className="w-10 h-10 mx-auto text-[#8C6D37] opacity-80" />
+          <h3 className="text-base font-bold font-serif text-[#0C1D2D]">No Tracked Games Match Filters</h3>
+          <p className="text-xs text-[#47586A] max-w-sm mx-auto font-sans">
             No games in your personal library match the selected view tab ({activeTab}) and filter options.
           </p>
           <button
             onClick={clearAllFilters}
-            className="px-4 py-2 rounded-xl bg-[var(--primary-action)] text-white font-bold text-xs shadow-md"
+            className="px-4 py-2 rounded-xl bg-[#0B2B3C] text-white font-bold text-xs shadow-xs border border-[#C5A059] cursor-pointer"
           >
             Clear All Filters
           </button>

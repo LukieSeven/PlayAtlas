@@ -252,16 +252,16 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
       {/* Add Ownership Modal Dialog */}
       {isOwnershipModalOpen && portalTarget && createPortal(
         <div
-          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200"
+          className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-[#0C1D2D]/60 backdrop-blur-xs animate-in fade-in duration-200"
           onClick={e => e.stopPropagation()}
           data-testid="ownership-modal"
         >
-          <div className="relative w-full max-w-sm themed-panel rounded-3xl p-6 border border-[var(--panel-border)] shadow-2xl space-y-4" style={{ backgroundColor: 'var(--card-bg)' }}>
-            <div className="flex items-center justify-between border-b border-[var(--panel-border)] pb-3">
-              <h4 className="font-bold themed-heading text-sm">Add Platform Ownership</h4>
+          <div className="relative w-full max-w-sm rounded-3xl p-6 border border-[#C5A059] shadow-2xl space-y-4 bg-[#FDFBF7] text-[#0C1D2D]">
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+              <h4 className="font-bold font-serif text-[#0C1D2D] text-base">Add Platform Ownership</h4>
               <button
                 onClick={() => setIsOwnershipModalOpen(false)}
-                className="p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
+                className="p-1 text-[#718294] hover:text-[#0C1D2D]"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -269,11 +269,11 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[10px] font-mono text-[var(--text-muted)] uppercase mb-1">Platform System</label>
+                <label className="block text-[10px] font-mono text-[#8C6D37] uppercase font-bold mb-1">Platform System</label>
                 <select
                   value={platformId}
                   onChange={e => setPlatformId(parseInt(e.target.value, 10))}
-                  className="w-full p-2 rounded-xl themed-input font-medium"
+                  className="w-full p-2 rounded-xl bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9] font-medium"
                 >
                   <option value={6}>PC (Windows)</option>
                   <option value={167}>PlayStation 5</option>
@@ -288,11 +288,11 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono text-[var(--text-muted)] uppercase mb-1">Ownership Format</label>
+                <label className="block text-[10px] font-mono text-[#8C6D37] uppercase font-bold mb-1">Ownership Format</label>
                 <select
                   value={ownershipType}
                   onChange={e => setOwnershipType(e.target.value as OwnershipType)}
-                  className="w-full p-2 rounded-xl themed-input font-medium"
+                  className="w-full p-2 rounded-xl bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9] font-medium"
                 >
                   <option value="digital">Digital Copy</option>
                   <option value="physical">Physical Disc / Cartridge</option>
@@ -304,11 +304,11 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
               {ownershipType === 'physical' && (
                 <div>
-                  <label className="block text-[10px] font-mono text-[var(--text-muted)] uppercase mb-1">Physical Condition</label>
+                  <label className="block text-[10px] font-mono text-[#8C6D37] uppercase font-bold mb-1">Physical Condition</label>
                   <select
                     value={condition}
                     onChange={e => setCondition(e.target.value as PhysicalCondition)}
-                    className="w-full p-2 rounded-xl themed-input font-medium"
+                    className="w-full p-2 rounded-xl bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9] font-medium"
                   >
                     <option value="sealed">Sealed New</option>
                     <option value="complete_in_box">Complete in Box (CIB)</option>
@@ -319,13 +319,13 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
               )}
 
               <div>
-                <label className="block text-[10px] font-mono text-[var(--text-muted)] uppercase mb-1">Storefront / Provider (Optional)</label>
+                <label className="block text-[10px] font-mono text-[#8C6D37] uppercase font-bold mb-1">Storefront / Provider (Optional)</label>
                 <input
                   type="text"
                   value={storefront}
                   onChange={e => setStorefront(e.target.value)}
                   placeholder="e.g. Steam, GOG, eShop, PlayStation Store"
-                  className="w-full p-2 rounded-xl themed-input font-medium"
+                  className="w-full p-2 rounded-xl bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9] font-medium"
                 />
               </div>
             </div>
@@ -346,7 +346,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
                   );
                   setIsOwnershipModalOpen(false);
                 }}
-                className="w-full py-2.5 rounded-xl themed-button-primary text-xs font-bold"
+                className="w-full py-2.5 rounded-xl bg-[#0B2B3C] hover:bg-[#0F4C5C] text-white border border-[#C5A059] text-xs font-bold shadow-xs cursor-pointer"
               >
                 Save Ownership Record
               </button>
