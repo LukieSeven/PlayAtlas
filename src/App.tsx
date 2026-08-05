@@ -24,6 +24,10 @@ export const App: React.FC = () => {
       <SidebarProvider>
         <HashRouter>
           <Routes>
+            {/* Standalone Isolated Theme Showcase Route (Dev-Only Preview) */}
+            <Route path="dev-theme-showcase" element={<DevThemeShowcasePage />} />
+
+            {/* Standard Production Application Shell Routes */}
             <Route path="/" element={<AppLayout />}>
               <Route index element={<HomePage />} />
               <Route path="new-releases" element={<NewReleasesPage />} />
@@ -38,7 +42,6 @@ export const App: React.FC = () => {
               <Route path="my-games" element={<MyGamesPage />} />
               <Route path="share/:listId" element={<SharedListPage />} />
               <Route path="settings" element={<SettingsPage />} />
-              <Route path="dev-theme-showcase" element={<DevThemeShowcasePage />} />
               <Route path="404" element={<NotFoundPage />} />
               <Route path="*" element={<Navigate to="/404" replace />} />
             </Route>
