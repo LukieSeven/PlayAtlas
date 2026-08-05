@@ -2,9 +2,13 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Sparkles,
+  Gamepad2,
+  Clock,
   Bookmark,
+  Trophy,
   ArrowRight,
-  Bell
+  Tag,
+  Calendar
 } from 'lucide-react';
 import { usePersonalGameLibrary } from '../hooks/usePersonalGameLibrary';
 import { CompactGameLookupRecord } from '../types/catalog';
@@ -21,33 +25,46 @@ export const HomePage: React.FC = () => {
   // Selected Game state for Modal
   const [selectedGameForModal, setSelectedGameForModal] = useState<CompactGameLookupRecord | null>(null);
 
-  // Recent Release Feed state
+  // Release Feed catalog state (Real catalog data)
   const [recentReleases, setRecentReleases] = useState<CompactGameLookupRecord[]>([]);
 
   // Hydration state for displayed compact records
   const [hydratedCompactMap, setHydratedCompactMap] = useState<Map<number, CompactGameLookupRecord>>(new Map());
   const attemptedHydrationIdsRef = useRef<Set<number>>(new Set());
 
-  // Derive playing & active records from personal library
-  const playingRecords = useMemo(() => {
-    return rawRecords
-      .filter(r => r.currentPlayStatus === 'playing')
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  // Derive meaningful records from personal library
+  const meaningfulRecords = useMemo(() => {
+    return rawRecords.filter(rec => {
+      return (
+        Boolean(rec.interestStatus) ||
+        Boolean(rec.currentPlayStatus) ||
+        Boolean(rec.inBacklogQueue) ||
+        (rec.userRating !== undefined && rec.userRating !== null) ||
+        (rec.userNotes && rec.userNotes.trim().length > 0) ||
+        (rec.ownerships && rec.ownerships.length > 0) ||
+        (rec.customTags && rec.customTags.length > 0) ||
+        (rec.playSessions && rec.playSessions.length > 0) ||
+        (rec.completionHistory && rec.completionHistory.length > 0)
+      );
+    });
   }, [rawRecords]);
 
-  // Live Countdown Timer state for Featured Game
-  const [countdown, setCountdown] = useState({ days: 23, hrs: 14, mins: 37, secs: 52 });
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCountdown(prev => {
-        if (prev.secs > 0) return { ...prev, secs: prev.secs - 1 };
-        return { ...prev, secs: 59, mins: prev.mins > 0 ? prev.mins - 1 : 59 };
-      });
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
+  // Derive playing records from personal library
+  const playingRecords = useMemo(() => {
+    return meaningfulRecords
+      .filter(r => r.currentPlayStatus === 'playing')
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, [meaningfulRecords]);
 
-  // Load Recent Release Discovery Feed (Non-blocking)
+  // Derive in-progress records (playing or with session/completion history)
+  const inProgressRecords = useMemo(() => {
+    return meaningfulRecords
+      .filter(r => r.currentPlayStatus === 'playing' || (r.playSessions && r.playSessions.length > 0) || (r.completionHistory && r.completionHistory.length > 0))
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+      .slice(0, 5);
+  }, [meaningfulRecords]);
+
+  // Load Release Discovery Feed from real catalog service
   useEffect(() => {
     let isMounted = true;
 
@@ -61,6 +78,7 @@ export const HomePage: React.FC = () => {
           gameType: item.record.gameType || undefined,
           coverUrl: item.record.coverUrl || undefined,
           chunk: item.record.dataChunk ? parseInt(String(item.record.dataChunk).replace(/\D/g, ''), 10) : undefined,
+          platforms: item.record.platforms ? item.record.platforms.map((p: any) => p.name) : undefined,
         }));
         setRecentReleases(mapped);
       })
@@ -73,7 +91,7 @@ export const HomePage: React.FC = () => {
     };
   }, []);
 
-  // Hydration batch processing
+  // Hydrate displayed records
   useEffect(() => {
     if (recentReleases.length === 0) return;
     let isCurrent = true;
@@ -101,6 +119,9 @@ export const HomePage: React.FC = () => {
     };
   }, [recentReleases]);
 
+  // Featured Game derived from real catalog if available
+  const realFeaturedGame = recentReleases.length > 0 ? recentReleases[0] : null;
+
   return (
     <div className="space-y-6 animate-in fade-in duration-300 select-none">
       {/* 2-Column Main Dashboard Grid Composition */}
@@ -110,7 +131,7 @@ export const HomePage: React.FC = () => {
           {/* WIDGET 1: FEATURED UPCOMING GAME */}
           <div className="rounded-3xl border border-[#C5A059] bg-[#FDFBF7] shadow-lg overflow-hidden relative group">
             {/* Top Landscape Artwork Container */}
-            <div className="relative h-64 md:h-72 w-full overflow-hidden bg-[#0B2B3C]">
+            <div className="relative h-60 md:h-68 w-full overflow-hidden bg-[#0B2B3C]">
               <FantasyLandscapeArtwork variant="featured" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
 
               {/* Gold Ribbon Badge Overlay */}
@@ -122,51 +143,52 @@ export const HomePage: React.FC = () => {
 
             {/* Bottom Content Information Panel */}
             <div className="p-6 md:p-8 space-y-4 bg-[#FDFBF7] relative z-10">
-              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                <div className="space-y-1">
-                  <h2 className="font-serif text-3xl md:text-4xl font-extrabold text-[#0C1D2D] leading-tight">
-                    ECHOES OF THE WILDMOOR
-                  </h2>
-                  <p className="text-xs font-sans font-bold text-[#8C6D37]">
-                    RPG, Open World • PC, PS5, XSX
-                  </p>
-                </div>
-
-                {/* Countdown Timer Block */}
-                <div className="space-y-1">
-                  <span className="text-[10px] font-mono font-extrabold text-[#718294] uppercase tracking-wider block">
-                    RELEASES IN
-                  </span>
-                  <div className="flex items-center gap-2 text-xs font-mono font-extrabold text-[#0C1D2D]">
-                    <div className="px-2 py-1 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-center min-w-[36px]">
-                      <span className="block text-sm text-[#0B2B3C]">{countdown.days}</span>
-                      <span className="text-[9px] text-[#47586A]">DAYS</span>
-                    </div>
-                    <div className="px-2 py-1 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-center min-w-[36px]">
-                      <span className="block text-sm text-[#0B2B3C]">{countdown.hrs}</span>
-                      <span className="text-[9px] text-[#47586A]">HRS</span>
-                    </div>
-                    <div className="px-2 py-1 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-center min-w-[36px]">
-                      <span className="block text-sm text-[#0B2B3C]">{countdown.mins}</span>
-                      <span className="text-[9px] text-[#47586A]">MINS</span>
-                    </div>
-                    <div className="px-2 py-1 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-center min-w-[36px]">
-                      <span className="block text-sm text-[#0B2B3C]">{countdown.secs}</span>
-                      <span className="text-[9px] text-[#47586A]">SECS</span>
+              {realFeaturedGame ? (
+                <div className="space-y-4">
+                  <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div className="space-y-1">
+                      <h2 className="font-serif text-3xl font-extrabold text-[#0C1D2D] leading-tight">
+                        {realFeaturedGame.name}
+                      </h2>
+                      <p className="text-xs font-sans font-bold text-[#8C6D37]">
+                        {realFeaturedGame.platforms?.join(', ') || 'Multi-Platform'} • Release Year: {realFeaturedGame.year || 'TBA'}
+                      </p>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              {/* Action Buttons */}
-              <div className="flex items-center gap-3 pt-2">
-                <Button variant="primary" icon={<ArrowRight className="w-4 h-4 text-[#C5A059]" />}>
-                  View Details
-                </Button>
-                <Button variant="secondary" icon={<Bookmark className="w-4 h-4 text-[#8C6D37]" />}>
-                  Bookmark
-                </Button>
-              </div>
+                  <div className="flex items-center gap-3 pt-2">
+                    <Button
+                      variant="primary"
+                      icon={<ArrowRight className="w-4 h-4 text-[#C5A059]" />}
+                      onClick={() => setSelectedGameForModal(realFeaturedGame)}
+                    >
+                      View Details
+                    </Button>
+                    <Link to="/my-games">
+                      <Button variant="secondary" icon={<Bookmark className="w-4 h-4 text-[#8C6D37]" />}>
+                        Explore Library
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                /* Themed Empty State for Featured Game Shell */
+                <div className="space-y-3 py-2">
+                  <h2 className="font-serif text-2xl font-bold text-[#0C1D2D]">
+                    Featured Upcoming Title
+                  </h2>
+                  <p className="text-xs font-sans text-[#47586A] leading-relaxed max-w-md">
+                    Featured upcoming release information unavailable until catalog data is loaded. Explore your personal gaming library to track active games and backlog items.
+                  </p>
+                  <div className="pt-2">
+                    <Link to="/my-games">
+                      <Button variant="primary" icon={<ArrowRight className="w-4 h-4 text-[#C5A059]" />}>
+                        Explore Personal Library
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -197,66 +219,36 @@ export const HomePage: React.FC = () => {
                 })}
               </div>
             ) : (
-              // Default Formatted Display Items matching Target Mockup
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                {[
-                  { title: "Baldur's Gate 3", progress: '68% • 82h', platform: 'PC' },
-                  { title: 'Zelda: TotK', progress: '54% • 60h', platform: 'Switch' },
-                  { title: 'Cyberpunk 2077', progress: '42% • 34h', platform: 'PC' },
-                  { title: 'Stardew Valley', progress: '86% • 120h', platform: 'PC' },
-                ].map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="p-3 rounded-2xl border border-[#D9C8A9] bg-[#EFE8D8] space-y-2 hover:border-[#C5A059] transition-all cursor-pointer"
-                  >
-                    <div className="aspect-[3/4] w-full rounded-xl bg-[#0B2B3C]/10 border border-[#D9C8A9] flex items-center justify-center text-[#0B2B3C] text-xs font-serif font-bold p-2 text-center">
-                      {item.title}
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-xs text-[#0C1D2D] truncate">{item.title}</h4>
-                      <p className="text-[10px] font-mono font-semibold text-[#47586A]">{item.progress} • {item.platform}</p>
-                    </div>
-                  </div>
-                ))}
+              /* Themed Empty State for Currently Playing Widget */
+              <div className="p-6 text-center rounded-2xl bg-[#EFE8D8] border border-[#D9C8A9] space-y-2">
+                <Clock className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
+                <h4 className="font-bold text-xs text-[#0C1D2D]">No games currently marked as Playing</h4>
+                <p className="text-xs text-[#47586A] max-w-xs mx-auto">
+                  Mark games as Playing via the Universal Action Menu to feature them here.
+                </p>
               </div>
             )}
           </div>
 
-          {/* WIDGET 5: DEALS • PLAYSTATION STORE */}
+          {/* WIDGET 5: DISCOUNTS & DEALS */}
           <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
             <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
-                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">DEALS • PLAYSTATION STORE</h3>
+                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">DISCOUNTS & DEALS</h3>
               </div>
               <Link to="/discounts" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
                 View All
               </Link>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {[
-                { title: 'Elden Ring', discount: '-40%', price: '$35.99', orig: '$59.99' },
-                { title: 'God of War', discount: '-50%', price: '$19.99', orig: '$39.99' },
-                { title: 'Ghost of Tsushima', discount: '-33%', price: '$46.89', orig: '$69.99' },
-                { title: "Demon's Souls", discount: '-60%', price: '$27.99', orig: '$69.99' },
-              ].map((deal, idx) => (
-                <div key={idx} className="p-3 rounded-2xl border border-[#D9C8A9] bg-[#EFE8D8] space-y-2 hover:border-[#C5A059] transition-all">
-                  <div className="aspect-[4/3] w-full rounded-xl bg-[#0B2B3C]/10 border border-[#D9C8A9] flex items-center justify-center text-[#0B2B3C] text-xs font-serif font-bold p-2 text-center">
-                    {deal.title}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-xs text-[#0C1D2D] truncate">{deal.title}</h4>
-                    <div className="flex items-center justify-between mt-1 text-[11px] font-mono">
-                      <span className="px-1.5 py-0.5 rounded bg-[#0B2B3C] text-white text-[10px] font-bold">{deal.discount}</span>
-                      <div>
-                        <span className="font-bold text-[#0C1D2D] mr-1">{deal.price}</span>
-                        <span className="line-through text-[#718294] text-[9px]">{deal.orig}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
+            {/* Themed Empty State for Deals Widget */}
+            <div className="p-6 text-center rounded-2xl bg-[#EFE8D8] border border-[#D9C8A9] space-y-2">
+              <Tag className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
+              <h4 className="font-bold text-xs text-[#0C1D2D]">No active deals or sales available</h4>
+              <p className="text-xs text-[#47586A] max-w-xs mx-auto">
+                Check back for updated platform storefront discounts and promotional sales.
+              </p>
             </div>
           </div>
         </div>
@@ -275,34 +267,51 @@ export const HomePage: React.FC = () => {
               </Link>
             </div>
 
-            {/* List Rows */}
-            <div className="space-y-3 font-sans">
-              {[
-                { rank: 1, title: "Baldur's Gate 3", platform: 'PC', pct: 68 },
-                { rank: 2, title: 'The Legend of Zelda: Tears of the Kingdom', platform: 'Switch', pct: 54 },
-                { rank: 3, title: 'Cyberpunk 2077: Phantom Liberty', platform: 'PC', pct: 42 },
-                { rank: 4, title: 'Red Dead Redemption 2', platform: 'PC', pct: 31 },
-                { rank: 5, title: 'Horizon Forbidden West', platform: 'PS5', pct: 28 },
-              ].map(item => (
-                <div key={item.rank} className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#EFE8D8] transition-colors">
-                  <span className="font-mono font-extrabold text-sm text-[#0B2B3C] w-4 text-center">{item.rank}</span>
-                  <div className="w-8 h-10 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] shrink-0 flex items-center justify-center text-[10px] font-mono font-bold text-[#8C6D37]">
-                    {item.title[0]}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between text-xs mb-1">
-                      <h4 className="font-bold text-[#0C1D2D] truncate">{item.title}</h4>
-                      <span className="text-[10px] font-mono font-bold text-[#8C6D37] shrink-0 ml-2">{item.platform}</span>
+            {inProgressRecords.length > 0 ? (
+              <div className="space-y-3 font-sans">
+                {inProgressRecords.map((rec, idx) => {
+                  const compact = convertPersonalRecordToCompact(rec);
+                  const hydrated = hydratedCompactMap.get(compact.id) || compact;
+                  const hasUserRating = rec.userRating !== undefined && rec.userRating !== null;
+                  const ratingVal = rec.userRating ?? 5;
+                  const pct = hasUserRating ? Math.round((ratingVal / 10) * 100) : 50;
+
+                  return (
+                    <div key={rec.gameId} className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#EFE8D8] transition-colors">
+                      <span className="font-mono font-extrabold text-sm text-[#0B2B3C] w-4 text-center">{idx + 1}</span>
+                      <div className="w-8 h-10 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] shrink-0 overflow-hidden flex items-center justify-center text-[10px] font-mono font-bold text-[#8C6D37]">
+                        {hydrated.coverUrl ? (
+                          <img src={hydrated.coverUrl} alt={hydrated.name} className="w-full h-full object-cover" />
+                        ) : (
+                          hydrated.name[0]
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between text-xs mb-1">
+                          <h4 className="font-bold text-[#0C1D2D] truncate">{hydrated.name}</h4>
+                          <span className="text-[10px] font-mono font-bold text-[#8C6D37] shrink-0 ml-2">
+                            {rec.currentPlayStatus?.toUpperCase() || 'IN PROGRESS'}
+                          </span>
+                        </div>
+                        <div className="w-full bg-[#EFE8D8] rounded-full h-1.5 overflow-hidden border border-[#D9C8A9]">
+                          <div className="bg-[#0B2B3C] h-full rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                      <span className="font-mono text-xs font-bold text-[#0C1D2D] w-10 text-right">{pct}%</span>
                     </div>
-                    {/* Progress Bar */}
-                    <div className="w-full bg-[#EFE8D8] rounded-full h-1.5 overflow-hidden border border-[#D9C8A9]">
-                      <div className="bg-[#0B2B3C] h-full rounded-full transition-all" style={{ width: `${item.pct}%` }} />
-                    </div>
-                  </div>
-                  <span className="font-mono text-xs font-bold text-[#0C1D2D] w-10 text-right">{item.pct}%</span>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Themed Empty State for In Progress Widget */
+              <div className="p-6 text-center rounded-2xl bg-[#EFE8D8] border border-[#D9C8A9] space-y-2">
+                <Trophy className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
+                <h4 className="font-bold text-xs text-[#0C1D2D]">No active game progress recorded yet</h4>
+                <p className="text-xs text-[#47586A] max-w-xs mx-auto">
+                  Play status updates recorded in your library will appear here.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* WIDGET 4: NEW RELEASES */}
@@ -317,29 +326,48 @@ export const HomePage: React.FC = () => {
               </Link>
             </div>
 
-            <div className="space-y-3 font-sans">
-              {[
-                { title: 'Manor Lords', genre: 'Strategy, City Builder', platform: 'PC', price: '$39.99' },
-                { title: 'Animal Well', genre: 'Metroidvania, Puzzle', platform: 'PC, Switch', price: '$24.99' },
-                { title: 'Pacific Drive', genre: 'Survival, Driving', platform: 'PC, PS5', price: '$29.99' },
-                { title: 'The Rogue Prince of Persia', genre: 'Action, Platformer', platform: 'PC, Switch', price: '$24.99' },
-              ].map((item, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2 rounded-xl hover:bg-[#EFE8D8] transition-colors">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] shrink-0 flex items-center justify-center text-xs font-serif font-bold text-[#0B2B3C]">
-                      {item.title[0]}
+            {recentReleases.length > 0 ? (
+              <div className="space-y-3 font-sans">
+                {recentReleases.slice(0, 4).map((game) => {
+                  const hydrated = hydratedCompactMap.get(game.id) || game;
+                  return (
+                    <div
+                      key={game.id}
+                      onClick={() => setSelectedGameForModal(hydrated)}
+                      className="flex items-center justify-between p-2 rounded-xl hover:bg-[#EFE8D8] cursor-pointer transition-colors"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-9 h-11 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] shrink-0 overflow-hidden flex items-center justify-center text-xs font-serif font-bold text-[#0B2B3C]">
+                          {hydrated.coverUrl ? (
+                            <img src={hydrated.coverUrl} alt={hydrated.name} className="w-full h-full object-cover" />
+                          ) : (
+                            hydrated.name[0]
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <h4 className="font-bold text-xs text-[#0C1D2D] truncate">{hydrated.name}</h4>
+                          <p className="text-[10px] text-[#47586A] truncate">
+                            {hydrated.year || 'TBA'} • {hydrated.platforms?.join(', ') || 'Multi-Platform'}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="px-2 py-1 rounded-lg bg-[#EFE8D8] text-[#0B2B3C] font-mono text-[10px] font-bold border border-[#D9C8A9] shrink-0 ml-2">
+                        View
+                      </span>
                     </div>
-                    <div className="min-w-0">
-                      <h4 className="font-bold text-xs text-[#0C1D2D] truncate">{item.title}</h4>
-                      <p className="text-[10px] text-[#47586A] truncate">{item.genre} • {item.platform}</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-xl bg-[#0B2B3C] text-white font-mono text-xs font-bold border border-[#C5A059] shrink-0 ml-2">
-                    {item.price}
-                  </span>
-                </div>
-              ))}
-            </div>
+                  );
+                })}
+              </div>
+            ) : (
+              /* Themed Empty State for New Releases Widget */
+              <div className="p-6 text-center rounded-2xl bg-[#EFE8D8] border border-[#D9C8A9] space-y-2">
+                <Gamepad2 className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
+                <h4 className="font-bold text-xs text-[#0C1D2D]">Release information temporarily unavailable</h4>
+                <p className="text-xs text-[#47586A] max-w-xs mx-auto">
+                  New and upcoming catalog releases will be listed here when available.
+                </p>
+              </div>
+            )}
           </div>
 
           {/* WIDGET 6: UPCOMING EVENTS */}
@@ -354,29 +382,13 @@ export const HomePage: React.FC = () => {
               </Link>
             </div>
 
-            <div className="space-y-3 font-sans relative z-10">
-              {[
-                { month: 'MAY', day: '24', title: 'PlayStation State of Play', time: 'May 24, 2024 • 3:00 PM PT', color: 'bg-indigo-600' },
-                { month: 'JUN', day: '09', title: 'Xbox Games Showcase', time: 'June 9, 2024 • 10:00 AM PT', color: 'bg-emerald-600' },
-                { month: 'JUN', day: '10', title: 'Summer Game Fest 2024', time: 'June 10, 2024 • 2:00 PM PT', color: 'bg-purple-600' },
-              ].map((evt, idx) => (
-                <div key={idx} className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FDFBF7]/90 border border-[#D9C8A9] hover:bg-[#EFE8D8] transition-colors">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] text-center flex flex-col items-center justify-center shrink-0">
-                      <span className="text-[9px] font-mono font-extrabold text-[#718294] leading-none">{evt.month}</span>
-                      <span className="text-sm font-mono font-extrabold text-[#0B2B3C] leading-none mt-0.5">{evt.day}</span>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${evt.color}`} />
-                        <h4 className="font-bold text-xs text-[#0C1D2D]">{evt.title}</h4>
-                      </div>
-                      <p className="text-[10px] font-mono text-[#47586A] mt-0.5">{evt.time}</p>
-                    </div>
-                  </div>
-                  <Bell className="w-4 h-4 text-[#8C6D37] hover:text-[#0B2B3C] cursor-pointer" />
-                </div>
-              ))}
+            {/* Themed Empty State for Upcoming Events Widget */}
+            <div className="p-6 text-center rounded-2xl bg-[#EFE8D8]/80 border border-[#D9C8A9] space-y-2 relative z-10">
+              <Calendar className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
+              <h4 className="font-bold text-xs text-[#0C1D2D]">No upcoming gaming events scheduled</h4>
+              <p className="text-xs text-[#47586A] max-w-xs mx-auto">
+                Check the games calendar for upcoming industry showcases, release streams, and gaming expos.
+              </p>
             </div>
 
             {/* Lower-Right Corner Castle Landscape Illustration */}

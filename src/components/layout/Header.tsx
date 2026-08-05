@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Loader2, Gamepad2, Sparkles, User } from 'lucide-react';
+import { Search, X, Loader2, Gamepad2, Sparkles } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCatalogSearch } from '../../hooks/useCatalogSearch';
 import { CompactGameLookupRecord } from '../../types/catalog';
@@ -235,14 +235,6 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
               </div>
             </div>
           )}
-        </div>
-
-        {/* Profile Avatar Pill */}
-        <div className="hidden sm:flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-[#FDFBF7] border border-[#D9C8A9] text-xs font-bold text-[#0C1D2D]">
-          <div className="w-6 h-6 rounded-full bg-[#0B2B3C] text-[#C5A059] flex items-center justify-center">
-            <User className="w-3.5 h-3.5" />
-          </div>
-          <span>Aventurer</span>
         </div>
       </div>
     </header>
