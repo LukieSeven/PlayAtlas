@@ -23,8 +23,8 @@ export const AppLayout: React.FC = () => {
         <Header />
 
         {/* Scrollable Main Dashboard Canvas Area */}
-        <main className="flex-1 overflow-y-auto p-4 md:p-8 lg:p-10 flex flex-col justify-between">
-          <div className="max-w-7xl mx-auto w-full space-y-8">
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 flex flex-col justify-between">
+          <div className="max-w-[1600px] mx-auto w-full space-y-8">
             <Outlet />
           </div>
           <Footer />

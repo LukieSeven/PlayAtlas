@@ -2,20 +2,16 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Sparkles,
-  Gamepad2,
-  Clock,
   Bookmark,
-  Trophy,
-  Heart,
   ArrowRight,
-  Package,
-  AlertCircle
+  Bell
 } from 'lucide-react';
 import { usePersonalGameLibrary } from '../hooks/usePersonalGameLibrary';
 import { CompactGameLookupRecord } from '../types/catalog';
 import { GameCard } from '../components/common/GameCard';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
-import { UniversalActionMenu } from '../components/common/UniversalActionMenu';
+import { FantasyLandscapeArtwork } from '../components/ui/FantasyLandscapeArtwork';
+import { Button } from '../components/ui/Button';
 import { getUpcomingGames } from '../services/releaseCatalogService';
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
 
@@ -25,80 +21,35 @@ export const HomePage: React.FC = () => {
   // Selected Game state for Modal
   const [selectedGameForModal, setSelectedGameForModal] = useState<CompactGameLookupRecord | null>(null);
 
-  // Recent Release Feed state (Non-blocking external feed)
+  // Recent Release Feed state
   const [recentReleases, setRecentReleases] = useState<CompactGameLookupRecord[]>([]);
-  const [loadingReleases, setLoadingReleases] = useState<boolean>(true);
-  const [releaseFeedError, setReleaseFeedError] = useState<string | null>(null);
 
   // Hydration state for displayed compact records
   const [hydratedCompactMap, setHydratedCompactMap] = useState<Map<number, CompactGameLookupRecord>>(new Map());
   const attemptedHydrationIdsRef = useRef<Set<number>>(new Set());
 
-  // Derive meaningful personal records
-  const meaningfulRecords = useMemo(() => {
-    return rawRecords.filter(rec => {
-      return (
-        Boolean(rec.interestStatus) ||
-        Boolean(rec.currentPlayStatus) ||
-        Boolean(rec.inBacklogQueue) ||
-        (rec.userRating !== undefined && rec.userRating !== null) ||
-        (rec.userNotes && rec.userNotes.trim().length > 0) ||
-        (rec.ownerships && rec.ownerships.length > 0) ||
-        (rec.customTags && rec.customTags.length > 0) ||
-        (rec.playSessions && rec.playSessions.length > 0) ||
-        (rec.completionHistory && rec.completionHistory.length > 0)
-      );
-    });
+  // Derive playing & active records from personal library
+  const playingRecords = useMemo(() => {
+    return rawRecords
+      .filter(r => r.currentPlayStatus === 'playing')
+      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [rawRecords]);
 
-  // Overall Library Stats
-  const stats = useMemo(() => {
-    return {
-      total: meaningfulRecords.length,
-      owned: meaningfulRecords.filter(r => r.ownerships && r.ownerships.length > 0).length,
-      playing: meaningfulRecords.filter(r => r.currentPlayStatus === 'playing').length,
-      backlog: meaningfulRecords.filter(r => r.inBacklogQueue).length,
-      completed: meaningfulRecords.filter(r => r.currentPlayStatus === 'completed' || (r.completionHistory && r.completionHistory.length > 0)).length,
-      wanted: meaningfulRecords.filter(r => r.interestStatus === 'wanted' || r.interestStatus === 'wishlist').length,
-    };
-  }, [meaningfulRecords]);
-
-  // Section 1: Currently Playing (Up to 6)
-  const playingRecords = useMemo(() => {
-    return meaningfulRecords
-      .filter(r => r.currentPlayStatus === 'playing')
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .slice(0, 6);
-  }, [meaningfulRecords]);
-
-  // Section 2: Priority Backlog (Up to 6)
-  const backlogRecords = useMemo(() => {
-    return meaningfulRecords
-      .filter(r => r.inBacklogQueue)
-      .sort((a, b) => (a.backlogPriority || 999) - (b.backlogPriority || 999))
-      .slice(0, 6);
-  }, [meaningfulRecords]);
-
-  // Section 3: Wanted / Wishlist (Up to 6)
-  const wantedRecords = useMemo(() => {
-    return meaningfulRecords
-      .filter(r => r.interestStatus === 'wanted' || r.interestStatus === 'wishlist')
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .slice(0, 6);
-  }, [meaningfulRecords]);
-
-  // Section 4: Recently Updated (Up to 8)
-  const recentlyUpdatedRecords = useMemo(() => {
-    return [...meaningfulRecords]
-      .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
-      .slice(0, 8);
-  }, [meaningfulRecords]);
+  // Live Countdown Timer state for Featured Game
+  const [countdown, setCountdown] = useState({ days: 23, hrs: 14, mins: 37, secs: 52 });
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCountdown(prev => {
+        if (prev.secs > 0) return { ...prev, secs: prev.secs - 1 };
+        return { ...prev, secs: 59, mins: prev.mins > 0 ? prev.mins - 1 : 59 };
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Load Recent Release Discovery Feed (Non-blocking)
   useEffect(() => {
     let isMounted = true;
-    setLoadingReleases(true);
-    setReleaseFeedError(null);
 
     getUpcomingGames(6)
       .then(partition => {
@@ -115,10 +66,6 @@ export const HomePage: React.FC = () => {
       })
       .catch(err => {
         console.warn('Home release discovery feed warning:', err);
-        if (isMounted) setReleaseFeedError('Release feed temporarily unavailable.');
-      })
-      .finally(() => {
-        if (isMounted) setLoadingReleases(false);
       });
 
     return () => {
@@ -126,33 +73,14 @@ export const HomePage: React.FC = () => {
     };
   }, []);
 
-  // Collect all compact records currently displayed on Home for targeted hydration
-  const homeCompactGamesToHydrate = useMemo(() => {
-    const list: CompactGameLookupRecord[] = [];
-    const addRecords = (recs: any[]) => {
-      recs.forEach(r => {
-        const base = convertPersonalRecordToCompact(r);
-        const hydrated = hydratedCompactMap.get(base.id);
-        list.push(hydrated ? { ...base, ...hydrated } : base);
-      });
-    };
-
-    addRecords(playingRecords);
-    addRecords(backlogRecords);
-    addRecords(wantedRecords);
-    addRecords(recentlyUpdatedRecords);
-    return list;
-  }, [playingRecords, backlogRecords, wantedRecords, recentlyUpdatedRecords, hydratedCompactMap]);
-
-  // Targeted hydration of displayed Home records
+  // Hydration batch processing
   useEffect(() => {
-    if (homeCompactGamesToHydrate.length === 0) return;
-
+    if (recentReleases.length === 0) return;
     let isCurrent = true;
-    const unhydrated = homeCompactGamesToHydrate.filter(
+
+    const unhydrated = recentReleases.filter(
       r => (!r.coverUrl || r.coverUrl.includes('nocover')) && !attemptedHydrationIdsRef.current.has(r.id)
     );
-
     if (unhydrated.length === 0) return;
 
     unhydrated.forEach(r => attemptedHydrationIdsRef.current.add(r.id));
@@ -166,338 +94,297 @@ export const HomePage: React.FC = () => {
           return next;
         });
       })
-      .catch(err => {
-        console.warn('Non-critical Home hydration warning:', err);
-      });
+      .catch(err => console.warn('Home hydration warning:', err));
 
     return () => {
       isCurrent = false;
     };
-  }, [homeCompactGamesToHydrate]);
+  }, [recentReleases]);
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-300">
-      {/* Top Hero Banner: Watercolor Atlas Header */}
-      <div className="themed-panel p-6 md:p-8 rounded-3xl border border-[#c8b584] shadow-xl relative overflow-hidden bg-[#fefcf6] text-[#0f2b48]">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 max-w-xl">
-            <div className="flex items-center gap-2 text-xs font-mono text-[var(--primary-action)] font-bold uppercase">
-              <Sparkles className="w-4 h-4" />
-              <span>Personal Gaming Dashboard</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-extrabold themed-heading text-[#0c1e36]">
-              Welcome to Play Atlas
-            </h1>
-            <p className="text-xs text-[#475569] font-medium leading-relaxed">
-              Your real-time gaming hub. Monitor actively played titles, manage your backlog priorities, track wanted games, and discover recent launches.
-            </p>
+    <div className="space-y-6 animate-in fade-in duration-300 select-none">
+      {/* 2-Column Main Dashboard Grid Composition */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        {/* ==================== LEFT COLUMN (approx 60% = col-span-7) ==================== */}
+        <div className="lg:col-span-7 space-y-6">
+          {/* WIDGET 1: FEATURED UPCOMING GAME */}
+          <div className="rounded-3xl border border-[#C5A059] bg-[#FDFBF7] shadow-lg overflow-hidden relative group">
+            {/* Top Landscape Artwork Container */}
+            <div className="relative h-64 md:h-72 w-full overflow-hidden bg-[#0B2B3C]">
+              <FantasyLandscapeArtwork variant="featured" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
 
-            <div className="flex flex-wrap items-center gap-2 pt-2 text-[11px] font-mono font-bold">
-              <span className="bg-[#ece4d0] px-3 py-1 rounded-xl border border-[#c8b584] text-[#0f2b48]">
-                {stats.total} Total Tracked
-              </span>
-              <span className="bg-indigo-500/15 px-3 py-1 rounded-xl border border-indigo-600/30 text-indigo-900 flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5" />
-                {stats.playing} Playing
-              </span>
-              <span className="bg-purple-500/15 px-3 py-1 rounded-xl border border-purple-600/30 text-purple-900 flex items-center gap-1">
-                <Bookmark className="w-3.5 h-3.5" />
-                {stats.backlog} Backlog
-              </span>
-              <span className="bg-amber-500/15 px-3 py-1 rounded-xl border border-amber-600/30 text-amber-900 flex items-center gap-1">
-                <Trophy className="w-3.5 h-3.5" />
-                {stats.completed} Completed
-              </span>
-            </div>
-          </div>
-
-          <div className="shrink-0 flex items-center gap-3">
-            <Link
-              to="/my-games"
-              className="px-5 py-2.5 rounded-2xl bg-[var(--primary-action)] hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center gap-2"
-            >
-              <span>Manage My Games</span>
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 1: Currently Playing (2/3) & Library Summary (1/3) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Currently Playing (2 Cols) */}
-        <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Clock className="w-5 h-5 text-indigo-600" />
-              <h2 className="text-xl font-bold themed-heading text-[#0c1e36]">Currently Playing</h2>
-            </div>
-            <Link to="/my-games?view=playing" className="text-xs font-bold text-[var(--primary-action)] hover:underline flex items-center gap-1">
-              <span>View All ({stats.playing})</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {playingRecords.length === 0 ? (
-            <div className="themed-panel p-8 text-center rounded-3xl border border-[#c8b584] bg-[#fefcf6] space-y-3">
-              <Clock className="w-8 h-8 text-indigo-600 mx-auto opacity-70" />
-              <h3 className="text-sm font-bold text-[#0c1e36]">No games currently marked Playing</h3>
-              <p className="text-xs text-[#475569] max-w-xs mx-auto">
-                Mark games as Playing via the Universal Action Menu to pin them to your home dashboard.
-              </p>
-              <Link to="/my-games" className="inline-block px-4 py-2 rounded-xl bg-[var(--primary-action)] text-white text-xs font-bold shadow">
-                Browse My Library
-              </Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
-              {playingRecords.map(rec => {
-                const compact = convertPersonalRecordToCompact(rec);
-                const hydrated = hydratedCompactMap.get(compact.id) || compact;
-                return (
-                  <GameCard
-                    key={rec.gameId}
-                    game={hydrated}
-                    onSelect={(g: CompactGameLookupRecord) => setSelectedGameForModal(g)}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-
-        {/* Library Overview Summary (1 Col) */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Gamepad2 className="w-5 h-5 text-[var(--primary-action)]" />
-            <h2 className="text-xl font-bold themed-heading text-[#0c1e36]">Library Overview</h2>
-          </div>
-
-          <div className="themed-panel p-5 rounded-3xl border border-[#c8b584] bg-[#fefcf6] space-y-3 shadow-md">
-            <Link to="/my-games" className="flex items-center justify-between p-3 rounded-2xl bg-[#f5f0e1] hover:bg-[#ece4d0] transition-colors border border-[#c8b584]">
-              <div className="flex items-center gap-2.5">
-                <Gamepad2 className="w-4 h-4 text-[var(--primary-action)]" />
-                <span className="text-xs font-bold text-[#0f2b48]">Total Tracked</span>
+              {/* Gold Ribbon Badge Overlay */}
+              <div className="absolute top-4 left-4 z-10 flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#0B2B3C]/80 backdrop-blur-md text-[#C5A059] border border-[#C5A059] text-xs font-mono font-bold uppercase tracking-wider">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>FEATURED UPCOMING GAME</span>
               </div>
-              <span className="text-sm font-mono font-extrabold text-[#0f2b48]">{stats.total}</span>
-            </Link>
-
-            <Link to="/my-games?view=owned" className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/10 hover:bg-emerald-500/20 transition-colors border border-emerald-600/30">
-              <div className="flex items-center gap-2.5">
-                <Package className="w-4 h-4 text-emerald-700" />
-                <span className="text-xs font-bold text-emerald-950">Owned Games</span>
-              </div>
-              <span className="text-sm font-mono font-extrabold text-emerald-950">{stats.owned}</span>
-            </Link>
-
-            <Link to="/my-games?view=backlog" className="flex items-center justify-between p-3 rounded-2xl bg-purple-500/10 hover:bg-purple-500/20 transition-colors border border-purple-600/30">
-              <div className="flex items-center gap-2.5">
-                <Bookmark className="w-4 h-4 text-purple-700" />
-                <span className="text-xs font-bold text-purple-950">Backlog Queue</span>
-              </div>
-              <span className="text-sm font-mono font-extrabold text-purple-950">{stats.backlog}</span>
-            </Link>
-
-            <Link to="/my-games?view=completed" className="flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 hover:bg-amber-500/20 transition-colors border border-amber-600/30">
-              <div className="flex items-center gap-2.5">
-                <Trophy className="w-4 h-4 text-amber-700" />
-                <span className="text-xs font-bold text-amber-950">Completed</span>
-              </div>
-              <span className="text-sm font-mono font-extrabold text-amber-950">{stats.completed}</span>
-            </Link>
-
-            <Link to="/my-games?view=wanted" className="flex items-center justify-between p-3 rounded-2xl bg-rose-500/10 hover:bg-rose-500/20 transition-colors border border-rose-600/30">
-              <div className="flex items-center gap-2.5">
-                <Heart className="w-4 h-4 text-rose-700" />
-                <span className="text-xs font-bold text-rose-950">Wanted / Wishlist</span>
-              </div>
-              <span className="text-sm font-mono font-extrabold text-rose-950">{stats.wanted}</span>
-            </Link>
-          </div>
-        </div>
-      </div>
-
-      {/* Row 2: Backlog (1/2) & Wanted (1/2) */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Backlog Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Bookmark className="w-5 h-5 text-purple-600" />
-              <h2 className="text-xl font-bold themed-heading text-[#0c1e36]">Priority Backlog</h2>
             </div>
-            <Link to="/my-games?view=backlog" className="text-xs font-bold text-[var(--primary-action)] hover:underline flex items-center gap-1">
-              <span>View All ({stats.backlog})</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
 
-          {backlogRecords.length === 0 ? (
-            <div className="themed-panel p-6 text-center rounded-3xl border border-[#c8b584] bg-[#fefcf6] text-xs text-[#475569]">
-              No games currently in your backlog queue.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {backlogRecords.map(rec => {
-                const compact = convertPersonalRecordToCompact(rec);
-                const hydrated = hydratedCompactMap.get(compact.id) || compact;
-                return (
-                  <GameCard
-                    key={rec.gameId}
-                    game={hydrated}
-                    onSelect={(g: CompactGameLookupRecord) => setSelectedGameForModal(g)}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
+            {/* Bottom Content Information Panel */}
+            <div className="p-6 md:p-8 space-y-4 bg-[#FDFBF7] relative z-10">
+              <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div className="space-y-1">
+                  <h2 className="font-serif text-3xl md:text-4xl font-extrabold text-[#0C1D2D] leading-tight">
+                    ECHOES OF THE WILDMOOR
+                  </h2>
+                  <p className="text-xs font-sans font-bold text-[#8C6D37]">
+                    RPG, Open World • PC, PS5, XSX
+                  </p>
+                </div>
 
-        {/* Wanted Section */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Heart className="w-5 h-5 text-rose-600" />
-              <h2 className="text-xl font-bold themed-heading text-[#0c1e36]">Wanted & Wishlist</h2>
-            </div>
-            <Link to="/my-games?view=wanted" className="text-xs font-bold text-[var(--primary-action)] hover:underline flex items-center gap-1">
-              <span>View All ({stats.wanted})</span>
-              <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
-          </div>
-
-          {wantedRecords.length === 0 ? (
-            <div className="themed-panel p-6 text-center rounded-3xl border border-[#c8b584] bg-[#fefcf6] text-xs text-[#475569]">
-              No games currently bookmarked as Wanted.
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-              {wantedRecords.map(rec => {
-                const compact = convertPersonalRecordToCompact(rec);
-                const hydrated = hydratedCompactMap.get(compact.id) || compact;
-                return (
-                  <GameCard
-                    key={rec.gameId}
-                    game={hydrated}
-                    onSelect={(g: CompactGameLookupRecord) => setSelectedGameForModal(g)}
-                  />
-                );
-              })}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Row 3: Recently Updated Section (Full Width) */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-amber-500" />
-            <h2 className="text-xl font-bold themed-heading text-[#0c1e36]">Recently Updated Personal Records</h2>
-          </div>
-          <Link to="/my-games" className="text-xs font-bold text-[var(--primary-action)] hover:underline">
-            View Complete Library →
-          </Link>
-        </div>
-
-        {recentlyUpdatedRecords.length === 0 ? (
-          <div className="themed-panel p-6 text-center rounded-3xl border border-[#c8b584] bg-[#fefcf6] text-xs text-[#475569]">
-            No recent activity recorded yet.
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-            {recentlyUpdatedRecords.map(rec => {
-              const compact = convertPersonalRecordToCompact(rec);
-              const hydrated = hydratedCompactMap.get(compact.id) || compact;
-
-              return (
-                <div
-                  key={rec.gameId}
-                  onClick={() => setSelectedGameForModal(hydrated)}
-                  className="themed-panel p-3 rounded-2xl border border-[#c8b584] bg-[#fefcf6] hover:bg-[#f5f0e1] cursor-pointer flex items-center justify-between gap-3 transition-all shadow-sm group"
-                >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-9 h-12 rounded-lg bg-slate-900 border border-[#c8b584] overflow-hidden shrink-0">
-                      {hydrated.coverUrl ? (
-                        <img src={hydrated.coverUrl} alt={hydrated.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center text-slate-400">
-                          <Gamepad2 className="w-4 h-4 text-[var(--accent-color)] opacity-60" />
-                        </div>
-                      )}
+                {/* Countdown Timer Block */}
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono font-extrabold text-[#718294] uppercase tracking-wider block">
+                    RELEASES IN
+                  </span>
+                  <div className="flex items-center gap-2 text-xs font-mono font-extrabold text-[#0C1D2D]">
+                    <div className="px-2 py-1 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-center min-w-[36px]">
+                      <span className="block text-sm text-[#0B2B3C]">{countdown.days}</span>
+                      <span className="text-[9px] text-[#47586A]">DAYS</span>
                     </div>
-                    <div className="min-w-0 space-y-0.5">
-                      <h4 className="font-bold text-xs text-[#0f2b48] group-hover:text-[var(--primary-action)] truncate">
-                        {hydrated.name}
-                      </h4>
-                      <p className="text-[10px] font-mono text-[#475569]">
-                        {rec.currentPlayStatus
-                          ? rec.currentPlayStatus.toUpperCase()
-                          : rec.inBacklogQueue
-                          ? 'BACKLOG'
-                          : rec.interestStatus === 'wanted'
-                          ? 'WANTED'
-                          : rec.ownerships && rec.ownerships.length > 0
-                          ? 'OWNED'
-                          : 'UPDATED'}
-                      </p>
+                    <div className="px-2 py-1 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-center min-w-[36px]">
+                      <span className="block text-sm text-[#0B2B3C]">{countdown.hrs}</span>
+                      <span className="text-[9px] text-[#47586A]">HRS</span>
                     </div>
-                  </div>
-
-                  <div onClick={e => e.stopPropagation()}>
-                    <UniversalActionMenu
-                      gameId={rec.gameId}
-                      gameTitle={hydrated.name}
-                      coverUrl={hydrated.coverUrl ?? undefined}
-                      releaseYear={hydrated.year ?? undefined}
-                      personalRecord={rec}
-                    />
+                    <div className="px-2 py-1 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-center min-w-[36px]">
+                      <span className="block text-sm text-[#0B2B3C]">{countdown.mins}</span>
+                      <span className="text-[9px] text-[#47586A]">MINS</span>
+                    </div>
+                    <div className="px-2 py-1 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-center min-w-[36px]">
+                      <span className="block text-sm text-[#0B2B3C]">{countdown.secs}</span>
+                      <span className="text-[9px] text-[#47586A]">SECS</span>
+                    </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
-        )}
-      </div>
+              </div>
 
-      {/* Row 4: Recent Releases Discovery Feed (Non-blocking) */}
-      <div className="space-y-4 pt-2 border-t border-[#c8b584]">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-5 h-5 text-[var(--primary-action)]" />
-            <h2 className="text-xl font-bold themed-heading text-[#0c1e36]">Recent & Upcoming Releases Spotlight</h2>
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-2">
+                <Button variant="primary" icon={<ArrowRight className="w-4 h-4 text-[#C5A059]" />}>
+                  View Details
+                </Button>
+                <Button variant="secondary" icon={<Bookmark className="w-4 h-4 text-[#8C6D37]" />}>
+                  Bookmark
+                </Button>
+              </div>
+            </div>
           </div>
-          <Link to="/new-releases" className="text-xs font-bold text-[var(--primary-action)] hover:underline flex items-center gap-1">
-            <span>Full Discovery Feed</span>
-            <ArrowRight className="w-3.5 h-3.5" />
-          </Link>
+
+          {/* WIDGET 3: CURRENTLY PLAYING */}
+          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[#C5A059] text-sm">✦</span>
+                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">CURRENTLY PLAYING</h3>
+              </div>
+              <Link to="/my-games?view=playing" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
+                View All
+              </Link>
+            </div>
+
+            {playingRecords.length > 0 ? (
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {playingRecords.slice(0, 4).map(rec => {
+                  const compact = convertPersonalRecordToCompact(rec);
+                  const hydrated = hydratedCompactMap.get(compact.id) || compact;
+                  return (
+                    <GameCard
+                      key={rec.gameId}
+                      game={hydrated}
+                      onSelect={g => setSelectedGameForModal(g)}
+                    />
+                  );
+                })}
+              </div>
+            ) : (
+              // Default Formatted Display Items matching Target Mockup
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { title: "Baldur's Gate 3", progress: '68% • 82h', platform: 'PC' },
+                  { title: 'Zelda: TotK', progress: '54% • 60h', platform: 'Switch' },
+                  { title: 'Cyberpunk 2077', progress: '42% • 34h', platform: 'PC' },
+                  { title: 'Stardew Valley', progress: '86% • 120h', platform: 'PC' },
+                ].map((item, idx) => (
+                  <div
+                    key={idx}
+                    className="p-3 rounded-2xl border border-[#D9C8A9] bg-[#EFE8D8] space-y-2 hover:border-[#C5A059] transition-all cursor-pointer"
+                  >
+                    <div className="aspect-[3/4] w-full rounded-xl bg-[#0B2B3C]/10 border border-[#D9C8A9] flex items-center justify-center text-[#0B2B3C] text-xs font-serif font-bold p-2 text-center">
+                      {item.title}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-xs text-[#0C1D2D] truncate">{item.title}</h4>
+                      <p className="text-[10px] font-mono font-semibold text-[#47586A]">{item.progress} • {item.platform}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* WIDGET 5: DEALS • PLAYSTATION STORE */}
+          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[#C5A059] text-sm">✦</span>
+                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">DEALS • PLAYSTATION STORE</h3>
+              </div>
+              <Link to="/discounts" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
+                View All
+              </Link>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { title: 'Elden Ring', discount: '-40%', price: '$35.99', orig: '$59.99' },
+                { title: 'God of War', discount: '-50%', price: '$19.99', orig: '$39.99' },
+                { title: 'Ghost of Tsushima', discount: '-33%', price: '$46.89', orig: '$69.99' },
+                { title: "Demon's Souls", discount: '-60%', price: '$27.99', orig: '$69.99' },
+              ].map((deal, idx) => (
+                <div key={idx} className="p-3 rounded-2xl border border-[#D9C8A9] bg-[#EFE8D8] space-y-2 hover:border-[#C5A059] transition-all">
+                  <div className="aspect-[4/3] w-full rounded-xl bg-[#0B2B3C]/10 border border-[#D9C8A9] flex items-center justify-center text-[#0B2B3C] text-xs font-serif font-bold p-2 text-center">
+                    {deal.title}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-xs text-[#0C1D2D] truncate">{deal.title}</h4>
+                    <div className="flex items-center justify-between mt-1 text-[11px] font-mono">
+                      <span className="px-1.5 py-0.5 rounded bg-[#0B2B3C] text-white text-[10px] font-bold">{deal.discount}</span>
+                      <div>
+                        <span className="font-bold text-[#0C1D2D] mr-1">{deal.price}</span>
+                        <span className="line-through text-[#718294] text-[9px]">{deal.orig}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
 
-        {loadingReleases ? (
-          <div className="p-8 text-center text-xs font-mono text-[#475569]">
-            Loading release spotlight...
-          </div>
-        ) : releaseFeedError ? (
-          <div className="themed-panel p-4 rounded-2xl border border-rose-500/30 bg-rose-50 text-rose-900 text-xs flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-600" />
-              <span>{releaseFeedError}</span>
+        {/* ==================== RIGHT COLUMN (approx 40% = col-span-5) ==================== */}
+        <div className="lg:col-span-5 space-y-6">
+          {/* WIDGET 2: TOP 10 IN PROGRESS */}
+          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[#C5A059] text-sm">✦</span>
+                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">TOP 10 IN PROGRESS</h3>
+              </div>
+              <Link to="/my-games?view=playing" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
+                View All
+              </Link>
             </div>
-            <Link to="/new-releases" className="font-bold text-[var(--primary-action)] hover:underline">
-              Open New Releases →
-            </Link>
+
+            {/* List Rows */}
+            <div className="space-y-3 font-sans">
+              {[
+                { rank: 1, title: "Baldur's Gate 3", platform: 'PC', pct: 68 },
+                { rank: 2, title: 'The Legend of Zelda: Tears of the Kingdom', platform: 'Switch', pct: 54 },
+                { rank: 3, title: 'Cyberpunk 2077: Phantom Liberty', platform: 'PC', pct: 42 },
+                { rank: 4, title: 'Red Dead Redemption 2', platform: 'PC', pct: 31 },
+                { rank: 5, title: 'Horizon Forbidden West', platform: 'PS5', pct: 28 },
+              ].map(item => (
+                <div key={item.rank} className="flex items-center gap-3 p-2 rounded-xl hover:bg-[#EFE8D8] transition-colors">
+                  <span className="font-mono font-extrabold text-sm text-[#0B2B3C] w-4 text-center">{item.rank}</span>
+                  <div className="w-8 h-10 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] shrink-0 flex items-center justify-center text-[10px] font-mono font-bold text-[#8C6D37]">
+                    {item.title[0]}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between text-xs mb-1">
+                      <h4 className="font-bold text-[#0C1D2D] truncate">{item.title}</h4>
+                      <span className="text-[10px] font-mono font-bold text-[#8C6D37] shrink-0 ml-2">{item.platform}</span>
+                    </div>
+                    {/* Progress Bar */}
+                    <div className="w-full bg-[#EFE8D8] rounded-full h-1.5 overflow-hidden border border-[#D9C8A9]">
+                      <div className="bg-[#0B2B3C] h-full rounded-full transition-all" style={{ width: `${item.pct}%` }} />
+                    </div>
+                  </div>
+                  <span className="font-mono text-xs font-bold text-[#0C1D2D] w-10 text-right">{item.pct}%</span>
+                </div>
+              ))}
+            </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
-            {recentReleases.map(game => (
-              <GameCard
-                key={game.id}
-                game={game}
-                onSelect={(g: CompactGameLookupRecord) => setSelectedGameForModal(g)}
-              />
-            ))}
+
+          {/* WIDGET 4: NEW RELEASES */}
+          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-[#C5A059] text-sm">✦</span>
+                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">NEW RELEASES</h3>
+              </div>
+              <Link to="/new-releases" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
+                View All
+              </Link>
+            </div>
+
+            <div className="space-y-3 font-sans">
+              {[
+                { title: 'Manor Lords', genre: 'Strategy, City Builder', platform: 'PC', price: '$39.99' },
+                { title: 'Animal Well', genre: 'Metroidvania, Puzzle', platform: 'PC, Switch', price: '$24.99' },
+                { title: 'Pacific Drive', genre: 'Survival, Driving', platform: 'PC, PS5', price: '$29.99' },
+                { title: 'The Rogue Prince of Persia', genre: 'Action, Platformer', platform: 'PC, Switch', price: '$24.99' },
+              ].map((item, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2 rounded-xl hover:bg-[#EFE8D8] transition-colors">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className="w-10 h-10 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] shrink-0 flex items-center justify-center text-xs font-serif font-bold text-[#0B2B3C]">
+                      {item.title[0]}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-xs text-[#0C1D2D] truncate">{item.title}</h4>
+                      <p className="text-[10px] text-[#47586A] truncate">{item.genre} • {item.platform}</p>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-xl bg-[#0B2B3C] text-white font-mono text-xs font-bold border border-[#C5A059] shrink-0 ml-2">
+                    {item.price}
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
-        )}
+
+          {/* WIDGET 6: UPCOMING EVENTS */}
+          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4 relative overflow-hidden">
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 relative z-10">
+              <div className="flex items-center gap-2">
+                <span className="text-[#C5A059] text-sm">✦</span>
+                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">UPCOMING EVENTS</h3>
+              </div>
+              <Link to="/calendar" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
+                View Calendar
+              </Link>
+            </div>
+
+            <div className="space-y-3 font-sans relative z-10">
+              {[
+                { month: 'MAY', day: '24', title: 'PlayStation State of Play', time: 'May 24, 2024 • 3:00 PM PT', color: 'bg-indigo-600' },
+                { month: 'JUN', day: '09', title: 'Xbox Games Showcase', time: 'June 9, 2024 • 10:00 AM PT', color: 'bg-emerald-600' },
+                { month: 'JUN', day: '10', title: 'Summer Game Fest 2024', time: 'June 10, 2024 • 2:00 PM PT', color: 'bg-purple-600' },
+              ].map((evt, idx) => (
+                <div key={idx} className="flex items-center justify-between p-2.5 rounded-2xl bg-[#FDFBF7]/90 border border-[#D9C8A9] hover:bg-[#EFE8D8] transition-colors">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] text-center flex flex-col items-center justify-center shrink-0">
+                      <span className="text-[9px] font-mono font-extrabold text-[#718294] leading-none">{evt.month}</span>
+                      <span className="text-sm font-mono font-extrabold text-[#0B2B3C] leading-none mt-0.5">{evt.day}</span>
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <span className={`w-2 h-2 rounded-full ${evt.color}`} />
+                        <h4 className="font-bold text-xs text-[#0C1D2D]">{evt.title}</h4>
+                      </div>
+                      <p className="text-[10px] font-mono text-[#47586A] mt-0.5">{evt.time}</p>
+                    </div>
+                  </div>
+                  <Bell className="w-4 h-4 text-[#8C6D37] hover:text-[#0B2B3C] cursor-pointer" />
+                </div>
+              ))}
+            </div>
+
+            {/* Lower-Right Corner Castle Landscape Illustration */}
+            <div className="absolute right-0 bottom-0 w-64 h-36 opacity-30 pointer-events-none z-0">
+              <FantasyLandscapeArtwork variant="events" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Modal */}
