@@ -78,8 +78,8 @@
   --focus-ring: var(--atlas-focus-ring);
   --shadow-style: var(--atlas-shadow-md);
   --border-radius: var(--atlas-radius-lg);
-  --paper-texture-url: url('/branding/watercolor-parchment-base.webp');
-  --paper-texture-opacity: 0.85;
+  --paper-texture-url: url('/branding/watercolor-paper-grain.svg');
+  --paper-texture-opacity: 0.35;
   --atlas-line-opacity: 0.35;
 }
 

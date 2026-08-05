@@ -28,7 +28,7 @@ export const DevThemeShowcasePage: React.FC = () => {
             Dev Preview
           </span>
           <span className="font-semibold text-amber-100">
-            Play Atlas Standalone Theme Showcase (Batch 1 Parity)
+            Play Atlas Standalone Theme Showcase (Batch 1 Visual Parity)
           </span>
         </div>
         <div className="flex items-center gap-4">
@@ -80,14 +80,14 @@ export const DevThemeShowcasePage: React.FC = () => {
           <div className="space-y-6">
             {/* Play Atlas Branding Logo */}
             <div className="flex items-center gap-3 pb-4 border-b border-[#D9C8A9]/60">
-              <div className="w-10 h-10 rounded-full bg-[#0B2B3C] border-2 border-[#C5A059] flex items-center justify-center text-[#C5A059] shadow-md font-serif font-bold text-lg select-none flex-shrink-0">
+              <div className="w-11 h-11 rounded-full bg-[#0B2B3C] border-2 border-[#C5A059] flex items-center justify-center text-[#C5A059] shadow-md font-serif font-bold text-xl select-none flex-shrink-0">
                 ✦
               </div>
               <div>
                 <h1 className="font-serif text-2xl font-bold tracking-wide text-[#0C1D2D] leading-none">
                   Play Atlas
                 </h1>
-                <span className="text-[10px] uppercase font-semibold text-[#8C6D37] tracking-widest block mt-0.5">
+                <span className="text-[10px] uppercase font-semibold text-[#8C6D37] tracking-widest block mt-1">
                   Cartographic Hub
                 </span>
               </div>
@@ -262,21 +262,22 @@ export const DevThemeShowcasePage: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
                 {/* Featured Upcoming Game (7 Cols) */}
                 <div className="lg:col-span-7">
-                  <AtlasPanel variant="featured" cornerOrnaments className="h-full flex flex-col justify-between space-y-4">
+                  <AtlasPanel variant="featured" cornerOrnaments className="h-full flex flex-col justify-between space-y-4 bg-[#FDFBF5] border border-[#C5A059] shadow-sm">
                     <div className="flex justify-between items-start">
-                      <span className="text-xs font-serif font-bold uppercase tracking-wider text-[#8C6D37]">
-                        ✦ FEATURED UPCOMING GAME
+                      <span className="text-xs font-serif font-bold uppercase tracking-wider text-[#8C6D37] flex items-center gap-1">
+                        <span>✦</span> FEATURED UPCOMING GAME
                       </span>
-                      <span className="bg-[#0B2B3C] text-[#C5A059] p-1.5 rounded text-xs">✦</span>
+                      <span className="bg-[#0B2B3C] text-[#C5A059] p-1.5 rounded text-xs shadow-sm">✦</span>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-4 items-center">
-                      {/* Mountain / Citadel Fantasy Artwork Graphic */}
-                      <div className="sm:col-span-5 h-44 rounded-lg bg-gradient-to-br from-[#1E6B80] via-[#145063] to-[#0B2B3C] border border-[#C5A059]/50 flex flex-col items-center justify-center text-white p-4 text-center shadow-md">
-                        <span className="text-4xl mb-1">🏰</span>
-                        <span className="font-serif text-base font-bold text-[#EBD99F]">Wildmoor Citadel</span>
-                        <span className="text-[10px] opacity-80 mt-1 uppercase tracking-widest text-[#EBD99F]/80">
-                          Cartographic Wash
+                    <div className="grid grid-cols-1 sm:grid-cols-12 gap-5 items-center">
+                      {/* Original Dedicated Fantasy Watercolor Landscape Graphic */}
+                      <div className="sm:col-span-5 h-48 rounded-lg bg-gradient-to-br from-[#E2D8C3] via-[#C9BBA0] to-[#A8987B] border border-[#C5A059]/60 flex flex-col items-center justify-center text-[#0C1D2D] p-4 text-center shadow-inner relative overflow-hidden">
+                        <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-amber-100/40 via-transparent to-black/10 pointer-events-none" />
+                        <span className="text-4xl mb-1 text-[#0B2B3C] z-10">🏰</span>
+                        <span className="font-serif text-lg font-bold text-[#0C1D2D] z-10">Wildmoor Citadel</span>
+                        <span className="text-[10px] uppercase font-semibold tracking-widest text-[#8C6D37] mt-1 z-10">
+                          Cartographic Scenery
                         </span>
                       </div>
 
@@ -288,25 +289,25 @@ export const DevThemeShowcasePage: React.FC = () => {
                         <p className="text-xs text-[#47586A] font-sans">RPG, Open World • PC, PS5, XSX</p>
 
                         <div className="pt-1">
-                          <span className="text-[10px] font-mono uppercase tracking-widest text-[#8C6D37] block mb-1 font-bold">
+                          <span className="text-[10px] font-mono uppercase tracking-widest text-[#8C6D37] block mb-1.5 font-bold">
                             RELEASES IN
                           </span>
                           <div className="grid grid-cols-4 gap-2 text-center font-sans">
-                            <div className="bg-[#EFE8D8] border border-[#D9C8A9] p-1.5 rounded">
+                            <div className="bg-[#EFE8D8] border border-[#D9C8A9] p-1.5 rounded shadow-xs">
                               <div className="font-serif font-bold text-base text-[#0C1D2D]">23</div>
-                              <div className="text-[9px] uppercase text-[#47586A]">DAYS</div>
+                              <div className="text-[9px] uppercase font-semibold text-[#47586A]">DAYS</div>
                             </div>
-                            <div className="bg-[#EFE8D8] border border-[#D9C8A9] p-1.5 rounded">
+                            <div className="bg-[#EFE8D8] border border-[#D9C8A9] p-1.5 rounded shadow-xs">
                               <div className="font-serif font-bold text-base text-[#0C1D2D]">14</div>
-                              <div className="text-[9px] uppercase text-[#47586A]">HRS</div>
+                              <div className="text-[9px] uppercase font-semibold text-[#47586A]">HRS</div>
                             </div>
-                            <div className="bg-[#EFE8D8] border border-[#D9C8A9] p-1.5 rounded">
+                            <div className="bg-[#EFE8D8] border border-[#D9C8A9] p-1.5 rounded shadow-xs">
                               <div className="font-serif font-bold text-base text-[#0C1D2D]">37</div>
-                              <div className="text-[9px] uppercase text-[#47586A]">MINS</div>
+                              <div className="text-[9px] uppercase font-semibold text-[#47586A]">MINS</div>
                             </div>
-                            <div className="bg-[#EFE8D8] border border-[#D9C8A9] p-1.5 rounded">
+                            <div className="bg-[#EFE8D8] border border-[#D9C8A9] p-1.5 rounded shadow-xs">
                               <div className="font-serif font-bold text-base text-[#0C1D2D]">52</div>
-                              <div className="text-[9px] uppercase text-[#47586A]">SECS</div>
+                              <div className="text-[9px] uppercase font-semibold text-[#47586A]">SECS</div>
                             </div>
                           </div>
                         </div>
@@ -326,7 +327,7 @@ export const DevThemeShowcasePage: React.FC = () => {
 
                 {/* Top 10 In Progress (5 Cols) */}
                 <div className="lg:col-span-5">
-                  <AtlasPanel variant="raised" className="h-full space-y-4">
+                  <AtlasPanel variant="raised" className="h-full space-y-4 bg-[#FFFFFF] border border-[#C5A059] shadow-sm">
                     <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/60">
                       <span className="font-serif font-bold text-sm uppercase tracking-wider text-[#0C1D2D] flex items-center gap-1.5">
                         <span className="text-[#C5A059]">✦</span> TOP 10 IN PROGRESS
@@ -336,22 +337,30 @@ export const DevThemeShowcasePage: React.FC = () => {
 
                     <div className="space-y-3 font-sans">
                       {[
-                        { rank: 1, name: "Baldur's Gate 3", platform: 'PC', pct: 68 },
-                        { rank: 2, name: 'The Legend of Zelda: Tears of the Kingdom', platform: 'Switch', pct: 54 },
-                        { rank: 3, name: 'Cyberpunk 2077: Phantom Liberty', platform: 'PC', pct: 42 },
-                        { rank: 4, name: 'Red Dead Redemption 2', platform: 'PC', pct: 31 },
-                        { rank: 5, name: 'Horizon Forbidden West', platform: 'PS5', pct: 28 },
+                        { rank: 1, name: "Baldur's Gate 3", platform: 'PC', pct: 68, icon: '⚔️' },
+                        { rank: 2, name: 'The Legend of Zelda: Tears of the Kingdom', platform: 'Switch', icon: '🛡️', pct: 54 },
+                        { rank: 3, name: 'Cyberpunk 2077: Phantom Liberty', platform: 'PC', icon: '🏙️', pct: 42 },
+                        { rank: 4, name: 'Red Dead Redemption 2', platform: 'PC', icon: '🤠', pct: 31 },
+                        { rank: 5, name: 'Horizon Forbidden West', platform: 'PS5', icon: '🏹', pct: 28 },
                       ].map((game) => (
-                        <div key={game.rank} className="flex items-center gap-3 text-xs">
-                          <span className="font-serif font-bold text-sm text-[#8C6D37] w-3 text-center flex-shrink-0">
+                        <div key={game.rank} className="flex items-center gap-3 text-xs p-1.5 rounded hover:bg-[#FDFBF7] transition-colors">
+                          <span className="font-serif font-bold text-sm text-[#8C6D37] w-4 text-center flex-shrink-0">
                             {game.rank}
                           </span>
+                          <div className="w-7 h-7 rounded bg-[#EFE8D8] border border-[#D9C8A9] flex items-center justify-center text-xs flex-shrink-0">
+                            {game.icon}
+                          </div>
                           <div className="flex-1 min-w-0">
                             <div className="flex justify-between items-baseline mb-1 gap-2">
                               <span className="font-semibold text-[#0C1D2D] truncate">
                                 {game.name}
                               </span>
-                              <AtlasBadge variant="default" className="flex-shrink-0">{game.platform}</AtlasBadge>
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                <AtlasBadge variant="default">{game.platform}</AtlasBadge>
+                                <span className="font-mono text-[11px] font-bold text-[#0B2B3C] w-7 text-right">
+                                  {game.pct}%
+                                </span>
+                              </div>
                             </div>
                             <AtlasProgressBar value={game.pct} />
                           </div>
@@ -366,8 +375,8 @@ export const DevThemeShowcasePage: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
                 {/* Currently Playing Cards (7 Cols) */}
                 <div className="lg:col-span-7">
-                  <AtlasPanel variant="standard" className="space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/40">
+                  <AtlasPanel variant="standard" className="space-y-4 bg-[#FDFBF7] border border-[#D9C8A9] shadow-sm">
+                    <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/60">
                       <span className="font-serif font-bold text-sm uppercase tracking-wider text-[#0C1D2D] flex items-center gap-1.5">
                         <span className="text-[#C5A059]">✦</span> CURRENTLY PLAYING
                       </span>
@@ -376,19 +385,19 @@ export const DevThemeShowcasePage: React.FC = () => {
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
-                        { title: "Baldur's Gate 3", stat: '68% • 82h', tag: 'PC', color: 'from-[#0B2B3C] to-[#1E6B80]' },
-                        { title: 'Zelda: TotK', stat: '54% • 60h', tag: 'Switch', color: 'from-[#145063] to-[#0F4C5C]' },
-                        { title: 'Cyberpunk 2077', stat: '42% • 34h', tag: 'PC', color: 'from-[#0B2B3C] to-[#145063]' },
-                        { title: 'Stardew Valley', stat: '86% • 120h', tag: 'PC', color: 'from-[#2B6E4E] to-[#0B2B3C]' },
+                        { title: "Baldur's Gate 3", stat: '68% • 82h', tag: 'PC', icon: '⚔️', gradient: 'from-[#D9C8A9] to-[#B8A785]' },
+                        { title: 'Zelda: TotK', stat: '54% • 60h', tag: 'Switch', icon: '🗡️', gradient: 'from-[#C5D5C5] to-[#9EB89E]' },
+                        { title: 'Cyberpunk 2077', stat: '42% • 34h', tag: 'PC', icon: '🌃', gradient: 'from-[#B5D5E2] to-[#88B5C7]' },
+                        { title: 'Stardew Valley', stat: '86% • 120h', tag: 'PC', icon: '🌾', gradient: 'from-[#E2D8B5] to-[#C7B588]' },
                       ].map((item) => (
-                        <div key={item.title} className="atlas-surface-raised p-2 rounded-lg space-y-2 border border-[#D9C8A9] flex flex-col justify-between">
-                          <div className={`h-28 rounded bg-gradient-to-b ${item.color} flex flex-col items-center justify-center text-white text-xs font-serif font-bold p-2 text-center shadow-inner`}>
-                            <span className="text-2xl mb-1">⚔️</span>
-                            <span>{item.title}</span>
+                        <div key={item.title} className="bg-[#FFFFFF] p-2.5 rounded-lg space-y-2 border border-[#D9C8A9] flex flex-col justify-between shadow-xs">
+                          <div className={`h-28 rounded-md bg-gradient-to-br ${item.gradient} border border-[#C5A059]/40 flex flex-col items-center justify-center text-[#0C1D2D] text-xs font-serif font-bold p-2 text-center shadow-inner`}>
+                            <span className="text-2xl mb-1">{item.icon}</span>
+                            <span className="leading-tight">{item.title}</span>
                           </div>
                           <div>
                             <h4 className="font-bold text-xs truncate text-[#0C1D2D]">{item.title}</h4>
-                            <div className="flex justify-between items-center text-[10px] text-[#47586A] mt-1">
+                            <div className="flex justify-between items-center text-[10px] text-[#47586A] mt-1 font-sans">
                               <span>{item.stat}</span>
                               <AtlasBadge variant="default">{item.tag}</AtlasBadge>
                             </div>
@@ -401,25 +410,30 @@ export const DevThemeShowcasePage: React.FC = () => {
 
                 {/* New Releases List (5 Cols) */}
                 <div className="lg:col-span-5">
-                  <AtlasPanel variant="standard" className="space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/40">
+                  <AtlasPanel variant="standard" className="space-y-4 bg-[#FDFBF7] border border-[#D9C8A9] shadow-sm">
+                    <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/60">
                       <span className="font-serif font-bold text-sm uppercase tracking-wider text-[#0C1D2D] flex items-center gap-1.5">
                         <span className="text-[#C5A059]">✦</span> NEW RELEASES
                       </span>
                       <span className="text-xs text-[#0F4C5C] font-semibold cursor-pointer hover:underline">View All</span>
                     </div>
 
-                    <div className="space-y-3 font-sans">
+                    <div className="space-y-2.5 font-sans">
                       {[
-                        { name: 'Manor Lords', desc: 'Strategy, City Builder', platforms: 'PC', price: '$39.99' },
-                        { name: 'Animal Well', desc: 'Metroidvania, Puzzle', platforms: 'PC, Switch', price: '$24.99' },
-                        { name: 'Pacific Drive', desc: 'Survival, Driving', platforms: 'PC, PS5', price: '$29.99' },
-                        { name: 'The Rogue Prince of Persia', desc: 'Action, Platformer', platforms: 'PC, Switch', price: '$24.99' },
+                        { name: 'Manor Lords', desc: 'Strategy, City Builder', platforms: 'PC', price: '$39.99', icon: '🏰' },
+                        { name: 'Animal Well', desc: 'Metroidvania, Puzzle', platforms: 'PC, Switch', price: '$24.99', icon: '🐸' },
+                        { name: 'Pacific Drive', desc: 'Survival, Driving', platforms: 'PC, PS5', price: '$29.99', icon: '🚗' },
+                        { name: 'The Rogue Prince of Persia', desc: 'Action, Platformer', platforms: 'PC, Switch', price: '$24.99', icon: '🗡️' },
                       ].map((release) => (
-                        <div key={release.name} className="flex items-center justify-between p-2.5 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] text-xs">
-                          <div>
-                            <h5 className="font-bold text-[#0C1D2D]">{release.name}</h5>
-                            <p className="text-[10px] text-[#47586A]">{release.desc} • {release.platforms}</p>
+                        <div key={release.name} className="flex items-center justify-between p-2.5 rounded-lg bg-[#FFFFFF] border border-[#D9C8A9]/70 text-xs shadow-xs">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded bg-[#EFE8D8] border border-[#D9C8A9] flex items-center justify-center text-sm flex-shrink-0">
+                              {release.icon}
+                            </div>
+                            <div>
+                              <h5 className="font-bold text-[#0C1D2D]">{release.name}</h5>
+                              <p className="text-[10px] text-[#47586A]">{release.desc} • {release.platforms}</p>
+                            </div>
                           </div>
                           <AtlasButton variant="primary" size="sm">
                             {release.price}
@@ -435,8 +449,8 @@ export const DevThemeShowcasePage: React.FC = () => {
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full">
                 {/* PlayStation Store Deals (7 Cols) */}
                 <div className="lg:col-span-7">
-                  <AtlasPanel variant="standard" className="space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/40">
+                  <AtlasPanel variant="standard" className="space-y-4 bg-[#FDFBF7] border border-[#D9C8A9] shadow-sm">
+                    <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/60">
                       <span className="font-serif font-bold text-sm uppercase tracking-wider text-[#0C1D2D] flex items-center gap-1.5">
                         <span className="text-[#C5A059]">✦</span> DEALS • PLAYSTATION STORE
                       </span>
@@ -445,21 +459,24 @@ export const DevThemeShowcasePage: React.FC = () => {
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {[
-                        { name: 'Elden Ring', off: '-40%', price: '$35.99', orig: '$59.99' },
-                        { name: 'God of War', off: '-50%', price: '$19.99', orig: '$39.99' },
-                        { name: 'Ghost of Tsushima', off: '-33%', price: '$46.89', orig: '$69.99' },
-                        { name: "Demon's Souls", off: '-60%', price: '$27.99', orig: '$69.99' },
+                        { name: 'Elden Ring', off: '-40%', price: '$35.99', orig: '$59.99', icon: '💍' },
+                        { name: 'God of War', off: '-50%', price: '$19.99', orig: '$39.99', icon: '🪓' },
+                        { name: 'Ghost of Tsushima', off: '-33%', price: '$46.89', orig: '$69.99', icon: '🌸' },
+                        { name: "Demon's Souls", off: '-60%', price: '$27.99', orig: '$69.99', icon: '👻' },
                       ].map((deal) => (
-                        <div key={deal.name} className="atlas-surface-raised p-2 rounded-lg space-y-2 border border-[#D9C8A9] flex flex-col justify-between">
-                          <div className="h-24 rounded bg-gradient-to-br from-[#0B2B3C] to-[#1E6B80] text-white flex flex-col items-center justify-center text-xs font-serif font-bold p-2 text-center shadow-inner">
-                            <span className="text-xl mb-1">🏷️</span>
-                            <span>{deal.name}</span>
+                        <div key={deal.name} className="bg-[#FFFFFF] p-2.5 rounded-lg space-y-2 border border-[#D9C8A9] flex flex-col justify-between shadow-xs">
+                          <div className="h-24 rounded-md bg-gradient-to-br from-[#EFE8D8] to-[#D9C8A9] border border-[#C5A059]/40 text-[#0C1D2D] flex flex-col items-center justify-center text-xs font-serif font-bold p-2 text-center shadow-inner">
+                            <span className="text-2xl mb-1">{deal.icon}</span>
+                            <span className="leading-tight">{deal.name}</span>
                           </div>
                           <div>
                             <h5 className="font-bold text-xs truncate text-[#0C1D2D]">{deal.name}</h5>
-                            <div className="flex items-center justify-between mt-1">
+                            <div className="flex items-center justify-between mt-1 font-sans">
                               <AtlasBadge variant="discount">{deal.off}</AtlasBadge>
-                              <span className="font-serif font-bold text-xs text-[#0F4C5C]">{deal.price}</span>
+                              <div className="text-right">
+                                <span className="font-serif font-bold text-xs text-[#0F4C5C] block">{deal.price}</span>
+                                <span className="line-through text-[9px] text-[#718294] block">{deal.orig}</span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -470,29 +487,32 @@ export const DevThemeShowcasePage: React.FC = () => {
 
                 {/* Upcoming Events Calendar (5 Cols) */}
                 <div className="lg:col-span-5">
-                  <AtlasPanel variant="featured" cornerOrnaments className="space-y-4">
-                    <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/40">
+                  <AtlasPanel variant="featured" cornerOrnaments className="space-y-4 bg-[#FDFBF5] border border-[#C5A059] shadow-sm">
+                    <div className="flex justify-between items-center pb-2 border-b border-[#D9C8A9]/60">
                       <span className="font-serif font-bold text-sm uppercase tracking-wider text-[#0C1D2D] flex items-center gap-1.5">
                         <span className="text-[#C5A059]">✦</span> UPCOMING EVENTS
                       </span>
                       <span className="text-xs text-[#0F4C5C] font-semibold cursor-pointer hover:underline">View Calendar</span>
                     </div>
 
-                    <div className="space-y-3 font-sans">
+                    <div className="space-y-2.5 font-sans">
                       {[
                         { title: 'PlayStation State of Play', month: 'MAY', day: '24', time: 'May 24, 2024 • 3:00 PM PT' },
                         { title: 'Xbox Games Showcase', month: 'JUN', day: '09', time: 'June 9, 2024 • 10:00 AM PT' },
                         { title: 'Summer Game Fest 2024', month: 'JUN', day: '10', time: 'June 10, 2024 • 2:00 PM PT' },
                       ].map((evt) => (
-                        <div key={evt.title} className="flex items-center gap-3 p-2.5 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9]">
-                          <div className="bg-[#0B2B3C] text-white px-2.5 py-1 rounded text-center font-serif font-bold flex-shrink-0">
-                            <div className="text-[9px] uppercase text-[#EBD99F]">{evt.month}</div>
-                            <div className="text-base leading-none">{evt.day}</div>
+                        <div key={evt.title} className="flex items-center justify-between p-2.5 rounded-lg bg-[#FFFFFF] border border-[#D9C8A9]/70 text-xs shadow-xs">
+                          <div className="flex items-center gap-3">
+                            <div className="bg-[#0B2B3C] text-white px-2.5 py-1 rounded text-center font-serif font-bold flex-shrink-0 shadow-xs">
+                              <div className="text-[9px] uppercase text-[#EBD99F] font-semibold">{evt.month}</div>
+                              <div className="text-base leading-none">{evt.day}</div>
+                            </div>
+                            <div>
+                              <h5 className="font-bold text-[#0C1D2D]">{evt.title}</h5>
+                              <p className="text-[10px] text-[#47586A]">{evt.time}</p>
+                            </div>
                           </div>
-                          <div>
-                            <h5 className="font-bold text-xs text-[#0C1D2D]">{evt.title}</h5>
-                            <p className="text-[10px] text-[#47586A]">{evt.time}</p>
-                          </div>
+                          <span className="text-sm text-[#8C6D37] cursor-pointer hover:text-[#0B2B3C]">🔔</span>
                         </div>
                       ))}
                     </div>

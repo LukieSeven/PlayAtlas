@@ -4,16 +4,16 @@
  * Verifies key contract requirements:
  *   1. The development showcase root is present.
  *   2. The production AppLayout/sidebar is NOT mounted.
- *   3. No old production screenshot background is present.
- *   4. Main dashboard uses the available desktop width.
- *   5. The primary parchment canvas and widget surfaces are opaque.
+ *   3. No forbidden production screenshot URL appears in computed background styles.
+ *   4. Main widget surfaces are opaque and light parchment (#FDFBF7 / #FFFFFF / #FDFBF5).
+ *   5. Main dashboard uses the available desktop width.
  *   6. The showcase sidebar is visible at desktop width.
  *   7. No horizontal page overflow exists at narrow viewport (390px).
  */
 import { test, expect } from '@playwright/test';
 
 test.describe('DevThemeShowcase Isolated Preview', () => {
-  test('renders standalone showcase without production AppLayout or card bleed-through', async ({ page }) => {
+  test('renders standalone showcase with clean light parchment widgets and zero old screenshot bleed-through', async ({ page }) => {
     await page.setViewportSize({ width: 1280, height: 900 });
     await page.goto('/#/dev-theme-showcase');
     await page.waitForLoadState('domcontentloaded');
@@ -37,14 +37,22 @@ test.describe('DevThemeShowcase Isolated Preview', () => {
     const workspace = page.locator('[data-testid="showcase-main-workspace"]');
     await expect(workspace).toBeVisible();
 
-    const bgColor = await showcaseRoot.evaluate((el) => getComputedStyle(el).backgroundColor);
-    expect(bgColor).toMatch(/rgb\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*\)/);
+    // 5. Check computed background-image of showcase root and widgets to ensure no forbidden screenshot URLs
+    const bgImages = await page.evaluate(() => {
+      const els = Array.from(document.querySelectorAll('[data-testid="showcase-main-workspace"] *'));
+      return els.map((el) => getComputedStyle(el).backgroundImage).filter((bg) => bg && bg !== 'none');
+    });
 
-    // 5. Featured game widget is mounted and readable
+    for (const bg of bgImages) {
+      expect(bg).not.toContain('watercolor-parchment-base.webp');
+      expect(bg).not.toContain('play-atlas-watercolor-logo.jpg');
+    }
+
+    // 6. Featured game widget is mounted and readable on clean light parchment
     await expect(page.locator('text=ECHOES OF THE WILDMOOR')).toBeVisible();
     await expect(page.locator('text=Wildmoor Citadel')).toBeVisible();
 
-    // 6. Verify main workspace utilizes desktop width (width > 900px)
+    // 7. Verify main workspace utilizes desktop width (width > 800px)
     const workspaceBox = await workspace.boundingBox();
     expect(workspaceBox).not.toBeNull();
     if (workspaceBox) {

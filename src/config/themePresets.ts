@@ -22,8 +22,8 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     // Official Parchment Paper, Forest Landmass & Atlas Text System
     paperBase: '#f7f4ea',
     paperHighlight: '#fefcf5',
-    paperTextureUrl: '/branding/watercolor-parchment-base.webp',
-    paperTextureOpacity: 0.85,
+    paperTextureUrl: '/branding/watercolor-paper-grain.svg',
+    paperTextureOpacity: 0.35,
     paperGrainOpacity: 0.35,
     washBlue: '#2b7a94',
     washTeal: '#1b5e75',
