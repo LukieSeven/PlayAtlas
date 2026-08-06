@@ -112,3 +112,33 @@ export function calculateCatalogImportance(record: Pick<CompactGameLookupRecord,
     - (rank.isVersion ? 8 : 0)
   );
 }
+
+/**
+ * Ranks unreleased discovery records without consulting any rating value or
+ * rating count. Pre-release scores remain display data only; demonstrated
+ * audience interest and record legitimacy drive discovery order.
+ */
+export function calculateUnreleasedPopularityWeight(
+  record: Pick<CompactGameLookupRecord, 'gameType' | 'defaultVisible' | 'rank'>,
+): number {
+  const rank = record.rank;
+  if (!rank) return 0;
+
+  const anticipation = Math.log1p(boundedCount(rank.hypeCount));
+  const legitimacy = Math.log1p(boundedCount(rank.externalProductCount)) * 0.35
+    + (rank.hasFranchise ? 0.3 : 0)
+    + (rank.hasCollection ? 0.2 : 0);
+  const reach = Math.log1p(boundedCount(rank.platformCount));
+  const confidence = (rank.metadataConfidence ?? 0) / 100;
+  const typeWeight = getContentTypeWeight(record.gameType);
+
+  return (
+    anticipation * 120
+    + legitimacy * 25
+    + reach * 5
+    + confidence * 15
+    + typeWeight * 25
+    + (record.defaultVisible ? 10 : 0)
+    - (rank.isVersion ? 15 : 0)
+  );
+}

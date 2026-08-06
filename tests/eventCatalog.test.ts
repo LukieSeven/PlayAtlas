@@ -1,5 +1,6 @@
 import { normalizeIgdbEvent } from '../scripts/build-igdb-events';
 import { eventsWithinRange, getEventsForMonth } from '../src/services/eventCatalogService';
+import fs from 'node:fs';
 
 let passed = 0;
 let failed = 0;
@@ -23,6 +24,11 @@ const catalog = [event!];
 assert(eventsWithinRange(catalog, new Date('2026-08-01T00:00:00Z'), new Date('2026-08-31T23:59:59Z')).length === 1, 'range filtering includes overlapping events');
 assert(getEventsForMonth(catalog, 2026, 8).length === 1, 'calendar month filtering includes the event in its local month');
 assert(getEventsForMonth(catalog, 2026, 9).length === 0, 'calendar month filtering excludes other months');
+
+const importerSource = fs.readFileSync(new URL('../scripts/build-igdb-events.ts', import.meta.url), 'utf8');
+assert(importerSource.includes('/v4/events/count'), 'importer requests the authoritative IGDB event count');
+assert(importerSource.includes('offset ${offset}'), 'importer paginates rather than assuming one Events response is complete');
+assert(importerSource.includes('Date.UTC(now.getUTCFullYear(), 0, 1)'), 'importer retains the current calendar year instead of only 31 recent days');
 
 console.log(`IGDB Events results: ${passed} passed, ${failed} failed.`);
 if (failed) process.exit(1);

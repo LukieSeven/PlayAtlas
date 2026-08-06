@@ -41,18 +41,33 @@ async function run() {
   const { access_token: token } = await tokenResponse.json() as { access_token?: string };
   if (!token) throw new Error('Twitch authentication returned no access token.');
 
-  const earliest = Math.floor(Date.now() / 1000) - 31 * 86_400;
-  const response = await fetch('https://api.igdb.com/v4/events', {
+  const now = new Date();
+  const earliest = Math.floor(Date.UTC(now.getUTCFullYear(), 0, 1) / 1000);
+  const headers = { 'Client-ID': clientId, Authorization: `Bearer ${token}`, 'Content-Type': 'text/plain', Accept: 'application/json' };
+  const countResponse = await fetch('https://api.igdb.com/v4/events/count', {
     method: 'POST',
-    headers: { 'Client-ID': clientId, Authorization: `Bearer ${token}`, 'Content-Type': 'text/plain', Accept: 'application/json' },
-    body: `fields id,name,slug,description,start_time,end_time,time_zone,live_stream_url,event_logo.image_id,event_networks.url,event_networks.network_type,games; where start_time >= ${earliest}; sort start_time asc; limit 500;`,
+    headers,
+    body: `where start_time >= ${earliest};`,
   });
-  if (!response.ok) throw new Error(`IGDB events request failed: HTTP ${response.status} ${await response.text()}`);
-  const events = ((await response.json()) as any[]).map(normalizeIgdbEvent).filter((event): event is CatalogEvent => event !== null);
+  if (!countResponse.ok) throw new Error(`IGDB events count request failed: HTTP ${countResponse.status} ${await countResponse.text()}`);
+  const { count = 0 } = await countResponse.json() as { count?: number };
+
+  const rawEvents: any[] = [];
+  for (let offset = 0; offset < count; offset += 500) {
+    const response = await fetch('https://api.igdb.com/v4/events', {
+      method: 'POST',
+      headers,
+      body: `fields id,name,slug,description,start_time,end_time,time_zone,live_stream_url,event_logo.image_id,event_networks.url,event_networks.network_type,games; where start_time >= ${earliest}; sort start_time asc; limit 500; offset ${offset};`,
+    });
+    if (!response.ok) throw new Error(`IGDB events request failed at offset ${offset}: HTTP ${response.status} ${await response.text()}`);
+    rawEvents.push(...await response.json() as any[]);
+  }
+
+  const events = rawEvents.map(normalizeIgdbEvent).filter((event): event is CatalogEvent => event !== null);
   const manifest: EventsCatalogManifest = { schemaVersion: 1, generatedAt: new Date().toISOString(), source: 'igdb', eventCount: events.length, events };
   await fs.mkdir(outputDir, { recursive: true });
   await fs.writeFile(path.join(outputDir, 'events.json'), `${JSON.stringify(manifest, null, 2)}\n`, 'utf8');
-  console.log(`Published ${events.length} IGDB events to ${path.join(outputDir, 'events.json')}`);
+  console.log(`IGDB reported ${count} dated events from ${now.getUTCFullYear()} onward; normalized and published ${events.length} to ${path.join(outputDir, 'events.json')}`);
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) run().catch(error => { console.error(error); process.exitCode = 1; });

@@ -23,6 +23,8 @@ console.log('Running Home Widget Service Tests...');
 const listDefaults = createDefaultWidgetConfiguration('list:favorites', 'Favorites');
 assert(listDefaults.display.presentation === 'list', 'Saved lists default to list presentation');
 assert(listDefaults.display.itemLimit === 6, 'Widgets receive a bounded default item count');
+assert(createDefaultWidgetConfiguration('releases', 'New Releases').display.itemLimit === 10, 'New Releases defaults to ten items');
+assert(createDefaultWidgetConfiguration('upcoming', 'Major Upcoming Games').display.itemLimit === 10, 'Major Upcoming Games defaults to ten items');
 
 const customized = {
   ...listDefaults,

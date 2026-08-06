@@ -4,7 +4,7 @@ import { GameItem } from '../types/game';
 import { CompactGameLookupRecord, CompactRankSignals } from '../types/catalog';
 import { openIndexedDB } from './indexDbStorage';
 import { getDevelopmentCatalogPlugin } from './developmentCatalogPlugin';
-import { calculateCatalogImportance } from '../utils/catalogRanking';
+import { calculateUnreleasedPopularityWeight } from '../utils/catalogRanking';
 
 export interface CompactPlatformReleaseDate {
   p: number; // platform ID
@@ -338,7 +338,7 @@ export function sortReleaseRecordsChronologically(
 }
 
 export function calculateUpcomingDiscoveryScore(record: ReleaseListingRecord, todayStr: string): number {
-  const popularity = calculateCatalogImportance(convertReleaseRecordToCompactRecord(record));
+  const unreleasedPopularity = calculateUnreleasedPopularityWeight(convertReleaseRecordToCompactRecord(record));
   const releaseTime = record.firstReleaseDate ? parseYMDLocal(record.firstReleaseDate).getTime() : Number.POSITIVE_INFINITY;
   const todayTime = parseYMDLocal(todayStr).getTime();
   const daysUntilRelease = Number.isFinite(releaseTime)
@@ -348,7 +348,7 @@ export function calculateUpcomingDiscoveryScore(record: ReleaseListingRecord, to
 
   // This establishes only the feed's default relevance order. User-selected
   // grid filters and sort modes continue to operate on top of that feed.
-  return popularity * 12 + proximityBonus;
+  return unreleasedPopularity + proximityBonus;
 }
 
 export function sortUpcomingReleaseRecordsByPopularity(

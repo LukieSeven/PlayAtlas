@@ -1,6 +1,7 @@
 import {
   getDynamicLocalDate,
   calculateDynamicDateRange,
+  calculateUpcomingDiscoveryScore,
   convertReleaseRecordToGameItem,
   fetchReleaseManifest,
   getReleaseMonthKeys,
@@ -158,6 +159,52 @@ async function runReleaseCatalogRegressionTests() {
     },
   ] as any, '2026-08-06');
   assertEqual(popularitySorted[0].sourceId, 1, 'Upcoming default relevance heavily favors major popular games over obscure nearer releases');
+
+  const anticipationSorted = sortUpcomingReleaseRecordsByPopularity([
+    {
+      ...sampleRecord,
+      id: 'igdb:10',
+      sourceId: 10,
+      name: 'Nearby Small-Sample Game',
+      firstReleaseDate: '2026-08-17',
+      rank: { totalRating: 7.6, totalRatingCount: 10, userRating: 7.6, userRatingCount: 10, hypeCount: 5, metadataConfidence: 100, externalProductCount: 5 },
+    },
+    {
+      ...sampleRecord,
+      id: 'igdb:11',
+      sourceId: 11,
+      name: 'Farther Highly Anticipated Game',
+      firstReleaseDate: '2026-11-19',
+      rank: { totalRatingCount: 0, userRatingCount: 0, hypeCount: 977, metadataConfidence: 100, externalProductCount: 1, hasFranchise: true, hasCollection: true },
+    },
+  ], '2026-08-06');
+  assertEqual(anticipationSorted[0].sourceId, 11, 'Upcoming hype outweighs a tiny pre-release rating sample and proximity bonus');
+
+  const unratedScore = calculateUpcomingDiscoveryScore({
+    ...sampleRecord,
+    id: 'igdb:20',
+    sourceId: 20,
+    firstReleaseDate: '2026-10-01',
+    rank: { hypeCount: 50, metadataConfidence: 90, externalProductCount: 2 },
+  }, '2026-08-06');
+  const earlyRatedScore = calculateUpcomingDiscoveryScore({
+    ...sampleRecord,
+    id: 'igdb:20',
+    sourceId: 20,
+    firstReleaseDate: '2026-10-01',
+    rank: {
+      hypeCount: 50,
+      metadataConfidence: 90,
+      externalProductCount: 2,
+      userRating: 10,
+      userRatingCount: 100000,
+      criticRating: 10,
+      criticRatingCount: 100000,
+      totalRating: 10,
+      totalRatingCount: 100000,
+    },
+  }, '2026-08-06');
+  assertEqual(earlyRatedScore, unratedScore, 'Unreleased popularity completely ignores displayed early rating values and counts');
 
   // 5. Release Manifest Path & Fallback URL Verification
   const originalFetch = globalThis.fetch;

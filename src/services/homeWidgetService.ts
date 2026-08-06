@@ -11,6 +11,7 @@ const presentationByWidget: Record<string, HomeWidgetPresentation> = {
   playing: 'grid',
   progress: 'list',
   releases: 'list',
+  upcoming: 'list',
 };
 
 export function createDefaultWidgetConfiguration(id: string, title: string): HomeWidgetConfiguration {
@@ -19,7 +20,7 @@ export function createDefaultWidgetConfiguration(id: string, title: string): Hom
     source: id.startsWith('list:') ? id : `system:${id}`,
     display: {
       presentation: id.startsWith('list:') ? 'list' : (presentationByWidget[id] || 'list'),
-      itemLimit: id === 'featured' ? 1 : 6,
+      itemLimit: id === 'featured' ? 1 : (id === 'releases' || id === 'upcoming' ? 10 : 6),
       showArtwork: true,
       showRating: true,
       showPlatforms: true,

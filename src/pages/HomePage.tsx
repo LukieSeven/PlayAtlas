@@ -23,7 +23,9 @@ import { GameCard } from '../components/common/GameCard';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
 import { FantasyLandscapeArtwork } from '../components/ui/FantasyLandscapeArtwork';
 import { Button } from '../components/ui/Button';
-import { getUpcomingGames, convertReleaseRecordToCompactRecord } from '../services/releaseCatalogService';
+import { getNewReleases, getUpcomingGames, convertReleaseRecordToCompactRecord } from '../services/releaseCatalogService';
+import { getEventsCatalog } from '../services/eventCatalogService';
+import type { CatalogEvent } from '../types/events';
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
 import { loadUserLists } from '../services/userListService';
 import { UserGameList } from '../types/userList';
@@ -36,35 +38,39 @@ import { loadHomeWidgetConfigurations, resolveWidgetConfiguration, saveHomeWidge
 import { PERSONAL_GAME_BUCKETS, PersonalGameBucketId } from '../types/gameSource';
 import { compactGamesForBucket } from '../services/gameSourceService';
 
-type SystemHomeWidgetId = 'featured' | 'playing' | 'deals' | 'progress' | 'releases' | 'events';
+type SystemHomeWidgetId = 'featured' | 'playing' | 'deals' | 'progress' | 'releases' | 'upcoming' | 'events';
 type HomeWidgetId = SystemHomeWidgetId | `list:${string}` | `bucket:${PersonalGameBucketId}`;
 type HomeWidgetWidth = 'half' | 'full';
 
 interface HomeWidgetPreferences {
+  schemaVersion: 2;
   visible: HomeWidgetId[];
   widths: Record<string, HomeWidgetWidth>;
 }
 
 const HOME_WIDGET_STORAGE_KEY = 'playatlas_home_widgets_v1';
-const HOME_WIDGET_IDS: SystemHomeWidgetId[] = ['featured', 'playing', 'deals', 'progress', 'releases', 'events'];
+const HOME_WIDGET_IDS: SystemHomeWidgetId[] = ['featured', 'playing', 'deals', 'progress', 'releases', 'upcoming', 'events'];
 const HOME_WIDGET_LABELS: Record<SystemHomeWidgetId, string> = {
   featured: 'Featured Upcoming Game',
   playing: 'Currently Playing',
   deals: 'Discounts & Deals',
   progress: 'Top Games In Progress',
   releases: 'New Releases',
+  upcoming: 'Major Upcoming Games',
   events: 'Upcoming Events',
 };
 const DEFAULT_HOME_WIDGETS: HomeWidgetPreferences = {
   // A fresh Home is public-catalog driven. Personal buckets and lists are
   // available in the widget store only after the user explicitly adds them.
-  visible: ['featured', 'releases', 'deals', 'events'],
+  schemaVersion: 2,
+  visible: ['featured', 'upcoming', 'releases', 'deals', 'events'],
   widths: {
     featured: 'half',
     playing: 'half',
     deals: 'half',
     progress: 'half',
     releases: 'half',
+    upcoming: 'half',
     events: 'half',
   },
 };
@@ -85,10 +91,16 @@ const loadHomeWidgetPreferences = (lists: UserGameList[]): HomeWidgetPreferences
     if (!saved) return DEFAULT_HOME_WIDGETS;
     const parsed = JSON.parse(saved) as Partial<HomeWidgetPreferences>;
     const availableIds: HomeWidgetId[] = [...HOME_WIDGET_IDS, ...PERSONAL_GAME_BUCKETS.map(bucket => `bucket:${bucket.id}` as HomeWidgetId), ...lists.map(list => getListWidgetId(list.id))];
-    const savedOrder = Array.isArray(parsed.visible)
+    let savedOrder = Array.isArray(parsed.visible)
       ? parsed.visible.filter((id, index): id is HomeWidgetId => availableIds.includes(id as HomeWidgetId) && parsed.visible?.indexOf(id) === index)
       : DEFAULT_HOME_WIDGETS.visible;
+    if (parsed.schemaVersion !== 2 && !savedOrder.includes('upcoming')) {
+      const featuredIndex = savedOrder.indexOf('featured');
+      savedOrder = [...savedOrder];
+      savedOrder.splice(featuredIndex >= 0 ? featuredIndex + 1 : 0, 0, 'upcoming');
+    }
     return {
+      schemaVersion: 2,
       visible: savedOrder,
       widths: { ...DEFAULT_HOME_WIDGETS.widths, ...parsed.widths },
     };
@@ -155,6 +167,8 @@ export const HomePage: React.FC = () => {
 
   // Release Feed catalog state (Real catalog data)
   const [recentReleases, setRecentReleases] = useState<CompactGameLookupRecord[]>([]);
+  const [upcomingGames, setUpcomingGames] = useState<CompactGameLookupRecord[]>([]);
+  const [catalogEvents, setCatalogEvents] = useState<CatalogEvent[]>([]);
 
   // Hydration state for displayed compact records
   const [hydratedCompactMap, setHydratedCompactMap] = useState<Map<number, CompactGameLookupRecord>>(new Map());
@@ -196,17 +210,25 @@ export const HomePage: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
 
-    getUpcomingGames(6)
-      .then(partition => {
+    Promise.all([getNewReleases(10), getUpcomingGames(10)])
+      .then(([recentPartition, upcomingPartition]) => {
         if (!isMounted) return;
-        const mapped: CompactGameLookupRecord[] = partition.items.map(item =>
+        const recentMapped: CompactGameLookupRecord[] = recentPartition.items.map(item =>
           convertReleaseRecordToCompactRecord(item.record)
         );
-        setRecentReleases(mapped.filter(game => !yuckedIds.has(game.id)));
+        const upcomingMapped: CompactGameLookupRecord[] = upcomingPartition.items.map(item =>
+          convertReleaseRecordToCompactRecord(item.record)
+        );
+        setRecentReleases(recentMapped.filter(game => !yuckedIds.has(game.id)));
+        setUpcomingGames(upcomingMapped.filter(game => !yuckedIds.has(game.id)));
       })
       .catch(err => {
         console.warn('Home release discovery feed warning:', err);
       });
+
+    getEventsCatalog()
+      .then(events => { if (isMounted) setCatalogEvents(events); })
+      .catch(err => { if (isMounted) console.warn('Home events feed warning:', err); });
 
     return () => {
       isMounted = false;
@@ -215,10 +237,11 @@ export const HomePage: React.FC = () => {
 
   // Hydrate displayed records
   useEffect(() => {
-    if (recentReleases.length === 0) return;
+    const homeCatalogGames = [...recentReleases, ...upcomingGames];
+    if (homeCatalogGames.length === 0) return;
     let isCurrent = true;
 
-    const unhydrated = recentReleases.filter(
+    const unhydrated = homeCatalogGames.filter(
       r => (!r.coverUrl || r.coverUrl.includes('nocover')) && !attemptedHydrationIdsRef.current.has(r.id)
     );
     if (unhydrated.length === 0) return;
@@ -239,7 +262,7 @@ export const HomePage: React.FC = () => {
     return () => {
       isCurrent = false;
     };
-  }, [recentReleases]);
+  }, [recentReleases, upcomingGames]);
 
   useEffect(() => {
     let isCurrent = true;
@@ -261,7 +284,11 @@ export const HomePage: React.FC = () => {
   }, [userLists]);
 
   // Featured Game derived from real catalog if available
-  const realFeaturedGame = recentReleases.length > 0 ? recentReleases[0] : null;
+  const realFeaturedGame = upcomingGames.length > 0 ? upcomingGames[0] : null;
+  const upcomingEvents = useMemo(() => {
+    const now = Date.now();
+    return catalogEvents.filter(event => new Date(event.endTime || event.startTime).getTime() >= now).slice(0, 4);
+  }, [catalogEvents]);
 
   const updateWidgetPreferences = (updater: (current: HomeWidgetPreferences) => HomeWidgetPreferences) => {
     setWidgetPreferences(current => {
@@ -274,6 +301,7 @@ export const HomePage: React.FC = () => {
   const toggleWidgetWidth = (id: HomeWidgetId) => {
     updateWidgetPreferences(current => ({
       ...current,
+      schemaVersion: 2,
       widths: {
         ...current.widths,
         [id]: current.widths[id] === 'full' ? 'half' : 'full',
@@ -284,6 +312,7 @@ export const HomePage: React.FC = () => {
   const removeWidget = (id: HomeWidgetId) => {
     updateWidgetPreferences(current => ({
       ...current,
+      schemaVersion: 2,
       visible: current.visible.filter(widgetId => widgetId !== id),
     }));
   };
@@ -291,6 +320,7 @@ export const HomePage: React.FC = () => {
   const restoreWidget = (id: HomeWidgetId) => {
     updateWidgetPreferences(current => ({
       ...current,
+      schemaVersion: 2,
       visible: current.visible.includes(id) ? current.visible : [...current.visible, id],
     }));
     setIsWidgetStoreOpen(false);
@@ -302,6 +332,7 @@ export const HomePage: React.FC = () => {
       return;
     }
     updateWidgetPreferences(current => ({
+      schemaVersion: 2,
       visible: current.visible.map(id => id === editingWidgetId ? replacementId : id),
       widths: {
         ...current.widths,
@@ -329,7 +360,8 @@ export const HomePage: React.FC = () => {
       const listId = source.slice(5);
       return hydratedListGames[listId] || userLists.find(list => list.id === listId)?.entries.map(entry => entry.game) || [];
     }
-    if (source === 'system:releases' || source === 'system:featured') return recentReleases.map(game => hydratedCompactMap.get(game.id) || game);
+    if (source === 'system:releases') return recentReleases.map(game => hydratedCompactMap.get(game.id) || game);
+    if (source === 'system:upcoming' || source === 'system:featured') return upcomingGames.map(game => hydratedCompactMap.get(game.id) || game);
     if (source === 'system:playing') return playingRecords.map(convertPersonalRecordToCompact);
     if (source === 'system:progress') return inProgressRecords.map(convertPersonalRecordToCompact);
     return [];
@@ -619,6 +651,33 @@ export const HomePage: React.FC = () => {
             )}
           </div>}
 
+          {/* MAJOR UPCOMING GAMES */}
+          {widgetPreferences.visible.includes('upcoming') && <div style={{ order: widgetOrder('upcoming') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('upcoming')}`}>
+            <WidgetControls id="upcoming" label={HOME_WIDGET_LABELS.upcoming} width={widgetPreferences.widths.upcoming || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+            {universalOverride('upcoming')}
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
+              <div className="flex items-center gap-2">
+                <span className="text-[#C5A059] text-sm">✦</span>
+                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">MAJOR UPCOMING GAMES</h3>
+              </div>
+              <Link to="/upcoming" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">View All</Link>
+            </div>
+            {upcomingGames.length > 0 ? (
+              <div className="space-y-3 font-sans">
+                {upcomingGames.slice(0, 10).map(game => {
+                  const hydrated = hydratedCompactMap.get(game.id) || game;
+                  return <button key={game.id} type="button" onClick={() => setSelectedGameForModal(hydrated)} className="flex w-full items-center justify-between rounded-xl p-2 text-left transition-colors hover:bg-[#EFE8D8]">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-11 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#D9C8A9] bg-[#EFE8D8] font-serif text-xs font-bold text-[#0B2B3C]">{hydrated.coverUrl ? <img src={hydrated.coverUrl} alt="" className="h-full w-full object-cover" /> : hydrated.name[0]}</span>
+                      <span className="min-w-0"><span className="block truncate text-xs font-bold text-[#0C1D2D]">{hydrated.name}</span><span className="block truncate text-[10px] text-[#47586A]">{hydrated.year || 'TBA'} · {hydrated.platforms?.join(', ') || 'Multi-Platform'}</span></span>
+                    </span>
+                    <span className="ml-2 shrink-0 rounded-lg border border-[#D9C8A9] bg-[#EFE8D8] px-2 py-1 font-mono text-[10px] font-bold text-[#0B2B3C]">View</span>
+                  </button>;
+                })}
+              </div>
+            ) : <div className="rounded-2xl border border-[#D9C8A9] bg-[#EFE8D8] p-6 text-center text-xs text-[#47586A]">Major upcoming releases are temporarily unavailable.</div>}
+          </div>}
+
           {/* WIDGET 6: UPCOMING EVENTS */}
           {widgetPreferences.visible.includes('events') && <div style={{ order: widgetOrder('events') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative overflow-hidden ${widgetGridClass('events')}`}>
             <WidgetControls id="events" label={HOME_WIDGET_LABELS.events} width={widgetPreferences.widths.events || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
@@ -628,19 +687,21 @@ export const HomePage: React.FC = () => {
                 <span className="text-[#C5A059] text-sm">✦</span>
                 <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">UPCOMING EVENTS</h3>
               </div>
-              <Link to="/calendar" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
-                View Calendar
+              <Link to="/events" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
+                View All
               </Link>
             </div>
 
-            {/* Themed Empty State for Upcoming Events Widget */}
-            <div className="p-6 text-center rounded-2xl bg-[#EFE8D8]/80 border border-[#D9C8A9] space-y-2 relative z-10">
+            {upcomingEvents.length > 0 ? <div className="relative z-10 space-y-2">
+              {upcomingEvents.map(event => <Link key={event.id} to="/events" className="flex items-center gap-3 rounded-xl border border-[#D9C8A9] bg-[#FDFBF7]/90 p-2.5 transition-colors hover:bg-[#EFE8D8]">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#D9C8A9] bg-[#EFE8D8]">{event.logoUrl ? <img src={event.logoUrl} alt="" className="h-full w-full object-contain" /> : <Calendar className="h-5 w-5 text-[#0B2B3C]" />}</span>
+                <span className="min-w-0"><span className="block truncate text-xs font-bold text-[#0C1D2D]">{event.name}</span><span className="block text-[10px] font-semibold text-[#8C6D37]">{new Date(event.startTime).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span></span>
+              </Link>)}
+            </div> : <div className="p-6 text-center rounded-2xl bg-[#EFE8D8]/80 border border-[#D9C8A9] space-y-2 relative z-10">
               <Calendar className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
               <h4 className="font-bold text-xs text-[#0C1D2D]">No upcoming gaming events scheduled</h4>
-              <p className="text-xs text-[#47586A] max-w-xs mx-auto">
-                Check the games calendar for upcoming industry showcases, release streams, and gaming expos.
-              </p>
-            </div>
+              <p className="text-xs text-[#47586A] max-w-xs mx-auto">The IGDB Events feed currently has no future-dated entries.</p>
+            </div>}
 
             {/* Lower-Right Corner Castle Landscape Illustration */}
             <div className="absolute right-0 bottom-0 w-64 h-36 opacity-30 pointer-events-none z-0">

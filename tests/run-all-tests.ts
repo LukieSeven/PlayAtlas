@@ -13,6 +13,7 @@ const testFiles = [
   'gameListControls.test.ts',
   'userListService.test.ts',
   'homeWidgetService.test.ts',
+  'homeCatalogWidgets.test.ts',
   'gameSourceService.test.ts',
   'personalCalendarService.test.ts',
   'catalogDetail.test.ts',
