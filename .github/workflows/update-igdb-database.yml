@@ -20,7 +20,59 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  test-importer:
+    if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Run Unit Tests & Search Benchmarks
+        run: npm test
+
+      - name: Run 500-Record Test Importer
+        env:
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+          IGDB_IMPORT_MODE: test
+          IGDB_IMPORT_LIMIT: 500
+        run: npm run build:igdb-test
+
+      - name: Build IGDB Events Feed
+        env:
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+          PLAY_ATLAS_EVENTS_OUTPUT_DIR: public/data/events
+        run: npm run build:igdb-events
+
+      - name: Run Production Build Validation
+        run: npm run build
+
+      - name: Upload Test Database & Build Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: igdb-test-database-${{ github.run_id }}
+          path: |
+            public/data/igdb_index_manifest.json
+            public/data/igdb_index.json
+            public/data/events/events.json
+            dist/
+          retention-days: 14
+
   run-importer-and-deploy:
+    if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation != 'test') }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -45,40 +97,6 @@ jobs:
 
       - name: Run Unit Tests & Search Benchmarks
         run: npm test
-
-      # --- 1. TEST MODE EXECUTION ---
-      - name: Run 500-Record Test Importer
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
-        env:
-          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
-          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
-          IGDB_IMPORT_MODE: test
-          IGDB_IMPORT_LIMIT: 500
-        run: npm run build:igdb-test
-
-      - name: Build IGDB Events Feed (Test Mode)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
-        env:
-          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
-          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
-          PLAY_ATLAS_EVENTS_OUTPUT_DIR: public/data/events
-        run: npm run build:igdb-events
-
-      - name: Run Production Build Validation (Test Mode)
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
-        run: npm run build
-
-      - name: Upload Test Database & Build Artifact
-        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
-        uses: actions/upload-artifact@v6
-        with:
-          name: igdb-test-database-${{ github.run_id }}
-          path: |
-            public/data/igdb_index_manifest.json
-            public/data/igdb_index.json
-            public/data/events/events.json
-            dist/
-          retention-days: 14
 
       # --- 2. FULL CATALOG EXECUTION & RE-BUILD ---
       - name: Run Complete IGDB Catalog Importer
