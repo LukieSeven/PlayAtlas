@@ -5,6 +5,7 @@ import { GameDetailModal } from '../components/widgets/GameDetailModal';
 import { usePersonalGameLibrary } from '../hooks/usePersonalGameLibrary';
 import {
   convertReleaseRecordToCompactRecord,
+  getExactCalendarReleaseDates,
   getReleaseRecordsForMonth,
   ReleaseListingRecord,
 } from '../services/releaseCatalogService';
@@ -69,6 +70,7 @@ export const CalendarPage: React.FC = () => {
 
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
+  const calendarMonthKey = `${year}-${String(month + 1).padStart(2, '0')}`;
 
   useEffect(() => {
     let active = true;
@@ -87,6 +89,7 @@ export const CalendarPage: React.FC = () => {
 
   const filteredReleases = useMemo(() => releases
     .filter(record => {
+      if (getExactCalendarReleaseDates(record, viewType, calendarMonthKey).length === 0) return false;
       if (platform !== 'all' && !record.platforms.some(item => item.name === platform)) return false;
       if (gameType !== 'all' && record.gameType !== gameType) return false;
       if (yuckedIds.has(record.sourceId)) return false;
@@ -95,18 +98,18 @@ export const CalendarPage: React.FC = () => {
     })
     .sort((left, right) => calculateCatalogImportance(convertReleaseRecordToCompactRecord(right)) - calculateCatalogImportance(convertReleaseRecordToCompactRecord(left)))
     .slice(0, maximumGames),
-  [releases, platform, gameType, minimumRating, maximumGames, yuckedIds]);
+  [releases, viewType, calendarMonthKey, platform, gameType, minimumRating, maximumGames, yuckedIds]);
 
   const platformOptions = useMemo(() =>
     Array.from(new Set(releases.flatMap(record => record.platforms.map(item => item.name)))).sort(),
   [releases]);
   const typeOptions = useMemo(() => Array.from(new Set(releases.map(record => record.gameType))).sort(), [releases]);
 
-  const releaseDates = (record: ReleaseListingRecord) => viewType === 'platform_release'
-    ? Array.from(new Set(record.platformReleaseDates
-      .filter(item => item.d.startsWith(`${year}-${String(month + 1).padStart(2, '0')}`))
-      .map(item => item.d)))
-    : record.firstReleaseDate ? [record.firstReleaseDate] : [];
+  const releaseDates = (record: ReleaseListingRecord) => getExactCalendarReleaseDates(
+    record,
+    viewType,
+    calendarMonthKey,
+  );
 
   const releasesByDate = useMemo(() => {
     const map = new Map<string, ReleaseListingRecord[]>();

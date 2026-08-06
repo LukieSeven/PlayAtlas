@@ -82,6 +82,7 @@ export interface CompactGameLookupRecord {
 export interface CompactPlatformReleaseDate {
   p: number; // numeric platform ID
   d: string; // ISO date string
+  f: string; // date precision
 }
 
 export interface ReleaseListingRecord {
@@ -300,7 +301,7 @@ async function runBrowserCatalogBuilder() {
           const pId = prd.platformId || prd.p || (typeof prd.platform === 'number' ? prd.platform : null);
           const dStr = prd.date || prd.d || prd.dateStr || null;
           if (pId && dStr) {
-            compactPlatformReleaseDates.push({ p: pId, d: dStr });
+            compactPlatformReleaseDates.push({ p: pId, d: dStr, f: prd.datePrecision || 'unknown' });
           }
         }
       }

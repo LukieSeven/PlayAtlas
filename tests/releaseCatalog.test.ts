@@ -4,8 +4,10 @@ import {
   convertReleaseRecordToGameItem,
   fetchReleaseManifest,
   getReleaseMonthKeys,
+  getExactCalendarReleaseDates,
   isUnreleasedFirstReleaseWithinRange,
   sortUpcomingReleaseRecordsByPopularity,
+  UPCOMING_DISCOVERY_DAYS,
 } from '../src/services/releaseCatalogService';
 
 async function runReleaseCatalogRegressionTests() {
@@ -65,6 +67,36 @@ async function runReleaseCatalogRegressionTests() {
   assertEqual(augustKeys.partitionKey, '2026/08', 'Calendar uses the published slash-delimited monthly partition key');
   assertEqual(augustKeys.datePrefix, '2026-08', 'Calendar retains ISO date prefixes when filtering release records');
 
+  const calendarDateRecord = {
+    firstReleaseDate: '2026-08-01',
+    firstReleaseDatePrecision: 'month',
+    platformReleaseDates: [
+      { p: 6, d: '2026-08-01', f: 'month' },
+      { p: 48, d: '2026-08-20', f: 'day' },
+      { p: 49, d: '2026-09-02', f: 'day' },
+    ],
+  };
+  assertEqual(
+    getExactCalendarReleaseDates(calendarDateRecord, 'first_release', '2026-08').length,
+    0,
+    'Calendar omits month-only first releases instead of placing them on the first',
+  );
+  assertEqual(
+    getExactCalendarReleaseDates({ ...calendarDateRecord, firstReleaseDatePrecision: 'day' }, 'first_release', '2026-08')[0],
+    '2026-08-01',
+    'Calendar retains explicitly day-precision first releases',
+  );
+  assertEqual(
+    getExactCalendarReleaseDates(calendarDateRecord, 'platform_release', '2026-08').join(','),
+    '2026-08-20',
+    'Calendar includes only exact platform releases inside the selected month',
+  );
+  assertEqual(
+    getExactCalendarReleaseDates({ ...calendarDateRecord, platformReleaseDates: [{ p: 6, d: '2026-08-15' }] }, 'platform_release', '2026-08').length,
+    0,
+    'Calendar treats legacy platform dates without precision as unconfirmed',
+  );
+
   assert(
     isUnreleasedFirstReleaseWithinRange({ firstReleaseDate: '2026-08-20' }, '2026-08-06', '2026-11-04'),
     'Upcoming includes games whose first release is still in the future',
@@ -73,6 +105,13 @@ async function runReleaseCatalogRegressionTests() {
     !isUnreleasedFirstReleaseWithinRange({ firstReleaseDate: '2018-10-26' }, '2026-08-06', '2026-11-04'),
     'Upcoming excludes older games even when they have later platform releases',
   );
+
+  const upcomingRange = calculateDynamicDateRange('upcoming', '2026-08-06');
+  assertEqual(UPCOMING_DISCOVERY_DAYS, 365, 'Upcoming uses a one-year default discovery horizon');
+  assertEqual(upcomingRange.startDate, '2026-08-06', 'Upcoming starts on the current local date');
+  assertEqual(upcomingRange.endDate, '2027-08-06', 'Upcoming includes anticipated releases throughout the next year');
+  assertEqual(calculateDynamicDateRange('upcoming', '2026-08-06', 90).endDate, '2026-11-04', 'Upcoming supports a 90-day discovery horizon');
+  assertEqual(calculateDynamicDateRange('upcoming', '2026-08-06', 180).endDate, '2027-02-02', 'Upcoming supports a 180-day discovery horizon');
 
   // 4. Converter test & Default Visibility
   const sampleRecord = {

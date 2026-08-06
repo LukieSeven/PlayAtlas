@@ -22,6 +22,7 @@ const testFiles = [
   'stagingSearch.test.ts',
   'releaseCatalog.test.ts',
   'upcomingGamesPage.test.ts',
+  'newReleasesPage.test.ts',
   'personalData.test.ts',
   'catalogResolution.test.ts',
   'personalInitialization.test.ts',

@@ -45,7 +45,7 @@ export const NewReleasesPage: React.FC = () => {
     try {
       const res = await queryReleaseCatalog({
         viewType,
-        timeframe: timeframe === 'day' ? 'past_30_days' : timeframe === 'week' ? 'past_30_days' : 'new_releases',
+        timeframe,
       });
 
       const mapped: CompactGameLookupRecord[] = res.records.map(convertReleaseRecordToCompactRecord);

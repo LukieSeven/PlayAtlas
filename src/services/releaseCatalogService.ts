@@ -9,6 +9,7 @@ import { calculateCatalogImportance } from '../utils/catalogRanking';
 export interface CompactPlatformReleaseDate {
   p: number; // platform ID
   d: string; // date YYYY-MM-DD
+  f?: string; // IGDB date precision (day, month, quarter, year, tbd, unknown)
 }
 
 export interface ReleaseListingRecord {
@@ -64,9 +65,10 @@ export interface ReleaseFeedPartition {
 }
 
 export interface ReleaseQueryOptions {
-  timeframe: 'new_releases' | 'upcoming' | 'past_30_days' | 'next_30_days';
+  timeframe: 'day' | 'week' | 'month' | 'new_releases' | 'upcoming' | 'past_30_days' | 'next_30_days';
   viewType?: 'first_release' | 'platform_release';
   includeHidden?: boolean;
+  upcomingDays?: UpcomingDiscoveryDays;
 }
 
 export interface ReleaseQueryResult {
@@ -80,6 +82,9 @@ export interface ReleaseQueryResult {
 let cachedManifest: ReleaseCatalogManifest | null = null;
 let cachedPartitionsMap = new Map<string, ReleaseListingRecord[]>();
 let sharedPlatformsMapCache: Record<number, { name: string; abbreviation: string | null }> | null = null;
+
+export const UPCOMING_DISCOVERY_DAYS = 365;
+export type UpcomingDiscoveryDays = 90 | 180 | typeof UPCOMING_DISCOVERY_DAYS;
 
 export function getDynamicLocalDate(): { dateStr: string; timezone: string } {
   const now = new Date();
@@ -95,7 +100,11 @@ export function parseYMDLocal(dateStr: string): Date {
   return new Date(y, (m || 1) - 1, d || 1);
 }
 
-export function calculateDynamicDateRange(timeframe: string, todayStr: string): { startDate: string; endDate: string } {
+export function calculateDynamicDateRange(
+  timeframe: string,
+  todayStr: string,
+  upcomingDays: UpcomingDiscoveryDays = UPCOMING_DISCOVERY_DAYS,
+): { startDate: string; endDate: string } {
   const today = parseYMDLocal(todayStr);
   const start = new Date(today);
   const end = new Date(today);
@@ -109,7 +118,7 @@ export function calculateDynamicDateRange(timeframe: string, todayStr: string): 
   } else if (timeframe === 'new_releases' || timeframe === 'past_30_days') {
     start.setDate(today.getDate() - 30);
   } else if (timeframe === 'upcoming' || timeframe === 'next_30_days') {
-    end.setDate(today.getDate() + 90);
+    end.setDate(today.getDate() + upcomingDays);
   }
 
   const format = (d: Date) => {
@@ -287,6 +296,22 @@ export function getReleaseMonthKeys(year: number, month: number): { datePrefix: 
   };
 }
 
+export function getExactCalendarReleaseDates(
+  record: Pick<ReleaseListingRecord, 'firstReleaseDate' | 'firstReleaseDatePrecision' | 'platformReleaseDates'>,
+  viewType: 'first_release' | 'platform_release',
+  monthKey: string,
+): string[] {
+  if (viewType === 'platform_release') {
+    return Array.from(new Set(record.platformReleaseDates
+      .filter(release => release.f === 'day' && release.d.startsWith(monthKey))
+      .map(release => release.d)));
+  }
+
+  return record.firstReleaseDatePrecision === 'day' && record.firstReleaseDate?.startsWith(monthKey)
+    ? [record.firstReleaseDate]
+    : [];
+}
+
 export function isUnreleasedFirstReleaseWithinRange(
   record: Pick<ReleaseListingRecord, 'firstReleaseDate'>,
   startDate: string,
@@ -349,7 +374,7 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
     };
   }
 
-  const { startDate, endDate } = calculateDynamicDateRange(options.timeframe, localToday);
+  const { startDate, endDate } = calculateDynamicDateRange(options.timeframe, localToday, options.upcomingDays);
   const isUpcoming = options.timeframe === 'upcoming' || options.timeframe === 'next_30_days';
 
   const manifest = await fetchReleaseManifest();
@@ -422,9 +447,13 @@ export async function getNewReleases(limit: number = 30): Promise<ReleaseFeedPar
   return { items: records.map(r => ({ record: r })) };
 }
 
-export async function getUpcomingGames(limit: number = 30): Promise<ReleaseFeedPartition> {
-  const result = await queryReleaseCatalog({ timeframe: 'upcoming' });
-  const records = sortUpcomingReleaseRecordsByPopularity(result.records, result.selectedDate).slice(0, limit);
+export async function getUpcomingGames(
+  limit?: number,
+  upcomingDays: UpcomingDiscoveryDays = UPCOMING_DISCOVERY_DAYS,
+): Promise<ReleaseFeedPartition> {
+  const result = await queryReleaseCatalog({ timeframe: 'upcoming', upcomingDays });
+  const sortedRecords = sortUpcomingReleaseRecordsByPopularity(result.records, result.selectedDate);
+  const records = limit === undefined ? sortedRecords : sortedRecords.slice(0, limit);
   return { items: records.map(r => ({ record: r })) };
 }
 

@@ -68,7 +68,9 @@ assert(
 
 const testDir = path.dirname(fileURLToPath(import.meta.url));
 const pageSource = fs.readFileSync(path.join(testDir, '../src/pages/UpcomingGamesPage.tsx'), 'utf8');
-assert(pageSource.includes('getUpcomingGames(30)'), 'routed page uses the IGDB release catalog');
+assert(pageSource.includes('getUpcomingGames(undefined, upcomingWindowDays)'), 'routed page uses the complete eligible IGDB upcoming set for the selected horizon');
+assert(pageSource.includes('useState<UpcomingDiscoveryDays>(365)'), 'routed page defaults the upcoming horizon to 365 days');
+assert(pageSource.includes('([90, 180, 365] as const)'), 'routed page offers 90, 180, and 365 day horizon toggles');
 assert(!pageSource.includes('gameDbService'), 'routed page has no LizardByte service dependency');
 assert(!pageSource.includes('Math.random'), 'routed page never generates random fallback IDs');
 assert(pageSource.includes('isMounted'), 'routed page guards against updates after unmount');

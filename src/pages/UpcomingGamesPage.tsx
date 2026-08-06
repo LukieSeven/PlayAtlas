@@ -4,6 +4,7 @@ import { GameListGrid } from '../components/widgets/GameListGrid';
 import {
   convertReleaseRecordToCompactRecord,
   getUpcomingGames,
+  UpcomingDiscoveryDays,
 } from '../services/releaseCatalogService';
 import { CompactGameLookupRecord } from '../types/catalog';
 
@@ -12,13 +13,14 @@ export const UpcomingGamesPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [upcomingWindowDays, setUpcomingWindowDays] = useState<UpcomingDiscoveryDays>(365);
 
   useEffect(() => {
     let isMounted = true;
     setIsLoading(true);
     setLoadError(null);
 
-    getUpcomingGames(30)
+    getUpcomingGames(undefined, upcomingWindowDays)
       .then(partition => {
         if (!isMounted) return;
         setUpcomingGames(partition.items.map(item => convertReleaseRecordToCompactRecord(item.record)));
@@ -36,7 +38,7 @@ export const UpcomingGamesPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [upcomingWindowDays]);
 
   const filteredUpcomingGames = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -52,6 +54,23 @@ export const UpcomingGamesPage: React.FC = () => {
           <span>All Upcoming</span>
           <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-mono">{upcomingGames.length}</span>
         </button>
+        <div className="ml-auto flex items-center gap-1 rounded-xl border border-[#D9C8A9] bg-white/70 p-1" aria-label="Upcoming release horizon">
+          {([90, 180, 365] as const).map(days => (
+            <button
+              key={days}
+              type="button"
+              onClick={() => setUpcomingWindowDays(days)}
+              aria-pressed={upcomingWindowDays === days}
+              className={`rounded-lg px-3 py-1.5 text-xs font-bold transition-colors ${
+                upcomingWindowDays === days
+                  ? 'bg-[#0B2B3C] text-white shadow-xs'
+                  : 'text-[#49606F] hover:bg-[#EFE8D8] hover:text-[#0B2B3C]'
+              }`}
+            >
+              {days} Days
+            </button>
+          ))}
+        </div>
       </div>
     </>
   );
