@@ -1,6 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
+import { pathToFileURL } from 'url';
 import {
   DatePrecision,
   parseGameTypeInfo,
@@ -79,6 +80,63 @@ export interface GameIndexRecord {
   coverUrl: string | null;
   coverImageId: string | null;
   summary: string | null;
+
+  rating: number | null;
+  ratingCount: number;
+  aggregatedRating: number | null;
+  aggregatedRatingCount: number;
+  totalRating: number | null;
+  totalRatingCount: number;
+  hypeCount: number;
+
+  alternativeNames: Array<{ id: number; name: string }>;
+  collections: Array<{ id: number; name: string; slug: string | null }>;
+  franchiseId: number | null;
+  franchises: Array<{ id: number; name: string; slug: string | null }>;
+  parentGameId: number | null;
+  versionParentId: number | null;
+  versionTitle: string | null;
+
+  companies: Array<{
+    id: number;
+    name: string;
+    slug: string | null;
+    developer: boolean;
+    publisher: boolean;
+    supporting: boolean;
+    porting: boolean;
+  }>;
+
+  websites: Array<{
+    id: number;
+    typeId: number | null;
+    type: string | null;
+    url: string;
+    trusted: boolean;
+  }>;
+
+  externalProducts: Array<{
+    id: number;
+    sourceId: number | null;
+    source: string | null;
+    uid: string | null;
+    url: string | null;
+    name: string | null;
+    platformId: number | null;
+    releaseFormatId: number | null;
+    releaseFormat: string | null;
+    countries: number[];
+    year: number | null;
+  }>;
+
+  gameModes: Array<{ id: number; name: string }>;
+  playerPerspectives: Array<{ id: number; name: string }>;
+  themes: Array<{ id: number; name: string }>;
+  keywords: Array<{ id: number; name: string }>;
+  languages: Array<{ id: number; name: string; supportType: string | null }>;
+  artworkImageIds: string[];
+  screenshotImageIds: string[];
+  videos: Array<{ id: number; name: string | null; videoId: string }>;
 
   externalIds: {
     steam?: string;
@@ -278,7 +336,7 @@ async function getSnapshotRecordCount(maxId: number, clientId: string, token: st
   throw new Error(`Failed to retrieve snapshot record count for maxId ${maxId}.`);
 }
 
-function normalizeRawIgdbRecord(raw: any): GameIndexRecord | null {
+export function normalizeRawIgdbRecord(raw: any): GameIndexRecord | null {
   if (!raw.id || !raw.name || typeof raw.name !== 'string' || !raw.name.trim()) {
     return null;
   }
@@ -362,6 +420,73 @@ function normalizeRawIgdbRecord(raw: any): GameIndexRecord | null {
 
   const gameStatus = raw.game_status?.status ? String(raw.game_status.status) : null;
 
+  const namedEntities = (items: any[]): Array<{ id: number; name: string }> =>
+    Array.isArray(items)
+      ? items.filter(item => item?.id && item?.name).map(item => ({ id: item.id, name: item.name }))
+      : [];
+
+  const collections = Array.isArray(raw.collections)
+    ? raw.collections.filter((item: any) => item?.id && item?.name).map((item: any) => ({
+        id: item.id,
+        name: item.name,
+        slug: item.slug || null,
+      }))
+    : [];
+
+  const franchiseEntities = [
+    ...(raw.franchise?.id && raw.franchise?.name ? [raw.franchise] : []),
+    ...(Array.isArray(raw.franchises) ? raw.franchises : []),
+  ];
+  const franchises = Array.from(
+    new Map(
+      franchiseEntities
+        .filter((item: any) => item?.id && item?.name)
+        .map((item: any) => [item.id, { id: item.id, name: item.name, slug: item.slug || null }])
+    ).values()
+  ) as Array<{ id: number; name: string; slug: string | null }>;
+
+  const companies = Array.isArray(raw.involved_companies)
+    ? raw.involved_companies
+        .filter((entry: any) => entry?.company?.id && entry?.company?.name)
+        .map((entry: any) => ({
+          id: entry.company.id,
+          name: entry.company.name,
+          slug: entry.company.slug || null,
+          developer: Boolean(entry.developer),
+          publisher: Boolean(entry.publisher),
+          supporting: Boolean(entry.supporting),
+          porting: Boolean(entry.porting),
+        }))
+    : [];
+
+  const websites = Array.isArray(raw.websites)
+    ? raw.websites
+        .filter((site: any) => site?.id && typeof site?.url === 'string' && /^https?:\/\//i.test(site.url))
+        .map((site: any) => ({
+          id: site.id,
+          typeId: site.type?.id || (typeof site.type === 'number' ? site.type : null),
+          type: site.type?.type || null,
+          url: site.url,
+          trusted: Boolean(site.trusted),
+        }))
+    : [];
+
+  const externalProducts = Array.isArray(raw.external_games)
+    ? raw.external_games.map((product: any) => ({
+        id: product.id,
+        sourceId: product.external_game_source?.id || null,
+        source: product.external_game_source?.name || null,
+        uid: product.uid || null,
+        url: typeof product.url === 'string' && /^https?:\/\//i.test(product.url) ? product.url : null,
+        name: product.name || null,
+        platformId: product.platform?.id || (typeof product.platform === 'number' ? product.platform : null),
+        releaseFormatId: product.game_release_format?.id || null,
+        releaseFormat: product.game_release_format?.format || null,
+        countries: Array.isArray(product.countries) ? product.countries.filter((country: any) => Number.isInteger(country)) : [],
+        year: Number.isInteger(product.year) ? product.year : null,
+      }))
+    : [];
+
   return {
     id: recordId,
     source: 'igdb',
@@ -384,6 +509,43 @@ function normalizeRawIgdbRecord(raw: any): GameIndexRecord | null {
     coverUrl,
     coverImageId: imageId,
     summary: raw.summary || null,
+    rating: typeof raw.rating === 'number' ? raw.rating : null,
+    ratingCount: Number.isInteger(raw.rating_count) ? raw.rating_count : 0,
+    aggregatedRating: typeof raw.aggregated_rating === 'number' ? raw.aggregated_rating : null,
+    aggregatedRatingCount: Number.isInteger(raw.aggregated_rating_count) ? raw.aggregated_rating_count : 0,
+    totalRating: typeof raw.total_rating === 'number' ? raw.total_rating : null,
+    totalRatingCount: Number.isInteger(raw.total_rating_count) ? raw.total_rating_count : 0,
+    hypeCount: Number.isInteger(raw.hypes) ? raw.hypes : 0,
+    alternativeNames: namedEntities(raw.alternative_names),
+    collections,
+    franchiseId: raw.franchise?.id || (typeof raw.franchise === 'number' ? raw.franchise : null),
+    franchises,
+    parentGameId: raw.parent_game?.id || (typeof raw.parent_game === 'number' ? raw.parent_game : null),
+    versionParentId: raw.version_parent?.id || (typeof raw.version_parent === 'number' ? raw.version_parent : null),
+    versionTitle: raw.version_title || null,
+    companies,
+    websites,
+    externalProducts,
+    gameModes: namedEntities(raw.game_modes),
+    playerPerspectives: namedEntities(raw.player_perspectives),
+    themes: namedEntities(raw.themes),
+    keywords: namedEntities(raw.keywords),
+    languages: Array.isArray(raw.language_supports)
+      ? raw.language_supports
+          .filter((entry: any) => entry?.language?.id && entry?.language?.name)
+          .map((entry: any) => ({
+            id: entry.language.id,
+            name: entry.language.name,
+            supportType: entry.language_support_type?.name || null,
+          }))
+      : [],
+    artworkImageIds: Array.isArray(raw.artworks) ? raw.artworks.map((item: any) => item?.image_id).filter(Boolean) : [],
+    screenshotImageIds: Array.isArray(raw.screenshots) ? raw.screenshots.map((item: any) => item?.image_id).filter(Boolean) : [],
+    videos: Array.isArray(raw.videos)
+      ? raw.videos
+          .filter((item: any) => item?.id && item?.video_id)
+          .map((item: any) => ({ id: item.id, name: item.name || null, videoId: item.video_id }))
+      : [],
     externalIds,
     igdbUpdatedAt: raw.updated_at ? new Date(raw.updated_at * 1000).toISOString() : null,
     sourceRecordPath: `https://api.igdb.com/v4/games/${raw.id}`,
@@ -423,8 +585,34 @@ async function runIgdbImporter() {
            genres.name,
            cover.image_id,
            summary,
+           rating, rating_count, aggregated_rating, aggregated_rating_count, total_rating, total_rating_count, hypes,
+           alternative_names.id, alternative_names.name,
+           collections.id, collections.name, collections.slug,
+           franchise.id, franchise.name, franchise.slug,
+           franchises.id, franchises.name, franchises.slug,
+           parent_game.id, version_parent.id, version_title,
+           involved_companies.developer, involved_companies.publisher,
+           involved_companies.supporting, involved_companies.porting,
+           involved_companies.company.id, involved_companies.company.name, involved_companies.company.slug,
+           websites.id, websites.type.id, websites.type.type, websites.url, websites.trusted,
+           game_modes.id, game_modes.name,
+           player_perspectives.id, player_perspectives.name,
+           themes.id, themes.name,
+           keywords.id, keywords.name,
+           language_supports.language.id, language_supports.language.name,
+           language_supports.language_support_type.name,
+           artworks.image_id, screenshots.image_id, videos.id, videos.name, videos.video_id,
+           external_games.id,
+           external_games.external_game_source.id,
            external_games.external_game_source.name,
            external_games.uid,
+           external_games.url,
+           external_games.name,
+           external_games.platform.id,
+           external_games.game_release_format.id,
+           external_games.game_release_format.format,
+           external_games.countries,
+           external_games.year,
            updated_at;
   `;
 
@@ -955,7 +1143,11 @@ async function runIgdbImporter() {
   }
 }
 
-runIgdbImporter().catch(err => {
+const invokedScriptPath = process.argv[1];
+const isDirectExecution = Boolean(invokedScriptPath)
+  && import.meta.url === pathToFileURL(path.resolve(invokedScriptPath)).href;
+
+if (isDirectExecution) runIgdbImporter().catch(err => {
   console.error('❌ IGDB Importer Failed:', err);
   process.exit(1);
 });

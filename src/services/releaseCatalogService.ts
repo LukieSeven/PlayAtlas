@@ -1,7 +1,7 @@
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { fetchAndDecompressJson } from '../utils/decompression';
 import { GameItem } from '../types/game';
-import { CompactGameLookupRecord } from '../types/catalog';
+import { CompactGameLookupRecord, CompactRankSignals } from '../types/catalog';
 import { openIndexedDB } from './indexDbStorage';
 
 export interface CompactPlatformReleaseDate {
@@ -28,6 +28,7 @@ export interface ReleaseListingRecord {
   coverUrl: string | null;
   summaryPreview: string | null;
   dataChunk: string;
+  rank?: CompactRankSignals;
 }
 
 export interface ReleaseManifestPartition {
@@ -271,6 +272,8 @@ export function convertReleaseRecordToCompactRecord(
     chunk: getReleaseRecordChunkNumber(record.dataChunk),
     coverUrl: record.coverUrl || undefined,
     platforms: record.platforms.map(platform => platform.name),
+    rating: record.rank?.totalRating ?? record.rank?.userRating ?? record.rank?.criticRating,
+    rank: record.rank,
   };
 }
 

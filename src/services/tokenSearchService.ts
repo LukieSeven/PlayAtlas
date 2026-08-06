@@ -7,6 +7,7 @@ import { fetchAndDecompressJson } from '../utils/decompression';
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { openIndexedDB } from './indexDbStorage';
 import { CompactGameLookupRecord } from '../types/catalog';
+import { calculateCatalogImportance } from '../utils/catalogRanking';
 
 export type { CompactGameLookupRecord };
 
@@ -267,18 +268,15 @@ export function getGameTypePriority(gameType?: string | null): number {
 }
 
 /**
- * Compares two records deterministically according to the strict 11-tier ranking rules:
+ * Compares two records deterministically using lexical relevance bands,
+ * durable catalog importance, and stable legacy fallbacks:
  * 1. Exact normalized title
  * 2. Exact title ignoring leading 'The', 'A', 'An'
- * 3. Title starts with complete search phrase
- * 4. Complete phrase appears elsewhere in title
- * 5. Query tokens appear in title order
- * 6. Default-visible / main game
- * 7. Game-type priority
- * 8. Shorter title distance from query
- * 9. Release year
- * 10. Alphabetical normalized title
- * 11. Numeric IGDB ID as final stable tie-breaker
+ * 3. Complete phrase appears in a primary or alternative title
+ * 4. Query tokens appear in title order
+ * 5. Catalog importance signals
+ * 6. Default visibility and game-type priority
+ * 7. Title distance, release year, title, and numeric ID
  */
 export function compareRecordsDeterministic(
   a: CompactGameLookupRecord,
@@ -286,31 +284,31 @@ export function compareRecordsDeterministic(
   normQuery: string,
   tokens: string[]
 ): number {
-  const normTitleA = normalizeSearchQuery(a.name);
-  const normTitleB = normalizeSearchQuery(b.name);
+  const normalizedTitles = (record: CompactGameLookupRecord): string[] => [
+    normalizeSearchQuery(record.name),
+    ...(record.alternativeNames || []).map(normalizeSearchQuery),
+  ].filter(Boolean);
+  const titlesA = normalizedTitles(a);
+  const titlesB = normalizedTitles(b);
+  const normTitleA = titlesA[0];
+  const normTitleB = titlesB[0];
 
-  const strippedTitleA = stripLeadingArticle(normTitleA);
-  const strippedTitleB = stripLeadingArticle(normTitleB);
   const strippedQuery = stripLeadingArticle(normQuery);
 
   // Tier 1: Exact normalized title
-  const exactA = normTitleA === normQuery;
-  const exactB = normTitleB === normQuery;
+  const exactA = titlesA.some(title => title === normQuery);
+  const exactB = titlesB.some(title => title === normQuery);
   if (exactA !== exactB) return exactA ? -1 : 1;
 
   // Tier 2: Exact title ignoring leading article
-  const articleA = strippedTitleA === strippedQuery;
-  const articleB = strippedTitleB === strippedQuery;
+  const articleA = titlesA.some(title => stripLeadingArticle(title) === strippedQuery);
+  const articleB = titlesB.some(title => stripLeadingArticle(title) === strippedQuery);
   if (articleA !== articleB) return articleA ? -1 : 1;
 
-  // Tier 3: Title starts with complete search phrase
-  const startsA = normTitleA.startsWith(normQuery) || (Boolean(strippedQuery) && strippedTitleA.startsWith(strippedQuery));
-  const startsB = normTitleB.startsWith(normQuery) || (Boolean(strippedQuery) && strippedTitleB.startsWith(strippedQuery));
-  if (startsA !== startsB) return startsA ? -1 : 1;
-
-  // Tier 4: Complete phrase appears elsewhere in title
-  const phraseA = normTitleA.includes(normQuery);
-  const phraseB = normTitleB.includes(normQuery);
+  // Phrase position is deliberately not a separate tier. Otherwise a low-value
+  // derivative title beginning with the query can outrank a stronger published game.
+  const phraseA = titlesA.some(title => title.includes(normQuery));
+  const phraseB = titlesB.some(title => title.includes(normQuery));
   if (phraseA !== phraseB) return phraseA ? -1 : 1;
 
   // Tier 5: Query tokens appear in title order
@@ -323,11 +321,16 @@ export function compareRecordsDeterministic(
     }
     return true;
   };
-  const orderA = inOrderTokens(normTitleA);
-  const orderB = inOrderTokens(normTitleB);
+  const orderA = titlesA.some(inOrderTokens);
+  const orderB = titlesB.some(inOrderTokens);
   if (orderA !== orderB) return orderA ? -1 : 1;
 
-  // Tier 6: Default-visible / main game
+  // Rank durable importance inside the same lexical relevance band.
+  const importanceA = calculateCatalogImportance(a);
+  const importanceB = calculateCatalogImportance(b);
+  if (importanceA !== importanceB) return importanceB - importanceA;
+
+  // Backward-compatible fallbacks for legacy compact records without signals.
   if (a.defaultVisible !== b.defaultVisible) return a.defaultVisible ? -1 : 1;
 
   // Tier 7: Game-type priority

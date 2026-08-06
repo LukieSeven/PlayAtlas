@@ -8,6 +8,8 @@ import {
   getReleaseYearKey,
   getReleaseMonthKey,
 } from '../src/utils/browserCatalogUtils';
+import { buildCompactRankSignals, RANKING_SCHEMA_VERSION } from '../src/utils/catalogRanking';
+import { CompactRankSignals } from '../src/types/catalog';
 
 function loadEnvFile() {
   const envPaths = [path.join(process.cwd(), '.env'), path.join(process.cwd(), '.env.local')];
@@ -72,6 +74,9 @@ export interface CompactGameLookupRecord {
   gameType: string;
   defaultVisible: boolean;
   chunk: number;
+  rating?: number;
+  alternativeNames?: string[];
+  rank?: CompactRankSignals;
 }
 
 export interface CompactPlatformReleaseDate {
@@ -98,6 +103,7 @@ export interface ReleaseListingRecord {
   coverUrl: string | null;
   summaryPreview: string | null;
   dataChunk: string;
+  rank?: CompactRankSignals;
 }
 
 async function runBrowserCatalogBuilder() {
@@ -252,6 +258,7 @@ async function runBrowserCatalogBuilder() {
       const firstYear = record.firstReleaseDate ? parseInt(record.firstReleaseDate.slice(0, 4), 10) : null;
 
       // 1. Compact Game Lookup Record
+      const rankSignals = buildCompactRankSignals(record);
       const compactRecord: CompactGameLookupRecord = {
         id: record.sourceId,
         name: record.name,
@@ -259,12 +266,20 @@ async function runBrowserCatalogBuilder() {
         gameType: record.gameType,
         defaultVisible: record.defaultVisible,
         chunk: chunkNumericId,
+        alternativeNames: Array.isArray(record.alternativeNames)
+          ? record.alternativeNames.map((alias: any) => alias?.name).filter(Boolean)
+          : undefined,
+        rating: rankSignals.totalRating ?? rankSignals.userRating ?? rankSignals.criticRating,
+        rank: rankSignals,
       };
       allCompactRecords.push(compactRecord);
 
       // 2. Token Posting Index Extraction
       const tokens = tokenizeTitle(record.name);
-      for (const token of tokens) {
+      const alternativeTokens = Array.isArray(compactRecord.alternativeNames)
+        ? compactRecord.alternativeNames.flatMap(alias => tokenizeTitle(alias))
+        : [];
+      for (const token of new Set([...tokens, ...alternativeTokens])) {
         if (!tokenPostingsMap.has(token)) tokenPostingsMap.set(token, new Set<number>());
         tokenPostingsMap.get(token)!.add(record.sourceId);
       }
@@ -305,6 +320,7 @@ async function runBrowserCatalogBuilder() {
         coverUrl: record.coverUrl || null,
         summaryPreview,
         dataChunk: relativeChunkPath,
+        rank: compactRecord.rank,
       };
 
       if (!yearPartitionsMap.has(yearStr)) yearPartitionsMap.set(yearStr, []);
@@ -433,7 +449,8 @@ async function runBrowserCatalogBuilder() {
 
   // Write Search Token Manifest
   const searchTokenManifest = {
-    schemaVersion: 2,
+    schemaVersion: 3,
+    rankingSchemaVersion: RANKING_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
     gameCount: totalCatalogRecords,
     uniqueTokenCount: tokenPostingsMap.size,
@@ -546,7 +563,8 @@ async function runBrowserCatalogBuilder() {
   }
 
   const releaseManifest = {
-    schemaVersion: 2,
+    schemaVersion: 3,
+    rankingSchemaVersion: RANKING_SCHEMA_VERSION,
     generatedAt: new Date().toISOString(),
     recordCount: totalCatalogRecords,
     totalBytes: totalReleaseCompressedBytes,
@@ -568,7 +586,8 @@ async function runBrowserCatalogBuilder() {
 
   const outputBrowserManifest = {
     source: 'igdb',
-    schemaVersion: 2,
+    schemaVersion: 3,
+    rankingSchemaVersion: RANKING_SCHEMA_VERSION,
     catalogBuildId,
     generatedAt: new Date().toISOString(),
 
@@ -579,6 +598,14 @@ async function runBrowserCatalogBuilder() {
     searchManifest: 'search/token_manifest.json',
     releaseManifest: 'releases/release_manifest.json',
     platformsMetadata: 'metadata/platforms.json.gz',
+
+    sizeReport: {
+      fullDetailBytes: totalCatalogCompressedBytes,
+      compactLookupBytes: totalLookupCompressedBytes,
+      tokenIndexBytes: totalTokenCompressedBytes,
+      releasePartitionBytes: totalReleaseCompressedBytes,
+      sharedMetadataBytes: platformsBuffer.length,
+    },
 
     fullCatalog: {
       chunkCount: outputChunksList.length,

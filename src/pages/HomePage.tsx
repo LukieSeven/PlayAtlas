@@ -23,7 +23,7 @@ import { GameCard } from '../components/common/GameCard';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
 import { FantasyLandscapeArtwork } from '../components/ui/FantasyLandscapeArtwork';
 import { Button } from '../components/ui/Button';
-import { getUpcomingGames } from '../services/releaseCatalogService';
+import { getUpcomingGames, convertReleaseRecordToCompactRecord } from '../services/releaseCatalogService';
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
 
 type HomeWidgetId = 'featured' | 'playing' | 'deals' | 'progress' | 'releases' | 'events';
@@ -169,15 +169,9 @@ export const HomePage: React.FC = () => {
     getUpcomingGames(6)
       .then(partition => {
         if (!isMounted) return;
-        const mapped: CompactGameLookupRecord[] = partition.items.map((item: any) => ({
-          id: item.record.id,
-          name: item.record.name,
-          year: item.record.firstReleaseDate ? parseInt(item.record.firstReleaseDate.slice(0, 4), 10) : undefined,
-          gameType: item.record.gameType || undefined,
-          coverUrl: item.record.coverUrl || undefined,
-          chunk: item.record.dataChunk ? parseInt(String(item.record.dataChunk).replace(/\D/g, ''), 10) : undefined,
-          platforms: item.record.platforms ? item.record.platforms.map((p: any) => p.name) : undefined,
-        }));
+        const mapped: CompactGameLookupRecord[] = partition.items.map(item =>
+          convertReleaseRecordToCompactRecord(item.record)
+        );
         setRecentReleases(mapped.filter(game => !yuckedIds.has(game.id)));
       })
       .catch(err => {

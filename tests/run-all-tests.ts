@@ -9,6 +9,7 @@ const testFiles = [
   'normalization.test.ts',
   'browserCatalog.test.ts',
   'searchEngine.test.ts',
+  'catalogRanking.test.ts',
   'catalogDetail.test.ts',
   'pagination.test.ts',
   'theme.test.ts',

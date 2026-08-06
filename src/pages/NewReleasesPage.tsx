@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Sparkles, Layers, Clock, AlertTriangle, RefreshCw, Search, X } from 'lucide-react';
-import { queryReleaseCatalog, getDynamicLocalDate } from '../services/releaseCatalogService';
+import { queryReleaseCatalog, getDynamicLocalDate, convertReleaseRecordToCompactRecord } from '../services/releaseCatalogService';
 import { executeProgressiveTokenSearch } from '../services/tokenSearchService';
 import { GameListGrid } from '../components/widgets/GameListGrid';
 import { CompactGameLookupRecord } from '../types/catalog';
@@ -48,15 +48,7 @@ export const NewReleasesPage: React.FC = () => {
         timeframe: timeframe === 'day' ? 'past_30_days' : timeframe === 'week' ? 'past_30_days' : 'new_releases',
       });
 
-      const mapped: CompactGameLookupRecord[] = res.records.map((r: any) => ({
-        id: r.sourceId || parseInt(String(r.id).replace(/\D/g, ''), 10) || Math.floor(Math.random() * 100000),
-        name: r.name,
-        year: r.firstReleaseDate ? parseInt(r.firstReleaseDate.slice(0, 4), 10) : undefined,
-        gameType: r.gameType || undefined,
-        defaultVisible: r.defaultVisible !== false,
-        coverUrl: r.coverUrl || undefined,
-        chunk: r.dataChunk ? parseInt(String(r.dataChunk).replace(/\D/g, ''), 10) : undefined,
-      }));
+      const mapped: CompactGameLookupRecord[] = res.records.map(convertReleaseRecordToCompactRecord);
 
       setReleaseGames(mapped);
     } catch (err: any) {
