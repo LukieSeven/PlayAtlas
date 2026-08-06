@@ -17,6 +17,7 @@ import {
   Pencil
 } from 'lucide-react';
 import { usePersonalGameLibrary } from '../hooks/usePersonalGameLibrary';
+import { getYuckedNumericIds } from '../utils/personalGameVisibility';
 import { CompactGameLookupRecord } from '../types/catalog';
 import { GameCard } from '../components/common/GameCard';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
@@ -114,6 +115,7 @@ const WidgetControls: React.FC<WidgetControlsProps> = ({ id, width, onToggleWidt
 
 export const HomePage: React.FC = () => {
   const rawRecords = usePersonalGameLibrary();
+  const yuckedIds = useMemo(() => getYuckedNumericIds(rawRecords), [rawRecords]);
   const [widgetPreferences, setWidgetPreferences] = useState<HomeWidgetPreferences>(loadHomeWidgetPreferences);
   const [isWidgetStoreOpen, setIsWidgetStoreOpen] = useState(false);
   const [editingWidgetId, setEditingWidgetId] = useState<HomeWidgetId | null>(null);
@@ -176,7 +178,7 @@ export const HomePage: React.FC = () => {
           chunk: item.record.dataChunk ? parseInt(String(item.record.dataChunk).replace(/\D/g, ''), 10) : undefined,
           platforms: item.record.platforms ? item.record.platforms.map((p: any) => p.name) : undefined,
         }));
-        setRecentReleases(mapped);
+        setRecentReleases(mapped.filter(game => !yuckedIds.has(game.id)));
       })
       .catch(err => {
         console.warn('Home release discovery feed warning:', err);
@@ -185,7 +187,7 @@ export const HomePage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [yuckedIds]);
 
   // Hydrate displayed records
   useEffect(() => {

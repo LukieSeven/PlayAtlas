@@ -6,7 +6,8 @@ import { getGameTypeBadgeVariant } from '../../services/gameTypePresentationServ
 import { personalGameStore } from '../../services/personalGameStore';
 import { usePersonalGameRecord } from '../../hooks/usePersonalGameRecord';
 import { CompactGameLookupRecord } from '../../types/catalog';
-import { Gamepad2, Bookmark, Star } from 'lucide-react';
+import { Gamepad2, Heart, Star } from 'lucide-react';
+import { SplatIcon } from '../ui/SplatIcon';
 
 interface GameCardProps {
   game?: unknown; // Raw catalog record or GameCardViewModel
@@ -30,14 +31,25 @@ export const GameCard: React.FC<GameCardProps> = ({
   // Re-calculate VM with live personal store data
   const liveVm = mapToGameCardViewModel(game || vm);
 
-  const isWanted = personalRecord?.interestStatus === 'wanted';
+  const isWanted = personalRecord?.interestStatus === 'wanted' || personalRecord?.interestStatus === 'wishlist';
+  const isYucked = personalRecord?.currentPlayStatus === 'dropped';
 
-  const handleBookmarkToggle = async (e: React.MouseEvent) => {
+  const handleLikeToggle = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
     await personalGameStore.setInterestStatus(
       liveVm.gameId,
       isWanted ? undefined : 'wanted',
+      { name: liveVm.title, coverUrl: liveVm.coverUrl, releaseYear: liveVm.releaseYearDisplay !== 'TBA' ? parseInt(liveVm.releaseYearDisplay, 10) : undefined }
+    );
+  };
+
+  const handleYuckToggle = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    await personalGameStore.setPlayStatus(
+      liveVm.gameId,
+      isYucked ? undefined : 'dropped',
       { name: liveVm.title, coverUrl: liveVm.coverUrl, releaseYear: liveVm.releaseYearDisplay !== 'TBA' ? parseInt(liveVm.releaseYearDisplay, 10) : undefined }
     );
   };
@@ -80,20 +92,32 @@ export const GameCard: React.FC<GameCardProps> = ({
           </div>
         )}
 
-        {/* Top-Right Quick Bookmark (Wanted) & Universal Action Menu */}
+        {/* Top-Right Quick Like, Yuck, and Universal Action Menu */}
         <div className="absolute top-2 right-2 z-10 flex items-center gap-1" onClick={e => e.stopPropagation()}>
-          {/* Quick Bookmark Toggle Button */}
           <button
-            onClick={handleBookmarkToggle}
+            onClick={handleLikeToggle}
             className={`p-1.5 rounded-xl backdrop-blur-md transition-all border ${
               isWanted
-                ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-md font-bold'
+                ? 'bg-rose-600 text-white border-rose-400 shadow-md font-bold'
                 : 'bg-[rgba(0,0,0,0.4)] text-white/80 hover:text-white border-white/20 hover:bg-[rgba(0,0,0,0.6)]'
             }`}
-            title={isWanted ? 'Remove from Wanted' : 'Add to Wanted'}
-            aria-label={isWanted ? 'Remove from Wanted' : 'Add to Wanted'}
+            title={isWanted ? 'Remove Like' : 'Like this game'}
+            aria-label={isWanted ? 'Remove Like' : 'Like this game'}
           >
-            <Bookmark className={`w-3.5 h-3.5 ${isWanted ? 'fill-current' : ''}`} />
+            <Heart className={`w-3.5 h-3.5 ${isWanted ? 'fill-current' : ''}`} />
+          </button>
+
+          <button
+            onClick={handleYuckToggle}
+            className={`p-1.5 rounded-xl backdrop-blur-md transition-all border ${
+              isYucked
+                ? 'bg-[#2B6E4E] text-[#D7F4C8] border-[#8FD39A] shadow-md'
+                : 'bg-[rgba(0,0,0,0.4)] text-[#BDE9A8] hover:text-white border-white/20 hover:bg-[#2B6E4E]'
+            }`}
+            title={isYucked ? 'Remove from Yuck!' : 'Yuck! Hide this game'}
+            aria-label={isYucked ? 'Remove from Yuck!' : 'Add to Yuck! and hide this game'}
+          >
+            <SplatIcon className="w-3.5 h-3.5" />
           </button>
 
           <UniversalActionMenu

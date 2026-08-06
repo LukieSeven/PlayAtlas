@@ -30,22 +30,9 @@ import { ExportImportModal } from '../components/widgets/ExportImportModal';
 import { getAllFamilies, getPlatformFamily, getPlatformDisplayName } from '../services/platformTaxonomyService';
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
 import { MinimumRatingFilter } from '../components/ui/MinimumRatingFilter';
+import { SplatIcon } from '../components/ui/SplatIcon';
 
 type MyGamesViewTab = 'all' | 'owned' | 'playing' | 'backlog' | 'completed' | 'wanted' | 'dropped';
-
-const SplatIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
-    <path
-      d="M11.9 3.2c1.2 0 1.5 2.2 2.6 2.6 1 .4 2.5-1.2 3.4-.3.8.8-.6 2.4-.2 3.4.4 1.1 2.8 1 2.8 2.2 0 1.1-2.3 1.4-2.7 2.4-.4 1 .9 2.7 0 3.5-.8.8-2.4-.6-3.4-.2-1.1.4-1.2 2.8-2.4 2.8-1.1 0-1.5-2.3-2.5-2.7-1-.4-2.6 1-3.5.1-.8-.8.6-2.4.2-3.4-.4-1.1-2.8-1.2-2.8-2.4 0-1.1 2.3-1.5 2.7-2.5.4-1-.9-2.7-.1-3.5.8-.8 2.5.6 3.5.2 1.1-.4 1.2-2.7 2.4-2.7Z"
-      fill="currentColor"
-      fillOpacity="0.24"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinejoin="round"
-    />
-    <circle cx="12" cy="11.7" r="2.6" fill="currentColor" />
-  </svg>
-);
 
 export const MyGamesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -122,13 +109,14 @@ export const MyGamesPage: React.FC = () => {
 
   // Tab Count Definitions
   const counts = useMemo(() => {
+    const visibleRecords = meaningfulRecords.filter(r => r.currentPlayStatus !== 'dropped');
     return {
-      all: meaningfulRecords.length,
-      owned: meaningfulRecords.filter(r => r.ownerships && r.ownerships.length > 0).length,
-      playing: meaningfulRecords.filter(r => r.currentPlayStatus === 'playing').length,
-      backlog: meaningfulRecords.filter(r => r.inBacklogQueue).length,
-      completed: meaningfulRecords.filter(r => r.currentPlayStatus === 'completed' || (r.completionHistory && r.completionHistory.length > 0)).length,
-      wanted: meaningfulRecords.filter(r => r.interestStatus === 'wanted' || r.interestStatus === 'wishlist').length,
+      all: visibleRecords.length,
+      owned: visibleRecords.filter(r => r.ownerships && r.ownerships.length > 0).length,
+      playing: visibleRecords.filter(r => r.currentPlayStatus === 'playing').length,
+      backlog: visibleRecords.filter(r => r.inBacklogQueue).length,
+      completed: visibleRecords.filter(r => r.currentPlayStatus === 'completed' || (r.completionHistory && r.completionHistory.length > 0)).length,
+      wanted: visibleRecords.filter(r => r.interestStatus === 'wanted' || r.interestStatus === 'wishlist').length,
       dropped: meaningfulRecords.filter(r => r.currentPlayStatus === 'dropped').length,
     };
   }, [meaningfulRecords]);
@@ -136,6 +124,7 @@ export const MyGamesPage: React.FC = () => {
   // Apply Tab View + Search + Filters
   const filteredRecords = useMemo(() => {
     return meaningfulRecords.filter(rec => {
+      if (activeTab !== 'dropped' && rec.currentPlayStatus === 'dropped') return false;
       // 1. Primary Tab View Filter
       switch (activeTab) {
         case 'owned':
@@ -344,7 +333,7 @@ export const MyGamesPage: React.FC = () => {
               { key: 'playing', label: 'Playing', count: counts.playing, icon: Clock },
               { key: 'backlog', label: 'Backlog', count: counts.backlog, icon: Bookmark },
               { key: 'completed', label: 'Completed', count: counts.completed, icon: Trophy },
-              { key: 'wanted', label: 'Wanted', count: counts.wanted, icon: Heart },
+              { key: 'wanted', label: 'Like', count: counts.wanted, icon: Heart },
               { key: 'dropped', label: 'Yuck!', count: counts.dropped, icon: SplatIcon },
             ] as const
           ).map(tab => {

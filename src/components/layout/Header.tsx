@@ -8,6 +8,8 @@ import { UniversalActionMenu } from '../common/UniversalActionMenu';
 import { getGameTypeLabel, shouldShowGameTypeBadge } from '../../services/gameTypePresentationService';
 import { normalizeGameTypeCategory } from '../../utils/gameTypeUtils';
 import { useSidebar } from '../../context/SidebarContext';
+import { usePersonalGameLibrary } from '../../hooks/usePersonalGameLibrary';
+import { getYuckedNumericIds } from '../../utils/personalGameVisibility';
 
 interface HeaderProps {
   onSelectGame?: (gameId: number, name: string) => void;
@@ -49,7 +51,10 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
   const { toggleMobileOpen } = useSidebar();
 
   const { title, subtitle } = getPageTitle(location.pathname);
-  const { results, totalMatches, isSearching, search } = useCatalogSearch();
+  const { results, isSearching, search } = useCatalogSearch();
+  const personalRecords = usePersonalGameLibrary();
+  const yuckedIds = React.useMemo(() => getYuckedNumericIds(personalRecords), [personalRecords]);
+  const visibleResults = React.useMemo(() => results.filter(game => !yuckedIds.has(game.id)), [results, yuckedIds]);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -136,18 +141,18 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
                   <Loader2 className="w-4 h-4 animate-spin text-[#0B2B3C]" />
                   <span>Searching Play Atlas catalog...</span>
                 </div>
-              ) : results.length === 0 ? (
+              ) : visibleResults.length === 0 ? (
                 <div className="p-6 text-center text-xs text-[#718294] font-mono">
                   No matching games found for "{searchQuery}".
                 </div>
               ) : (
                 <div className="divide-y divide-[#D9C8A9]/60">
                   <div className="px-4 py-2 bg-[#EFE8D8] text-[10px] font-mono text-[#0C1D2D] font-bold uppercase flex justify-between">
-                    <span>Results ({totalMatches.toLocaleString()})</span>
+                    <span>Results ({visibleResults.length.toLocaleString()})</span>
                     <span>Press game to view details</span>
                   </div>
 
-                  {results.map((game: CompactGameLookupRecord) => {
+                  {visibleResults.map((game: CompactGameLookupRecord) => {
                     const gameCategory = normalizeGameTypeCategory(game.gameType || undefined, game.name);
                     const showTypeBadge = shouldShowGameTypeBadge(gameCategory);
 

@@ -13,6 +13,7 @@ import {
   Plus,
   Trash2,
   Bookmark,
+  Heart,
   Settings
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
@@ -207,7 +208,7 @@ export const Sidebar: React.FC = () => {
         <div className="p-2 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] text-[11px] font-mono font-semibold space-y-1">
           <div className="flex items-center justify-between text-[#0C1D2D]">
             <span className="flex items-center gap-1.5 text-[#47586A]">
-              <Bookmark className="w-3 h-3 text-[#C5A059]" /> Wishlist
+              <Heart className="w-3 h-3 text-rose-600" /> Likes
             </span>
             <span className="font-bold text-[#0B2B3C]">{libraryStats.wishlist}</span>
           </div>

@@ -5,6 +5,8 @@ import { normalizeGameTypeCategory } from '../../utils/gameTypeUtils';
 import { GameCard } from '../common/GameCard';
 import { getAllFamilies, getPlatformFamily } from '../../services/platformTaxonomyService';
 import { MinimumRatingFilter } from '../ui/MinimumRatingFilter';
+import { usePersonalGameLibrary } from '../../hooks/usePersonalGameLibrary';
+import { getYuckedNumericIds } from '../../utils/personalGameVisibility';
 
 interface GameListGridProps {
   collectionKey?: string;
@@ -35,6 +37,8 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   searchContent,
   noticeContent,
 }) => {
+  const personalRecords = usePersonalGameLibrary();
+  const yuckedIds = useMemo(() => getYuckedNumericIds(personalRecords), [personalRecords]);
   const [selectedPlatformFamily, setSelectedPlatformFamily] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [minimumRating, setMinimumRating] = useState<number>(0);
@@ -52,6 +56,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   // Filter games dynamically using PlatformTaxonomyService
   const filteredGames = useMemo(() => {
     return games.filter(game => {
+      if (yuckedIds.has(game.id)) return false;
       // Platform Family Filter
       if (selectedPlatformFamily !== 'all') {
         const matchFamily = selectedPlatformFamily === 'all' || getPlatformFamily(game.id) === selectedPlatformFamily;
@@ -68,7 +73,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
       return true;
     });
-  }, [games, selectedPlatformFamily, selectedCategory, minimumRating]);
+  }, [games, yuckedIds, selectedPlatformFamily, selectedCategory, minimumRating]);
 
   // Sort games
   const sortedGames = useMemo(() => {

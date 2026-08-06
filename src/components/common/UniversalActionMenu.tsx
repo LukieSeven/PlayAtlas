@@ -13,7 +13,7 @@ import { personalGameStore } from '../../services/personalGameStore';
 import { usePersonalGameRecord } from '../../hooks/usePersonalGameRecord';
 import { useAnchoredPopover } from '../../hooks/useAnchoredPopover';
 import { actionMenuCoordinator } from '../../services/actionMenuCoordinator';
-import { OwnershipType, PhysicalCondition, PlayStatus, InterestStatus, PersonalGameRecord } from '../../types/personal';
+import { OwnershipType, PhysicalCondition, PlayStatus, PersonalGameRecord } from '../../types/personal';
 
 interface UniversalActionMenuProps {
   gameId: string | number;
@@ -179,7 +179,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
                       : 'bg-[rgba(0,0,0,0.05)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   }`}
                 >
-                  {st}
+                  {st === 'dropped' ? 'Yuck!' : st}
                 </button>
               ))}
             </div>
@@ -187,25 +187,23 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
           {/* Interest Status */}
           <div className="pt-1 border-t border-[var(--panel-border)]">
-            <span className="px-2 text-[9px] font-mono text-[var(--text-muted)] uppercase">Interest</span>
+            <span className="px-2 text-[9px] font-mono text-[var(--text-muted)] uppercase">Preference</span>
             <div className="flex items-center gap-1 mt-1">
-              {(['wanted', 'wishlist'] as InterestStatus[]).map(st => (
                 <button
-                  key={st}
                   onClick={async e => {
                     e.stopPropagation();
-                    await personalGameStore.setInterestStatus(strId, interestStatus === st ? undefined : st, catalogSnapshot);
+                    const isLiked = interestStatus === 'wanted' || interestStatus === 'wishlist';
+                    await personalGameStore.setInterestStatus(strId, isLiked ? undefined : 'wanted', catalogSnapshot);
                   }}
                   className={`flex-1 py-1 text-[10px] font-bold rounded-lg capitalize flex items-center justify-center gap-1 transition-colors ${
-                    interestStatus === st
+                    interestStatus === 'wanted' || interestStatus === 'wishlist'
                       ? 'bg-[var(--accent-color)] text-slate-950 font-extrabold shadow-sm'
                       : 'bg-[rgba(0,0,0,0.05)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   <Heart className="w-3 h-3" />
-                  <span>{st}</span>
+                  <span>Like</span>
                 </button>
-              ))}
             </div>
           </div>
 

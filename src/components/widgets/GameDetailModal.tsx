@@ -68,7 +68,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
 
   const catalogSnapshot = { name: detail.name, coverUrl: detail.coverUrl, releaseYear: detail.releaseYear };
   const externalScore = normalizeExternalGameScore(detail);
-  const isWanted = personalRecord?.interestStatus === 'wanted';
+  const isWanted = personalRecord?.interestStatus === 'wanted' || personalRecord?.interestStatus === 'wishlist';
   const inBacklog = Boolean(personalRecord?.inBacklogQueue);
 
   return (
@@ -153,7 +153,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
                   {personalRecord && <Badge variant="emerald">RECORD ACTIVE</Badge>}
                 </div>
 
-                {/* Quick Action Bar (Wanted & Backlog) */}
+                {/* Quick Action Bar (Like & Backlog) */}
                 <div className="flex flex-wrap gap-2 text-xs">
                   <button
                     onClick={async () => {
@@ -170,7 +170,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
                     }`}
                   >
                     <Heart className={`w-3.5 h-3.5 ${isWanted ? 'fill-current' : ''}`} />
-                    <span>{isWanted ? 'Wanted' : 'Add to Wanted'}</span>
+                    <span>{isWanted ? 'Liked' : 'Like'}</span>
                   </button>
 
                   <button

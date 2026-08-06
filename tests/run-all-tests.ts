@@ -19,6 +19,7 @@ const testFiles = [
   'personalData.test.ts',
   'catalogResolution.test.ts',
   'personalInitialization.test.ts',
+  'personalGameVisibility.test.ts',
   'actionMenuPortal.test.ts',
 ];
 
