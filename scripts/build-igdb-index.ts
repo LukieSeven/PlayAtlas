@@ -35,6 +35,9 @@ const IGDB_CLIENT_SECRET = process.env.IGDB_CLIENT_SECRET;
 const IMPORT_MODE = (process.env.IGDB_IMPORT_MODE || 'test').toLowerCase();
 const OUTPUT_DIR_ENV = process.env.IGDB_OUTPUT_DIR || (IMPORT_MODE === 'full' ? 'generated/igdb-full-test' : 'public/data');
 const CHUNK_RECORD_LIMIT = 2500;
+const IMPORT_LIMIT_ENV = process.env.IGDB_IMPORT_LIMIT;
+const TARGET_LIMIT = IMPORT_LIMIT_ENV ? parseInt(IMPORT_LIMIT_ENV, 10) : 500;
+export const BATCH_LIMIT = Math.min(250, Math.floor(TARGET_LIMIT / 2));
 
 export interface PlatformReleaseDate {
   platformId: number | null;

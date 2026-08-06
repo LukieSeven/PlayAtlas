@@ -1,6 +1,6 @@
 import { buildCompactRankSignals, calculateCatalogImportance, normalizeIgdbRating } from '../src/utils/catalogRanking';
 import { compareRecordsDeterministic } from '../src/services/tokenSearchService';
-import { normalizeRawIgdbRecord } from '../scripts/build-igdb-index';
+import { BATCH_LIMIT, normalizeRawIgdbRecord } from '../scripts/build-igdb-index';
 
 let passed = 0;
 let failed = 0;
@@ -16,6 +16,7 @@ const assert = (condition: boolean, message: string) => {
 
 console.log('🧪 Running Catalog Ranking & Enrichment Tests...');
 
+assert(BATCH_LIMIT === 250, 'Test importer defines two 250-record query batches by default');
 assert(normalizeIgdbRating(63) === 6.3, 'IGDB score 63 normalizes to 6.3 stars');
 assert(normalizeIgdbRating(100) === 10, 'IGDB score 100 normalizes to 10 stars');
 assert(normalizeIgdbRating(undefined) === undefined, 'Missing score remains unrated');
