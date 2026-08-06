@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { CalendarPlus, ChevronLeft, ChevronRight, Filter, Plus, Trash2, X } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { GameCard } from '../components/common/GameCard';
 import { GameDetailModal } from '../components/widgets/GameDetailModal';
 import { usePersonalGameLibrary } from '../hooks/usePersonalGameLibrary';
@@ -20,7 +21,7 @@ import { CompactGameLookupRecord } from '../types/catalog';
 import { PersonalCalendarItem } from '../types/personalCalendar';
 import { calculateCatalogImportance } from '../utils/catalogRanking';
 import { getYuckedNumericIds } from '../utils/personalGameVisibility';
-import { getEventsCatalog, getEventsForMonth } from '../services/eventCatalogService';
+import { getEventDetailPath, getEventsCatalog, getEventsForMonth } from '../services/eventCatalogService';
 import type { CatalogEvent } from '../types/events';
 
 type CalendarMode = 'games' | 'events' | 'personal';
@@ -223,7 +224,7 @@ export const CalendarPage: React.FC = () => {
                         {mode === 'games'
                           ? dayReleases.slice(0, 5).map(record => <GameReleaseItem key={`${record.sourceId}:${date}`} record={record} date={date} viewType={viewType} onExpand={expandGame} />)
                           : mode === 'events'
-                            ? dayEvents.slice(0, 5).map(event => <a key={event.id} href={event.liveStreamUrl || event.links[0]?.url || '#'} target={event.liveStreamUrl || event.links[0] ? '_blank' : undefined} rel="noreferrer" className="block rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5"><span className="block line-clamp-2 text-[10px] font-bold text-[#0C1D2D]">{event.name}</span><span className="text-[9px] text-[#8C6D37]">{new Date(event.startTime).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span></a>)
+                            ? dayEvents.slice(0, 5).map(event => <Link key={event.id} to={getEventDetailPath(event.id)} className="block rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5"><span className="block line-clamp-2 text-[10px] font-bold text-[#0C1D2D]">{event.name}</span><span className="text-[9px] text-[#8C6D37]">{event.allDay ? 'All day' : new Date(event.startTime).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span></Link>)
                           : dayPersonal.map(item => (
                             <div key={item.id} className="flex items-start justify-between gap-1 rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5">
                               <span><span className="block line-clamp-2 text-[10px] font-bold text-[#0C1D2D]">{item.title}</span><span className="text-[9px] uppercase text-[#8C6D37]">{item.kind}</span></span>

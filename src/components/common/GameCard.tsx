@@ -15,6 +15,7 @@ interface GameCardProps {
   onSelect?: (record: CompactGameLookupRecord) => void;
   onLikeChange?: (liked: boolean) => void;
   className?: string;
+  variant?: 'card' | 'list';
 }
 
 export const GameCard: React.FC<GameCardProps> = ({
@@ -23,6 +24,7 @@ export const GameCard: React.FC<GameCardProps> = ({
   onSelect,
   onLikeChange,
   className = '',
+  variant = 'card',
 }) => {
   // Map raw catalog record if viewModel is not directly provided
   const vm: GameCardViewModel = providedViewModel || mapToGameCardViewModel(game);
@@ -73,6 +75,83 @@ export const GameCard: React.FC<GameCardProps> = ({
       onSelect(compactRecord);
     }
   };
+
+  if (variant === 'list') {
+    return (
+      <div
+        onClick={handleCardClick}
+        className={`themed-card themed-card-hover group flex min-h-24 cursor-pointer items-center gap-3 overflow-hidden p-3 sm:gap-4 ${className}`}
+      >
+        <div className="h-20 w-14 shrink-0 overflow-hidden rounded-lg border border-[var(--panel-border)] bg-slate-900 shadow-sm">
+          {liveVm.coverUrl ? (
+            <img src={liveVm.coverUrl} alt={liveVm.title} className="h-full w-full object-cover" loading="lazy" />
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-slate-400">
+              <Gamepad2 className="h-5 w-5 text-[var(--accent-color)] opacity-60" />
+            </div>
+          )}
+        </div>
+
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <h3 className="truncate text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--primary-action)]">
+              {liveVm.title}
+            </h3>
+            {liveVm.shouldShowGameTypeBadge && liveVm.gameTypeBadgeLabel && (
+              <Badge variant={getGameTypeBadgeVariant(liveVm.gameType)}>{liveVm.gameTypeBadgeLabel}</Badge>
+            )}
+          </div>
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-muted)]">
+            <span className="font-mono font-semibold">{liveVm.releaseYearDisplay}</span>
+            {liveVm.primaryPlatforms.length > 0 && <span>{liveVm.primaryPlatforms.join(' • ')}</span>}
+            {liveVm.genresDisplay.length > 0 && <span>{liveVm.genresDisplay.slice(0, 2).join(' • ')}</span>}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-wide">
+            {liveVm.isOwned && <span className="rounded bg-emerald-600 px-2 py-0.5 text-white">Owned</span>}
+            {liveVm.currentPlayStatus === 'playing' && <span className="rounded bg-indigo-600 px-2 py-0.5 text-white">Playing</span>}
+            {liveVm.currentPlayStatus === 'completed' && <span className="rounded bg-amber-500 px-2 py-0.5 text-slate-950">Completed</span>}
+            {liveVm.inBacklog && <span className="rounded bg-purple-600 px-2 py-0.5 text-white">Backlog</span>}
+          </div>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5" onClick={event => event.stopPropagation()}>
+          <div className="hidden min-w-16 text-right sm:block">
+            <span className="text-xs font-bold text-[var(--text-secondary)]">
+              {liveVm.personalScore && !liveVm.personalScore.isUnrated
+                ? liveVm.personalScore.displayString
+                : !liveVm.externalScore.isUnrated
+                  ? liveVm.externalScore.displayString
+                  : 'Not rated'}
+            </span>
+          </div>
+          <button
+            onClick={handleLikeToggle}
+            className={`rounded-lg border p-2 transition-colors ${isWanted ? 'border-rose-400 bg-rose-600 text-white' : 'border-[var(--panel-border)] bg-[var(--panel-bg)] text-[var(--text-muted)] hover:text-rose-600'}`}
+            title={isWanted ? 'Remove Like' : 'Like this game'}
+            aria-label={isWanted ? 'Remove Like' : 'Like this game'}
+          >
+            <Heart className={`h-3.5 w-3.5 ${isWanted ? 'fill-current' : ''}`} />
+          </button>
+          <button
+            onClick={handleYuckToggle}
+            className={`rounded-lg border p-2 transition-colors ${isYucked ? 'border-[#8FD39A] bg-[#2B6E4E] text-[#D7F4C8]' : 'border-[var(--panel-border)] bg-[var(--panel-bg)] text-[#2B6E4E] hover:bg-[#2B6E4E] hover:text-white'}`}
+            title={isYucked ? 'Remove from Yuck!' : 'Yuck! Hide this game'}
+            aria-label={isYucked ? 'Remove from Yuck!' : 'Add to Yuck! and hide this game'}
+          >
+            <SplatIcon className="h-3.5 w-3.5" />
+          </button>
+          <UniversalActionMenu
+            gameId={liveVm.gameId}
+            gameTitle={liveVm.title}
+            coverUrl={liveVm.coverUrl}
+            releaseYear={liveVm.releaseYearDisplay !== 'TBA' ? parseInt(liveVm.releaseYearDisplay, 10) : undefined}
+            personalRecord={personalRecord}
+            onLikeChange={onLikeChange}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div

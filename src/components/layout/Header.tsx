@@ -41,6 +41,7 @@ const getPageTitle = (pathname: string): { title: string; subtitle: string } => 
     case '/settings':
       return { title: 'Settings', subtitle: 'Application customization' };
     default:
+      if (pathname.startsWith('/events/')) return { title: 'Event Details', subtitle: 'Dates, venue, sources, and official links' };
       return { title: 'Home', subtitle: 'Your customizable gaming hub' };
   }
 };

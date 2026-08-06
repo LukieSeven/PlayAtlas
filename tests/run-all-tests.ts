@@ -11,6 +11,7 @@ const testFiles = [
   'searchEngine.test.ts',
   'catalogRanking.test.ts',
   'gameListControls.test.ts',
+  'searchableListView.test.ts',
   'userListService.test.ts',
   'homeWidgetService.test.ts',
   'homeCatalogWidgets.test.ts',

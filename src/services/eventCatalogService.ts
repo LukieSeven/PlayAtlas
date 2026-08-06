@@ -1,20 +1,40 @@
 import { getBasePathAwareUrl } from './catalogDataSource';
 import type { CatalogEvent, EventsCatalogManifest } from '../types/events';
 
+interface LegacyCatalogEvent extends Omit<CatalogEvent, 'id' | 'sources' | 'sourceIds' | 'categories'> {
+  id: number;
+}
+
+interface LegacyEventsCatalogManifest {
+  schemaVersion: 1;
+  events: LegacyCatalogEvent[];
+}
+
 let cachedEvents: CatalogEvent[] | null = null;
+
+export const getEventDetailPath = (eventId: string): string => `/events/${encodeURIComponent(eventId)}`;
 
 export async function getEventsCatalog(): Promise<CatalogEvent[]> {
   if (cachedEvents) return cachedEvents;
   const url = getBasePathAwareUrl('data/events/events.json');
   const response = await fetch(url);
   if (!response.ok) throw new Error(`Failed to load events catalog: HTTP ${response.status}`);
-  const manifest = await response.json() as EventsCatalogManifest;
-  if (manifest.schemaVersion !== 1 || !Array.isArray(manifest.events)) {
+  const manifest = await response.json() as EventsCatalogManifest | LegacyEventsCatalogManifest;
+  if (![1, 2].includes(manifest.schemaVersion) || !Array.isArray(manifest.events)) {
     throw new Error('Events catalog uses an unsupported schema.');
   }
-  cachedEvents = manifest.events
-    .filter(event => Number.isSafeInteger(event.id) && event.name && event.startTime)
-    .sort((left, right) => left.startTime.localeCompare(right.startTime) || left.id - right.id);
+  const normalizedEvents: CatalogEvent[] = manifest.schemaVersion === 1
+    ? manifest.events.map(event => ({
+        ...event,
+        id: `igdb:${event.id}`,
+        sources: ['igdb'],
+        sourceIds: { igdb: String(event.id) },
+        categories: [],
+      }))
+    : manifest.events;
+  cachedEvents = normalizedEvents
+    .filter(event => typeof event.id === 'string' && event.id && event.name && event.startTime)
+    .sort((left, right) => left.startTime.localeCompare(right.startTime) || left.id.localeCompare(right.id));
   return cachedEvents;
 }
 

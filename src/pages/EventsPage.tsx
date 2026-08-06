@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ExternalLink, Grid2X2, List, Radio, Search } from 'lucide-react';
-import { eventsWithinRange, getEventsCatalog } from '../services/eventCatalogService';
+import { CalendarDays, Grid2X2, List, Search } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { eventsWithinRange, getEventDetailPath, getEventsCatalog } from '../services/eventCatalogService';
 import type { CatalogEvent } from '../types/events';
 
 type EventRange = 30 | 90 | 365;
@@ -54,10 +55,10 @@ export const EventsPage: React.FC = () => {
 
 const EventCard: React.FC<{ event: CatalogEvent }> = ({ event }) => {
   const start = new Date(event.startTime);
-  return <article className="atlas-dashboard-panel flex min-h-52 overflow-hidden">
+  return <Link to={getEventDetailPath(event.id)} className="block"><article className="atlas-dashboard-panel flex min-h-52 overflow-hidden transition-transform hover:-translate-y-0.5">
     <div className="flex w-28 shrink-0 flex-col items-center justify-center border-r border-[#D9C8A9] bg-[#0B2B3C] p-3 text-center text-white"><span className="text-xs font-black uppercase text-[#F2D27C]">{start.toLocaleString(undefined, { month: 'short' })}</span><span className="font-serif text-4xl font-bold">{start.getDate()}</span><span className="text-[10px]">{start.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span></div>
-    <div className="flex min-w-0 flex-1 flex-col p-4"><div className="flex items-start gap-3">{event.logoUrl ? <img src={event.logoUrl} alt="" className="h-12 w-12 rounded-lg object-contain" /> : <CalendarDays className="h-8 w-8 text-[#8C6D37]" />}<div><h2 className="font-serif text-xl font-bold text-[#0C1D2D]">{event.name}</h2><p className="text-[10px] font-bold uppercase tracking-wide text-[#8C6D37]">{event.timeZone || 'Time shown locally'} · {event.gameIds.length} linked games</p></div></div><p className="mt-3 line-clamp-3 text-xs leading-relaxed text-[#47586A]">{event.description || 'No description has been published for this event.'}</p><div className="mt-auto flex gap-2 pt-4">{event.liveStreamUrl && <a href={event.liveStreamUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-lg bg-[#0B2B3C] px-3 py-2 text-xs font-bold text-white"><Radio className="h-3.5 w-3.5" /> Stream</a>}{event.links[0] && <a href={event.links[0].url} target="_blank" rel="noreferrer" className="flex items-center gap-1 rounded-lg border border-[#C5A059] px-3 py-2 text-xs font-bold text-[#0B2B3C]">Event link <ExternalLink className="h-3.5 w-3.5" /></a>}</div></div>
-  </article>;
+    <div className="flex min-w-0 flex-1 flex-col p-4"><div className="flex items-start gap-3">{event.logoUrl ? <img src={event.logoUrl} alt="" className="h-12 w-12 rounded-lg object-contain" /> : <CalendarDays className="h-8 w-8 text-[#8C6D37]" />}<div><h2 className="font-serif text-xl font-bold text-[#0C1D2D]">{event.name}</h2><p className="text-[10px] font-bold uppercase tracking-wide text-[#8C6D37]">{event.categories.length > 0 ? event.categories.join(' · ') : (event.timeZone || 'Time shown locally')}</p>{event.venue && <p className="mt-1 text-[10px] font-semibold text-[#47586A]">{[event.venue.name, event.venue.city, event.venue.region, event.venue.country].filter(Boolean).join(', ')}</p>}</div></div><p className="mt-3 line-clamp-3 text-xs leading-relaxed text-[#47586A]">{event.description || 'No description has been published for this event.'}</p><span className="mt-auto pt-4 text-xs font-bold text-[#0B2B3C]">View event details →</span></div>
+  </article></Link>;
 };
 
 export default EventsPage;

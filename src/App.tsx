@@ -9,6 +9,7 @@ const UpcomingGamesPage = lazy(() => import('./pages/UpcomingGamesPage').then(mo
 const CalendarPage = lazy(() => import('./pages/CalendarPage').then(module => ({ default: module.CalendarPage })));
 const DiscountsPage = lazy(() => import('./pages/DiscountsPage').then(module => ({ default: module.DiscountsPage })));
 const EventsPage = lazy(() => import('./pages/EventsPage').then(module => ({ default: module.EventsPage })));
+const EventDetailPage = lazy(() => import('./pages/EventDetailPage').then(module => ({ default: module.EventDetailPage })));
 const RankedListsPage = lazy(() => import('./pages/RankedListsPage').then(module => ({ default: module.RankedListsPage })));
 const CollectionsPage = lazy(() => import('./pages/CollectionsPage').then(module => ({ default: module.CollectionsPage })));
 const BacklogPage = lazy(() => import('./pages/BacklogPage').then(module => ({ default: module.BacklogPage })));
@@ -41,6 +42,7 @@ export const App: React.FC = () => {
               <Route path="calendar" element={<CalendarPage />} />
               <Route path="discounts" element={<DiscountsPage />} />
               <Route path="events" element={<EventsPage />} />
+              <Route path="events/:eventId" element={<EventDetailPage />} />
               <Route path="deals" element={<Navigate to="/discounts" replace />} />
               <Route path="lists" element={<RankedListsPage />} />
               <Route path="tier-lists" element={<Navigate to="/lists" replace />} />

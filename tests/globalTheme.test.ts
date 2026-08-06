@@ -32,6 +32,11 @@ function runGlobalThemeTests() {
   assert(presets.length >= 6, 'at least six global theme variations are available');
   assert(presets.some(preset => preset.isDark), 'a true dark theme is available');
   assert(
+    themePresets.watercolor_atlas.sidebarBackground === '#f4efe6'
+      && themePresets.watercolor_atlas.sidebarText === '#0f2b48',
+    'default Watercolor Atlas sidebar remains parchment with readable navy ink',
+  );
+  assert(
     existsSync(resolve(process.cwd(), 'public/branding/play-atlas-wordmark-dark.png')),
     'dark theme wordmark asset is packaged with the application',
   );

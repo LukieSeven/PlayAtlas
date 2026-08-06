@@ -24,7 +24,7 @@ import { GameDetailModal } from '../components/widgets/GameDetailModal';
 import { FantasyLandscapeArtwork } from '../components/ui/FantasyLandscapeArtwork';
 import { Button } from '../components/ui/Button';
 import { getNewReleases, getUpcomingGames, convertReleaseRecordToCompactRecord } from '../services/releaseCatalogService';
-import { getEventsCatalog } from '../services/eventCatalogService';
+import { getEventDetailPath, getEventsCatalog } from '../services/eventCatalogService';
 import type { CatalogEvent } from '../types/events';
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
 import { loadUserLists } from '../services/userListService';
@@ -693,14 +693,14 @@ export const HomePage: React.FC = () => {
             </div>
 
             {upcomingEvents.length > 0 ? <div className="relative z-10 space-y-2">
-              {upcomingEvents.map(event => <Link key={event.id} to="/events" className="flex items-center gap-3 rounded-xl border border-[#D9C8A9] bg-[#FDFBF7]/90 p-2.5 transition-colors hover:bg-[#EFE8D8]">
+              {upcomingEvents.map(event => <Link key={event.id} to={getEventDetailPath(event.id)} className="flex items-center gap-3 rounded-xl border border-[#D9C8A9] bg-[#FDFBF7]/90 p-2.5 transition-colors hover:bg-[#EFE8D8]">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#D9C8A9] bg-[#EFE8D8]">{event.logoUrl ? <img src={event.logoUrl} alt="" className="h-full w-full object-contain" /> : <Calendar className="h-5 w-5 text-[#0B2B3C]" />}</span>
                 <span className="min-w-0"><span className="block truncate text-xs font-bold text-[#0C1D2D]">{event.name}</span><span className="block text-[10px] font-semibold text-[#8C6D37]">{new Date(event.startTime).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span></span>
               </Link>)}
             </div> : <div className="p-6 text-center rounded-2xl bg-[#EFE8D8]/80 border border-[#D9C8A9] space-y-2 relative z-10">
               <Calendar className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
               <h4 className="font-bold text-xs text-[#0C1D2D]">No upcoming gaming events scheduled</h4>
-              <p className="text-xs text-[#47586A] max-w-xs mx-auto">The IGDB Events feed currently has no future-dated entries.</p>
+              <p className="text-xs text-[#47586A] max-w-xs mx-auto">The merged Events for Gamers and IGDB feed currently has no future-dated entries.</p>
             </div>}
 
             {/* Lower-Right Corner Castle Landscape Illustration */}

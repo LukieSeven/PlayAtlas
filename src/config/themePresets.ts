@@ -8,9 +8,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     appBackground: '#f5f0e1',               // Warm Parchment Base
     appBackgroundSecondary: '#ece4d0',      // Aged Parchment Shadow
-    sidebarBackground: '#0d1b2a',            // Deep Navy Ink Sidebar
-    sidebarText: '#f1f5f9',                  // Parchment White Sidebar Text
-    sidebarMutedText: '#94a3b8',             // Muted Slate Navy
+    sidebarBackground: '#f4efe6',            // Parchment Navigation Rail
+    sidebarText: '#0f2b48',                  // Deep Navy Ink Sidebar Text
+    sidebarMutedText: '#47586a',             // Muted Cartographic Ink
     sidebarActiveBackground: 'linear-gradient(135deg, rgba(43, 122, 148, 0.45) 0%, rgba(54, 110, 87, 0.45) 100%)',
     headerBackground: 'rgba(245, 240, 225, 0.94)', // Parchment Translucent Header
     
