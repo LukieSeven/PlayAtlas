@@ -30,6 +30,8 @@ const getPageTitle = (pathname: string): { title: string; subtitle: string } => 
       return { title: 'Discounts & Deals', subtitle: 'Featured platform game sales' };
     case '/events':
       return { title: 'Events', subtitle: 'Showcases, conventions, and community dates' };
+    case '/about':
+      return { title: 'About Play Atlas', subtitle: 'The project, its data, and its community' };
     case '/lists':
       return { title: 'Lists', subtitle: 'Create collections and tier rankings' };
     case '/tier-lists':

@@ -185,7 +185,7 @@
     760px 760px,
     820px 620px,
     780px 620px;
-  opacity: 0.48;
+  opacity: var(--background-artwork-opacity, 0.48);
   mix-blend-mode: multiply;
   filter: saturate(0.88) contrast(0.96);
 }
@@ -205,7 +205,7 @@
   background-position: right -80px top 80px, left -50px bottom -50px, top 10px right 10px, bottom 40px left 260px, right 5% bottom 8%;
   background-repeat: no-repeat;
   background-size: 520px 520px, 650px 650px, 700px 450px, 450px 200px, 360px 360px;
-  opacity: calc(var(--atlas-line-opacity) + 0.16);
+  opacity: var(--cartographic-overlay-opacity, 0.51);
   transition: opacity 0.25s ease;
   mix-blend-mode: multiply;
 }
@@ -245,6 +245,14 @@
   height: 42px;
   background-size: 220px auto;
   background-position: -35px -44px;
+}
+
+/* Brighter supplied wordmark for dark canvases; preserve the watercolor mark
+   on parchment themes. Both source images share the same crop geometry. */
+.dark .atlas-wordmark-crop {
+  background-image: url('../branding/play-atlas-wordmark-dark.png');
+  mix-blend-mode: normal;
+  border-radius: 0.35rem;
 }
 
 .atlas-home-widget {
@@ -524,10 +532,73 @@
 }
 
 .themed-input {
-  background-color: #FFFFFF;
+  background-color: var(--input-bg);
   border: 1px solid var(--atlas-border-panel);
   color: var(--atlas-ink-primary);
   border-radius: var(--atlas-radius-md);
+}
+
+/*
+ * Global theme compatibility layer.
+ * The current UI contains both semantic theme utilities and historical
+ * parchment Tailwind colors. Map that finite legacy palette back onto the
+ * active tokens so theme changes reach every routed page and modal.
+ */
+[class*="text-[#0C1D2D]"],
+[class*="text-[#0c1d2d]"],
+[class*="text-[#0f2b48]"] { color: var(--text-primary) !important; }
+[class*="text-[#213547]"],
+[class*="text-[#47586A]"],
+[class*="text-[#47586a]"] { color: var(--text-secondary) !important; }
+[class*="text-[#718294]"],
+[class*="text-[#64748b]"] { color: var(--text-muted) !important; }
+[class*="text-[#0B2B3C]"],
+[class*="text-[#0b2b3c]"] { color: var(--primary-action) !important; }
+[class*="text-[#8C6D37]"],
+[class*="text-[#8c6d37]"],
+[class*="text-[#C5A059]"],
+[class*="text-[#c5a059]"] { color: var(--accent-color) !important; }
+
+[class*="bg-[#F4EFE6]"],
+[class*="bg-[#f4efe6]"] { background-color: var(--app-bg) !important; }
+[class*="bg-[#FDFBF7]"],
+[class*="bg-[#fdfbf7]"],
+[class*="bg-[#FEFCF6]"],
+[class*="bg-[#fefcf6]"] { background-color: var(--panel-bg) !important; }
+[class*="bg-[#EFE8D8]"],
+[class*="bg-[#efe8d8]"] { background-color: var(--app-bg-secondary) !important; }
+[class*="bg-[#0B2B3C]"],
+[class*="bg-[#0b2b3c]"] { background-color: var(--primary-action) !important; }
+
+[class*="border-[#D9C8A9]"],
+[class*="border-[#d9c8a9]"],
+[class*="border-[#C8B584]"],
+[class*="border-[#c8b584]"] { border-color: var(--panel-border) !important; }
+[class*="border-[#C5A059]"],
+[class*="border-[#c5a059]"] { border-color: var(--accent-color) !important; }
+
+.themed-header {
+  background: var(--header-bg) !important;
+  border-color: var(--panel-border) !important;
+  color: var(--text-primary);
+}
+
+.themed-sidebar {
+  background: var(--sidebar-bg) !important;
+  border-color: var(--panel-border) !important;
+  color: var(--sidebar-text);
+}
+
+.dark .themed-app-shell::before,
+.dark .themed-app-shell::after,
+.dark .cartographic-bg-overlay {
+  mix-blend-mode: normal;
+}
+
+.dark input,
+.dark select,
+.dark textarea {
+  color-scheme: dark;
 }
 
 .themed-input:focus {

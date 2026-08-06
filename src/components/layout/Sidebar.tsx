@@ -14,7 +14,8 @@ import {
   Trash2,
   Bookmark,
   Heart,
-  Settings
+  Settings,
+  Info
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { usePersonalGameLibrary } from '../../hooks/usePersonalGameLibrary';
@@ -49,7 +50,7 @@ export const Sidebar: React.FC = () => {
   }, [rawRecords]);
 
   const isDefaultSystemTab = (id: string) => {
-    return ['home', 'my-games', 'lists', 'new-releases', 'upcoming', 'calendar', 'events', 'discounts', 'deals', 'settings'].includes(id);
+    return ['home', 'my-games', 'lists', 'new-releases', 'upcoming', 'calendar', 'events', 'discounts', 'deals', 'about', 'settings'].includes(id);
   };
 
   return (
@@ -189,6 +190,20 @@ export const Sidebar: React.FC = () => {
         <div className="py-0.5 opacity-40 flex justify-center text-[#8C6D37] text-xs tracking-widest select-none font-mono">
           - - ✕ - -
         </div>
+
+        <NavLink
+          to="/about"
+          className={({ isActive }) =>
+            `flex items-center gap-3 px-3 py-2 rounded-xl text-xs font-bold transition-all ${
+              isActive
+                ? 'bg-[#0B2B3C] text-white border border-[#C5A059]'
+                : 'text-[#0C1D2D] hover:bg-[#EFE8D8]'
+            }`
+          }
+        >
+          <Info className="w-4 h-4 text-[#8C6D37]" />
+          <span className="atlas-nav-label">About Play Atlas</span>
+        </NavLink>
 
         {/* Settings Navigation Link */}
         <NavLink

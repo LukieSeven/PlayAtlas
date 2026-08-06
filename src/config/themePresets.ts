@@ -91,7 +91,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     appBackgroundSecondary: '#0b1329',
     sidebarBackground: '#070f23',
     sidebarText: '#f1f5f9',
-    sidebarMutedText: '#64748b',
+    sidebarMutedText: '#94a3b8',
     sidebarActiveBackground: 'rgba(14, 165, 233, 0.2)',
     headerBackground: 'rgba(3, 7, 18, 0.85)',
     
@@ -129,7 +129,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     textPrimary: '#f8fafc',
     textSecondary: '#cbd5e1',
-    textMuted: '#64748b',
+    textMuted: '#94a3b8',
     headingColor: '#ffffff',
     
     primaryAction: '#0ea5e9',
@@ -241,7 +241,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     appBackgroundSecondary: '#13092b',
     sidebarBackground: '#0d061e',
     sidebarText: '#f472b6',
-    sidebarMutedText: '#a78bfa',
+    sidebarMutedText: '#c4b5fd',
     sidebarActiveBackground: 'rgba(236, 72, 153, 0.25)',
     headerBackground: 'rgba(9, 5, 20, 0.88)',
     
@@ -279,7 +279,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     textPrimary: '#f472b6',
     textSecondary: '#c084fc',
-    textMuted: '#a78bfa',
+    textMuted: '#c4b5fd',
     headingColor: '#ffffff',
     
     primaryAction: '#ec4899',
@@ -316,7 +316,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     appBackgroundSecondary: '#211811',
     sidebarBackground: '#140f09',
     sidebarText: '#fef3c7',
-    sidebarMutedText: '#d97706',
+    sidebarMutedText: '#fbbf24',
     sidebarActiveBackground: 'rgba(217, 119, 6, 0.3)',
     headerBackground: 'rgba(24, 18, 12, 0.9)',
     
@@ -354,7 +354,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     textPrimary: '#fef3c7',
     textSecondary: '#fde68a',
-    textMuted: '#d97706',
+    textMuted: '#fbbf24',
     headingColor: '#fffbeb',
     
     primaryAction: '#d97706',

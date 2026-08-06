@@ -14,6 +14,7 @@ const CollectionsPage = lazy(() => import('./pages/CollectionsPage').then(module
 const BacklogPage = lazy(() => import('./pages/BacklogPage').then(module => ({ default: module.BacklogPage })));
 const SharedListPage = lazy(() => import('./pages/SharedListPage').then(module => ({ default: module.SharedListPage })));
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then(module => ({ default: module.SettingsPage })));
+const AboutPage = lazy(() => import('./pages/AboutPage').then(module => ({ default: module.AboutPage })));
 const MyGamesPage = lazy(() => import('./pages/MyGamesPage').then(module => ({ default: module.MyGamesPage })));
 const DevThemeShowcasePage = lazy(() => import('./pages/DevThemeShowcasePage').then(module => ({ default: module.DevThemeShowcasePage })));
 const DevComponentReviewPage = lazy(() => import('./pages/DevComponentReviewPage').then(module => ({ default: module.DevComponentReviewPage })));
@@ -47,6 +48,7 @@ export const App: React.FC = () => {
               <Route path="backlog" element={<BacklogPage />} />
               <Route path="my-games" element={<MyGamesPage />} />
               <Route path="share/:listId" element={<SharedListPage />} />
+              <Route path="about" element={<AboutPage />} />
               <Route path="settings" element={<SettingsPage />} />
               <Route path="404" element={<NotFoundPage />} />
               <Route path="*" element={<Navigate to="/404" replace />} />

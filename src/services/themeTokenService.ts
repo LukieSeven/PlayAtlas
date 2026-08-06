@@ -42,6 +42,9 @@ export function applyThemeTokensToDOM(
 ): void {
   const root = document.documentElement;
 
+  root.dataset.theme = tokens.presetKey;
+  root.dataset.themeMode = tokens.isDark ? 'dark' : 'light';
+
   // Apply Backgrounds
   if (accessibility.plainBackgroundMode) {
     root.style.setProperty('--app-bg', tokens.isDark ? '#0c1626' : '#ffffff');
@@ -59,6 +62,23 @@ export function applyThemeTokensToDOM(
 
   root.style.setProperty('--header-bg', tokens.headerBackground);
   root.style.setProperty('--panel-border', tokens.panelBorder);
+
+  // Keep the current atlas component palette connected to the preset engine.
+  // Newer screens use these semantic variables while older screens use the
+  // legacy variables below; both must describe the same active theme.
+  root.style.setProperty('--atlas-canvas-bg', accessibility.plainBackgroundMode ? (tokens.isDark ? '#0c1626' : '#ffffff') : tokens.appBackground);
+  root.style.setProperty('--atlas-panel-bg', accessibility.plainBackgroundMode ? (tokens.isDark ? '#132238' : '#ffffff') : tokens.panelBackground);
+  root.style.setProperty('--atlas-panel-raised-bg', accessibility.plainBackgroundMode ? (tokens.isDark ? '#1c2d47' : '#ffffff') : tokens.panelElevatedBackground);
+  root.style.setProperty('--atlas-panel-inset-bg', accessibility.plainBackgroundMode ? (tokens.isDark ? '#0f1d31' : '#f8fafc') : tokens.appBackgroundSecondary);
+  root.style.setProperty('--atlas-panel-featured-bg', accessibility.plainBackgroundMode ? (tokens.isDark ? '#132238' : '#ffffff') : tokens.panelElevatedBackground);
+  root.style.setProperty('--atlas-border-gold', tokens.accent);
+  root.style.setProperty('--atlas-border-panel', tokens.panelBorder);
+  root.style.setProperty('--atlas-border-subtle', tokens.inputBorder);
+  root.style.setProperty('--atlas-shadow-sm', tokens.shadow);
+  root.style.setProperty('--atlas-shadow-md', tokens.shadow);
+  root.style.setProperty('--atlas-shadow-lg', tokens.shadow);
+  root.style.setProperty('--atlas-radius-lg', tokens.cornerRadius);
+  root.style.setProperty('--atlas-radius-xl', tokens.cornerRadius);
 
   // Apply Sidebar Beveled Rail Tokens
   root.style.setProperty('--sidebar-edge-primary', tokens.sidebarEdgePrimary || '#d4af37');
@@ -124,12 +144,24 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--text-secondary', accessibility.highContrast ? (tokens.isDark ? '#cbd5e1' : '#334155') : tokens.textSecondary);
   root.style.setProperty('--text-muted', accessibility.highContrast ? (tokens.isDark ? '#cbd5e1' : '#475569') : tokens.textMuted);
   root.style.setProperty('--heading-color', accessibility.highContrast ? (tokens.isDark ? '#ffffff' : '#000000') : tokens.headingColor);
+  root.style.setProperty('--atlas-ink-primary', accessibility.highContrast ? (tokens.isDark ? '#ffffff' : '#000000') : tokens.textPrimary);
+  root.style.setProperty('--atlas-ink-secondary', accessibility.highContrast ? (tokens.isDark ? '#e2e8f0' : '#1e293b') : tokens.textSecondary);
+  root.style.setProperty('--atlas-ink-muted', accessibility.highContrast ? (tokens.isDark ? '#cbd5e1' : '#334155') : tokens.textMuted);
+  root.style.setProperty('--atlas-ink-subdued', accessibility.highContrast ? (tokens.isDark ? '#cbd5e1' : '#475569') : tokens.textMuted);
 
   // Apply Actions & Accents
   root.style.setProperty('--primary-action', tokens.primaryAction);
   root.style.setProperty('--primary-action-hover', tokens.primaryActionHover);
   root.style.setProperty('--accent-color', tokens.accent);
   root.style.setProperty('--focus-ring', tokens.focusRing);
+  root.style.setProperty('--atlas-teal-deep', tokens.primaryAction);
+  root.style.setProperty('--atlas-teal-dark', tokens.primaryAction);
+  root.style.setProperty('--atlas-teal-medium', tokens.primaryActionHover);
+  root.style.setProperty('--atlas-teal-light', tokens.primaryActionHover);
+  root.style.setProperty('--atlas-gold-antique', tokens.accent);
+  root.style.setProperty('--atlas-gold-light', tokens.accent);
+  root.style.setProperty('--atlas-gold-dark', tokens.accent);
+  root.style.setProperty('--atlas-focus-ring', tokens.focusRing);
 
   // Apply Inputs & Badges
   root.style.setProperty('--input-bg', tokens.inputBackground);
@@ -142,15 +174,23 @@ export function applyThemeTokensToDOM(
   root.style.setProperty('--status-success', tokens.success);
   root.style.setProperty('--status-warning', tokens.warning);
   root.style.setProperty('--status-danger', tokens.danger);
+  root.style.setProperty('--atlas-status-success', tokens.success);
+  root.style.setProperty('--atlas-status-warning', tokens.warning);
+  root.style.setProperty('--atlas-status-danger', tokens.danger);
 
   // Apply Font Families (Cormorant Garamond display headings)
   root.style.setProperty('--font-heading', tokens.displayHeadingFont || tokens.headingFontFamily);
+  root.style.setProperty('--font-display', tokens.displayHeadingFont || tokens.headingFontFamily);
   root.style.setProperty('--font-body', tokens.bodyFontFamily);
 
   // Apply Utilities & General Styles
   root.style.setProperty('--texture-opacity', (accessibility.disableTextures ? 0 : tokens.textureOpacity).toString());
   root.style.setProperty('--border-radius', tokens.cornerRadius);
   root.style.setProperty('--shadow-style', tokens.shadow);
+  const artworkIntensity = accessibility.disableTextures || accessibility.plainBackgroundMode ? 0 : tokens.backgroundArtworkIntensity;
+  root.style.setProperty('--background-artwork-intensity', artworkIntensity.toString());
+  root.style.setProperty('--background-artwork-opacity', (0.48 * artworkIntensity).toString());
+  root.style.setProperty('--cartographic-overlay-opacity', ((tokens.atlasLineOpacity + 0.16) * artworkIntensity).toString());
 
   // Motion Control
   if (accessibility.reduceMotion) {
