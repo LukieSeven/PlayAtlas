@@ -4,6 +4,7 @@ import { GameItem } from '../types/game';
 import { CompactGameLookupRecord, CompactRankSignals } from '../types/catalog';
 import { openIndexedDB } from './indexDbStorage';
 import { getDevelopmentCatalogPlugin } from './developmentCatalogPlugin';
+import { calculateCatalogImportance } from '../utils/catalogRanking';
 
 export interface CompactPlatformReleaseDate {
   p: number; // platform ID
@@ -278,6 +279,22 @@ export function convertReleaseRecordToCompactRecord(
   };
 }
 
+export function getReleaseMonthKeys(year: number, month: number): { datePrefix: string; partitionKey: string } {
+  const paddedMonth = String(month).padStart(2, '0');
+  return {
+    datePrefix: `${year}-${paddedMonth}`,
+    partitionKey: `${year}/${paddedMonth}`,
+  };
+}
+
+export function isUnreleasedFirstReleaseWithinRange(
+  record: Pick<ReleaseListingRecord, 'firstReleaseDate'>,
+  startDate: string,
+  endDate: string,
+): boolean {
+  return Boolean(record.firstReleaseDate && record.firstReleaseDate >= startDate && record.firstReleaseDate <= endDate);
+}
+
 export function sortReleaseRecordsChronologically(
   records: ReleaseListingRecord[],
   direction: 'ascending' | 'descending'
@@ -286,6 +303,33 @@ export function sortReleaseRecordsChronologically(
     const comparison = (a.firstReleaseDate || '').localeCompare(b.firstReleaseDate || '');
     if (comparison !== 0) return direction === 'ascending' ? comparison : -comparison;
     return a.sourceId - b.sourceId;
+  });
+}
+
+export function calculateUpcomingDiscoveryScore(record: ReleaseListingRecord, todayStr: string): number {
+  const popularity = calculateCatalogImportance(convertReleaseRecordToCompactRecord(record));
+  const releaseTime = record.firstReleaseDate ? parseYMDLocal(record.firstReleaseDate).getTime() : Number.POSITIVE_INFINITY;
+  const todayTime = parseYMDLocal(todayStr).getTime();
+  const daysUntilRelease = Number.isFinite(releaseTime)
+    ? Math.max(0, Math.floor((releaseTime - todayTime) / 86_400_000))
+    : 365;
+  const proximityBonus = Math.max(0, 90 - Math.min(daysUntilRelease, 90));
+
+  // This establishes only the feed's default relevance order. User-selected
+  // grid filters and sort modes continue to operate on top of that feed.
+  return popularity * 12 + proximityBonus;
+}
+
+export function sortUpcomingReleaseRecordsByPopularity(
+  records: ReleaseListingRecord[],
+  todayStr: string,
+): ReleaseListingRecord[] {
+  return [...records].sort((left, right) => {
+    const scoreDifference = calculateUpcomingDiscoveryScore(right, todayStr) - calculateUpcomingDiscoveryScore(left, todayStr);
+    if (scoreDifference !== 0) return scoreDifference;
+    const dateDifference = (left.firstReleaseDate || '').localeCompare(right.firstReleaseDate || '');
+    if (dateDifference !== 0) return dateDifference;
+    return left.sourceId - right.sourceId;
   });
 }
 
@@ -306,6 +350,7 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
   }
 
   const { startDate, endDate } = calculateDynamicDateRange(options.timeframe, localToday);
+  const isUpcoming = options.timeframe === 'upcoming' || options.timeframe === 'next_30_days';
 
   const manifest = await fetchReleaseManifest();
   let platformsMap: Record<number, { name: string; abbreviation: string | null }> | undefined;
@@ -336,6 +381,10 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
       return false;
     }
 
+    if (isUpcoming) {
+      return isUnreleasedFirstReleaseWithinRange(record, localToday, endDate);
+    }
+
     if (options.viewType === 'first_release') {
       if (!record.firstReleaseDate) return false;
       return record.firstReleaseDate >= startDate && record.firstReleaseDate <= endDate;
@@ -351,7 +400,6 @@ export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise
     }
   });
 
-  const isUpcoming = options.timeframe === 'upcoming' || options.timeframe === 'next_30_days';
   const filteredRecords = sortReleaseRecordsChronologically(
     matchingRecords,
     isUpcoming ? 'ascending' : 'descending'
@@ -376,7 +424,7 @@ export async function getNewReleases(limit: number = 30): Promise<ReleaseFeedPar
 
 export async function getUpcomingGames(limit: number = 30): Promise<ReleaseFeedPartition> {
   const result = await queryReleaseCatalog({ timeframe: 'upcoming' });
-  const records = result.records.slice(0, limit);
+  const records = sortUpcomingReleaseRecordsByPopularity(result.records, result.selectedDate).slice(0, limit);
   return { items: records.map(r => ({ record: r })) };
 }
 
@@ -385,7 +433,7 @@ export async function getReleaseRecordsForMonth(
   month: number,
   options: { viewType?: 'first_release' | 'platform_release'; includeHidden?: boolean } = {},
 ): Promise<ReleaseListingRecord[]> {
-  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+  const { datePrefix: monthKey, partitionKey } = getReleaseMonthKeys(year, month);
   const developmentPlugin = await getDevelopmentCatalogPlugin();
   if (developmentPlugin) {
     return developmentPlugin.createReleaseRecords(true).map((record, index) => ({
@@ -395,7 +443,7 @@ export async function getReleaseRecordsForMonth(
   }
 
   const manifest = await fetchReleaseManifest();
-  const monthlyPartitions = manifest.partitions.filter(partition => partition.key.startsWith(monthKey));
+  const monthlyPartitions = manifest.partitions.filter(partition => partition.key === partitionKey);
   const targetPartitions = monthlyPartitions.length > 0
     ? monthlyPartitions
     : manifest.partitions.filter(partition => partition.key === String(year));

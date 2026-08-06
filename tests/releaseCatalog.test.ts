@@ -3,6 +3,9 @@ import {
   calculateDynamicDateRange,
   convertReleaseRecordToGameItem,
   fetchReleaseManifest,
+  getReleaseMonthKeys,
+  isUnreleasedFirstReleaseWithinRange,
+  sortUpcomingReleaseRecordsByPopularity,
 } from '../src/services/releaseCatalogService';
 
 async function runReleaseCatalogRegressionTests() {
@@ -58,6 +61,19 @@ async function runReleaseCatalogRegressionTests() {
   const augustRange = calculateDynamicDateRange('month', '2026-08-15');
   assertEqual(augustRange.startDate, '2026-08-01', 'August month view uses August 1st (not July)');
 
+  const augustKeys = getReleaseMonthKeys(2026, 8);
+  assertEqual(augustKeys.partitionKey, '2026/08', 'Calendar uses the published slash-delimited monthly partition key');
+  assertEqual(augustKeys.datePrefix, '2026-08', 'Calendar retains ISO date prefixes when filtering release records');
+
+  assert(
+    isUnreleasedFirstReleaseWithinRange({ firstReleaseDate: '2026-08-20' }, '2026-08-06', '2026-11-04'),
+    'Upcoming includes games whose first release is still in the future',
+  );
+  assert(
+    !isUnreleasedFirstReleaseWithinRange({ firstReleaseDate: '2018-10-26' }, '2026-08-06', '2026-11-04'),
+    'Upcoming excludes older games even when they have later platform releases',
+  );
+
   // 4. Converter test & Default Visibility
   const sampleRecord = {
     id: 'igdb:406526',
@@ -79,6 +95,20 @@ async function runReleaseCatalogRegressionTests() {
   const gameItem = convertReleaseRecordToGameItem(sampleRecord);
   assertEqual(gameItem.title, 'A Maze in Labyrinth', 'Converter maps title correctly');
   assertEqual(gameItem.releaseDate, '2026-08-03', 'Converter maps releaseDate correctly');
+
+  const popularitySorted = sortUpcomingReleaseRecordsByPopularity([
+    {
+      ...sampleRecord,
+      id: 'igdb:2', sourceId: 2, name: 'Obscure Tomorrow', firstReleaseDate: '2026-08-07',
+      rank: { totalRating: 8, totalRatingCount: 1, hypeCount: 0, metadataConfidence: 40 },
+    },
+    {
+      ...sampleRecord,
+      id: 'igdb:1', sourceId: 1, name: 'Major Release', firstReleaseDate: '2026-10-01',
+      rank: { totalRating: 8, totalRatingCount: 25000, hypeCount: 800, metadataConfidence: 100, externalProductCount: 2 },
+    },
+  ] as any, '2026-08-06');
+  assertEqual(popularitySorted[0].sourceId, 1, 'Upcoming default relevance heavily favors major popular games over obscure nearer releases');
 
   // 5. Release Manifest Path & Fallback URL Verification
   const originalFetch = globalThis.fetch;
