@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Filter, SortAsc, LayoutGrid, List as ListIcon, ShieldAlert, ChevronDown } from 'lucide-react';
+import { SortAsc, LayoutGrid, List as ListIcon, ShieldAlert, ChevronDown } from 'lucide-react';
 import { CompactGameLookupRecord } from '../../types/catalog';
 import { normalizeGameTypeCategory } from '../../utils/gameTypeUtils';
 import { GameCard } from '../common/GameCard';
 import { getAllFamilies, getPlatformFamily } from '../../services/platformTaxonomyService';
+import { MinimumRatingFilter } from '../ui/MinimumRatingFilter';
 
 interface GameListGridProps {
   collectionKey?: string;
@@ -16,6 +17,9 @@ interface GameListGridProps {
   description?: string;
   badge?: string;
   onShareClick?: () => void;
+  headerContent?: React.ReactNode;
+  searchContent?: React.ReactNode;
+  noticeContent?: React.ReactNode;
 }
 
 export const GameListGrid: React.FC<GameListGridProps> = ({
@@ -27,9 +31,13 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   title,
   description,
   onShareClick,
+  headerContent,
+  searchContent,
+  noticeContent,
 }) => {
   const [selectedPlatformFamily, setSelectedPlatformFamily] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [minimumRating, setMinimumRating] = useState<number>(0);
   const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'yearAsc' | 'yearDesc'>('relevance');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
@@ -39,7 +47,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   // Reset visibleCount to 40 ONLY when collectionKey, filters, or sorting change (NOT on record hydration!)
   useEffect(() => {
     setVisibleCount(40);
-  }, [collectionKey, selectedPlatformFamily, selectedCategory, sortBy]);
+  }, [collectionKey, selectedPlatformFamily, selectedCategory, minimumRating, sortBy]);
 
   // Filter games dynamically using PlatformTaxonomyService
   const filteredGames = useMemo(() => {
@@ -56,9 +64,11 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         if (cat !== selectedCategory) return false;
       }
 
+      if (minimumRating > 0 && (game.rating === undefined || game.rating < minimumRating)) return false;
+
       return true;
     });
-  }, [games, selectedPlatformFamily, selectedCategory]);
+  }, [games, selectedPlatformFamily, selectedCategory, minimumRating]);
 
   // Sort games
   const sortedGames = useMemo(() => {
@@ -111,16 +121,42 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
       )}
 
       {/* Solid High-Contrast Filter and Control Bar */}
-      <div className="themed-panel p-4 rounded-2xl flex flex-wrap items-center justify-between gap-4 border border-[var(--panel-border)] shadow-md bg-[#fefcf6]">
+      <div className="themed-panel rounded-2xl border border-[var(--panel-border)] shadow-md bg-[#fefcf6] overflow-hidden">
+        {headerContent && <div>{headerContent}</div>}
+        <div className={`p-4 space-y-3 text-xs font-semibold ${headerContent ? 'border-t border-[#D9C8A9]' : ''}`}>
+        <div className="flex flex-col items-stretch justify-between gap-3 sm:flex-row sm:items-center">
+          <div className="min-w-0 flex-1">{searchContent}</div>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-xs font-mono font-bold text-[#0C1D2D]">
+              Showing {visibleGames.length} of {sortedGames.length.toLocaleString()}
+            </span>
+            <div className="flex items-center bg-[#EFE8D8] p-0.5 rounded-xl border border-[#D9C8A9]">
+              <button
+                onClick={() => setViewMode('grid')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'grid' ? 'bg-[#0B2B3C] text-white shadow-xs' : 'text-[#0C1D2D] hover:bg-white/50'}`}
+                title="Grid View"
+              >
+                <LayoutGrid className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setViewMode('list')}
+                className={`p-1.5 rounded-lg transition-colors ${viewMode === 'list' ? 'bg-[#0B2B3C] text-white shadow-xs' : 'text-[#0C1D2D] hover:bg-white/50'}`}
+                title="List View"
+              >
+                <ListIcon className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#D9C8A9]/60 pt-2">
         {/* Left Side Filters */}
-        <div className="flex flex-wrap items-center gap-3 text-xs font-semibold">
+        <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs font-semibold">
           {/* Platform Taxonomy Filter */}
           <div className="flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-[var(--primary-action)]" />
             <select
               value={selectedPlatformFamily}
               onChange={e => setSelectedPlatformFamily(e.target.value)}
-              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584] focus:ring-2 focus:ring-[var(--focus-ring)]"
+              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584] focus:ring-2 focus:ring-[var(--focus-ring)]"
             >
               <option value="all">All Platform Families</option>
               {platformFamilies.map(fam => (
@@ -135,22 +171,21 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
           <select
             value={selectedCategory}
             onChange={e => setSelectedCategory(e.target.value)}
-            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584] focus:ring-2 focus:ring-[var(--focus-ring)]"
+            className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584] focus:ring-2 focus:ring-[var(--focus-ring)]"
           >
-            <option value="all">All Game Types</option>
+              <option value="all">All Formats</option>
             <option value="main_game">Main Games Only</option>
             <option value="dlc_addon">DLC & Addons</option>
             <option value="pack">Packs & Expansions</option>
             <option value="mod">Mods & ROM Hacks</option>
           </select>
 
-          <span className="text-xs font-mono font-bold text-[#0f2b48]">
-            Showing {visibleGames.length} of {sortedGames.length.toLocaleString()} games
-          </span>
+          <MinimumRatingFilter value={minimumRating} onChange={setMinimumRating} />
+
         </div>
 
-        {/* Right Side Sorting & Layout Toggle */}
-        <div className="flex items-center gap-3 text-xs font-semibold">
+        {/* Right Side Sorting */}
+        <div className="flex shrink-0 items-center gap-3 text-xs font-semibold">
           <div className="flex items-center gap-1.5">
             <SortAsc className="w-3.5 h-3.5 text-[var(--text-muted)]" />
             <select
@@ -164,30 +199,12 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
               <option value="yearAsc">Release Year (Oldest)</option>
             </select>
           </div>
-
-          {/* Grid / List Mode Controls */}
-          <div className="flex items-center bg-[#ece4d0] p-0.5 rounded-xl border border-[#c8b584]">
-            <button
-              onClick={() => setViewMode('grid')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'grid' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[#0f2b48] hover:bg-white/50'
-              }`}
-              title="Grid View"
-            >
-              <LayoutGrid className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setViewMode('list')}
-              className={`p-1.5 rounded-lg transition-colors ${
-                viewMode === 'list' ? 'bg-[var(--primary-action)] text-white shadow-sm' : 'text-[#0f2b48] hover:bg-white/50'
-              }`}
-              title="List View"
-            >
-              <ListIcon className="w-4 h-4" />
-            </button>
-          </div>
+        </div>
+        </div>
         </div>
       </div>
+
+      {noticeContent}
 
       {/* Grid Results Content */}
       {isLoading ? (

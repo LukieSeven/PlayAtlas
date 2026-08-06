@@ -8,7 +8,13 @@ import {
   Trophy,
   ArrowRight,
   Tag,
-  Calendar
+  Calendar,
+  Maximize2,
+  Minimize2,
+  Trash2,
+  Plus,
+  X,
+  Pencil
 } from 'lucide-react';
 import { usePersonalGameLibrary } from '../hooks/usePersonalGameLibrary';
 import { CompactGameLookupRecord } from '../types/catalog';
@@ -19,8 +25,98 @@ import { Button } from '../components/ui/Button';
 import { getUpcomingGames } from '../services/releaseCatalogService';
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
 
+type HomeWidgetId = 'featured' | 'playing' | 'deals' | 'progress' | 'releases' | 'events';
+type HomeWidgetWidth = 'half' | 'full';
+
+interface HomeWidgetPreferences {
+  visible: HomeWidgetId[];
+  widths: Record<HomeWidgetId, HomeWidgetWidth>;
+}
+
+const HOME_WIDGET_STORAGE_KEY = 'playatlas_home_widgets_v1';
+const HOME_WIDGET_IDS: HomeWidgetId[] = ['featured', 'playing', 'deals', 'progress', 'releases', 'events'];
+const HOME_WIDGET_LABELS: Record<HomeWidgetId, string> = {
+  featured: 'Featured Upcoming Game',
+  playing: 'Currently Playing',
+  deals: 'Discounts & Deals',
+  progress: 'Top Games In Progress',
+  releases: 'New Releases',
+  events: 'Upcoming Events',
+};
+const DEFAULT_HOME_WIDGETS: HomeWidgetPreferences = {
+  visible: [...HOME_WIDGET_IDS],
+  widths: {
+    featured: 'half',
+    playing: 'half',
+    deals: 'half',
+    progress: 'half',
+    releases: 'half',
+    events: 'half',
+  },
+};
+
+const loadHomeWidgetPreferences = (): HomeWidgetPreferences => {
+  try {
+    const saved = localStorage.getItem(HOME_WIDGET_STORAGE_KEY);
+    if (!saved) return DEFAULT_HOME_WIDGETS;
+    const parsed = JSON.parse(saved) as Partial<HomeWidgetPreferences>;
+    const savedOrder = Array.isArray(parsed.visible)
+      ? parsed.visible.filter((id, index): id is HomeWidgetId => HOME_WIDGET_IDS.includes(id as HomeWidgetId) && parsed.visible?.indexOf(id) === index)
+      : DEFAULT_HOME_WIDGETS.visible;
+    return {
+      visible: savedOrder,
+      widths: { ...DEFAULT_HOME_WIDGETS.widths, ...parsed.widths },
+    };
+  } catch {
+    return DEFAULT_HOME_WIDGETS;
+  }
+};
+
+interface WidgetControlsProps {
+  id: HomeWidgetId;
+  width: HomeWidgetWidth;
+  onToggleWidth: (id: HomeWidgetId) => void;
+  onEdit: (id: HomeWidgetId) => void;
+  onRemove: (id: HomeWidgetId) => void;
+}
+
+const WidgetControls: React.FC<WidgetControlsProps> = ({ id, width, onToggleWidth, onEdit, onRemove }) => (
+  <div className="atlas-widget-controls absolute right-3 top-3 z-30 flex items-center gap-1">
+    <button
+      type="button"
+      onClick={() => onEdit(id)}
+      className="atlas-widget-control"
+      title={`Replace or edit ${HOME_WIDGET_LABELS[id]}`}
+      aria-label={`Replace or edit ${HOME_WIDGET_LABELS[id]}`}
+    >
+      <Pencil className="h-3.5 w-3.5" />
+    </button>
+    <button
+      type="button"
+      onClick={() => onToggleWidth(id)}
+      className="atlas-widget-control"
+      title={width === 'full' ? 'Return widget to half width' : 'Expand widget to full width'}
+      aria-label={width === 'full' ? `Return ${HOME_WIDGET_LABELS[id]} to half width` : `Expand ${HOME_WIDGET_LABELS[id]} to full width`}
+    >
+      {width === 'full' ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+    </button>
+    <button
+      type="button"
+      onClick={() => onRemove(id)}
+      className="atlas-widget-control atlas-widget-control--danger"
+      title="Remove widget from Home (it can be restored)"
+      aria-label={`Remove ${HOME_WIDGET_LABELS[id]} from Home`}
+    >
+      <Trash2 className="h-3.5 w-3.5" />
+    </button>
+  </div>
+);
+
 export const HomePage: React.FC = () => {
   const rawRecords = usePersonalGameLibrary();
+  const [widgetPreferences, setWidgetPreferences] = useState<HomeWidgetPreferences>(loadHomeWidgetPreferences);
+  const [isWidgetStoreOpen, setIsWidgetStoreOpen] = useState(false);
+  const [editingWidgetId, setEditingWidgetId] = useState<HomeWidgetId | null>(null);
 
   // Selected Game state for Modal
   const [selectedGameForModal, setSelectedGameForModal] = useState<CompactGameLookupRecord | null>(null);
@@ -122,16 +218,78 @@ export const HomePage: React.FC = () => {
   // Featured Game derived from real catalog if available
   const realFeaturedGame = recentReleases.length > 0 ? recentReleases[0] : null;
 
+  const updateWidgetPreferences = (updater: (current: HomeWidgetPreferences) => HomeWidgetPreferences) => {
+    setWidgetPreferences(current => {
+      const next = updater(current);
+      localStorage.setItem(HOME_WIDGET_STORAGE_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const toggleWidgetWidth = (id: HomeWidgetId) => {
+    updateWidgetPreferences(current => ({
+      ...current,
+      widths: {
+        ...current.widths,
+        [id]: current.widths[id] === 'full' ? 'half' : 'full',
+      },
+    }));
+  };
+
+  const removeWidget = (id: HomeWidgetId) => {
+    updateWidgetPreferences(current => ({
+      ...current,
+      visible: current.visible.filter(widgetId => widgetId !== id),
+    }));
+  };
+
+  const restoreWidget = (id: HomeWidgetId) => {
+    updateWidgetPreferences(current => ({
+      ...current,
+      visible: current.visible.includes(id) ? current.visible : [...current.visible, id],
+    }));
+    setIsWidgetStoreOpen(false);
+  };
+
+  const replaceWidget = (replacementId: HomeWidgetId) => {
+    if (!editingWidgetId) {
+      restoreWidget(replacementId);
+      return;
+    }
+    updateWidgetPreferences(current => ({
+      visible: current.visible.map(id => id === editingWidgetId ? replacementId : id),
+      widths: {
+        ...current.widths,
+        [replacementId]: current.widths[editingWidgetId],
+      },
+    }));
+    setEditingWidgetId(null);
+    setIsWidgetStoreOpen(false);
+  };
+
+  const openWidgetStore = (editingId: HomeWidgetId | null = null) => {
+    setEditingWidgetId(editingId);
+    setIsWidgetStoreOpen(true);
+  };
+
+  const hiddenWidgets = HOME_WIDGET_IDS.filter(id => !widgetPreferences.visible.includes(id));
+  const storeWidgets = editingWidgetId
+    ? HOME_WIDGET_IDS.filter(id => id !== editingWidgetId && !widgetPreferences.visible.includes(id))
+    : hiddenWidgets;
+  const widgetGridClass = (id: HomeWidgetId) => widgetPreferences.widths[id] === 'full' ? 'xl:col-span-2' : 'xl:col-span-1';
+  const widgetOrder = (id: HomeWidgetId) => widgetPreferences.visible.indexOf(id);
+
   return (
-    <div className="space-y-6 animate-in fade-in duration-300 select-none">
+    <div className="space-y-4 animate-in fade-in duration-300 select-none">
       {/* 2-Column Main Dashboard Grid Composition */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-4 items-start">
         {/* ==================== LEFT COLUMN (approx 60% = col-span-7) ==================== */}
-        <div className="lg:col-span-7 space-y-6">
+        <div className="home-widget-column space-y-4 min-w-0">
           {/* WIDGET 1: FEATURED UPCOMING GAME */}
-          <div className="rounded-3xl border border-[#C5A059] bg-[#FDFBF7] shadow-lg overflow-hidden relative group">
+          {widgetPreferences.visible.includes('featured') && <div style={{ order: widgetOrder('featured') }} className={`atlas-home-widget atlas-dashboard-panel atlas-dashboard-feature atlas-feature-layout overflow-hidden relative group ${widgetGridClass('featured')}`}>
+            <WidgetControls id="featured" width={widgetPreferences.widths.featured} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
             {/* Top Landscape Artwork Container */}
-            <div className="relative h-60 md:h-68 w-full overflow-hidden bg-[#0B2B3C]">
+            <div className="atlas-feature-art relative h-52 md:h-64 w-full overflow-hidden bg-[#0B2B3C]">
               <FantasyLandscapeArtwork variant="featured" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
 
               {/* Gold Ribbon Badge Overlay */}
@@ -142,7 +300,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {/* Bottom Content Information Panel */}
-            <div className="p-6 md:p-8 space-y-4 bg-[#FDFBF7] relative z-10">
+            <div className="atlas-feature-copy p-5 md:p-6 space-y-4 bg-[#FDFBF7]/95 relative z-10">
               {realFeaturedGame ? (
                 <div className="space-y-4">
                   <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -190,11 +348,12 @@ export const HomePage: React.FC = () => {
                 </div>
               )}
             </div>
-          </div>
+          </div>}
 
           {/* WIDGET 3: CURRENTLY PLAYING */}
-          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+          {widgetPreferences.visible.includes('playing') && <div style={{ order: widgetOrder('playing') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('playing')}`}>
+            <WidgetControls id="playing" width={widgetPreferences.widths.playing} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
                 <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">CURRENTLY PLAYING</h3>
@@ -228,11 +387,12 @@ export const HomePage: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* WIDGET 5: DISCOUNTS & DEALS */}
-          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+          {widgetPreferences.visible.includes('deals') && <div style={{ order: widgetOrder('deals') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('deals')}`}>
+            <WidgetControls id="deals" width={widgetPreferences.widths.deals} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
                 <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">DISCOUNTS & DEALS</h3>
@@ -250,14 +410,15 @@ export const HomePage: React.FC = () => {
                 Check back for updated platform storefront discounts and promotional sales.
               </p>
             </div>
-          </div>
+          </div>}
         </div>
 
         {/* ==================== RIGHT COLUMN (approx 40% = col-span-5) ==================== */}
-        <div className="lg:col-span-5 space-y-6">
+        <div className="home-widget-column space-y-4 min-w-0">
           {/* WIDGET 2: TOP 10 IN PROGRESS */}
-          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+          {widgetPreferences.visible.includes('progress') && <div style={{ order: widgetOrder('progress') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('progress')}`}>
+            <WidgetControls id="progress" width={widgetPreferences.widths.progress} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
                 <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">TOP 10 IN PROGRESS</h3>
@@ -312,11 +473,12 @@ export const HomePage: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* WIDGET 4: NEW RELEASES */}
-          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4">
-            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
+          {widgetPreferences.visible.includes('releases') && <div style={{ order: widgetOrder('releases') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('releases')}`}>
+            <WidgetControls id="releases" width={widgetPreferences.widths.releases} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
                 <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">NEW RELEASES</h3>
@@ -368,11 +530,12 @@ export const HomePage: React.FC = () => {
                 </p>
               </div>
             )}
-          </div>
+          </div>}
 
           {/* WIDGET 6: UPCOMING EVENTS */}
-          <div className="p-6 rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs space-y-4 relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 relative z-10">
+          {widgetPreferences.visible.includes('events') && <div style={{ order: widgetOrder('events') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative overflow-hidden ${widgetGridClass('events')}`}>
+            <WidgetControls id="events" width={widgetPreferences.widths.events} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28 relative z-10">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
                 <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">UPCOMING EVENTS</h3>
@@ -395,9 +558,60 @@ export const HomePage: React.FC = () => {
             <div className="absolute right-0 bottom-0 w-64 h-36 opacity-30 pointer-events-none z-0">
               <FantasyLandscapeArtwork variant="events" />
             </div>
+          </div>}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => openWidgetStore()}
+          style={{ order: widgetPreferences.visible.length }}
+          className="atlas-widget-add-slot atlas-home-widget"
+          aria-label="Add a widget to the next available Home slot"
+        >
+          <span className="atlas-widget-add-orbit" aria-hidden="true">
+            <Plus className="h-8 w-8" />
+          </span>
+          <span className="font-serif text-lg font-bold">Add Widget</span>
+          <span className="text-xs text-[#47586A]">
+            {hiddenWidgets.length > 0 ? `${hiddenWidgets.length} available` : 'Open widget store'}
+          </span>
+        </button>
+      </div>
+
+      {isWidgetStoreOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0C1D2D]/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="widget-store-title">
+          <div className="atlas-dashboard-panel w-full max-w-2xl p-5 md:p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-[#D9C8A9] pb-4">
+              <div>
+                <h2 id="widget-store-title" className="font-serif text-2xl font-bold text-[#0C1D2D]">{editingWidgetId ? 'Replace Widget' : 'Widget Store'}</h2>
+                <p className="mt-1 text-xs text-[#47586A]">{editingWidgetId ? `Choose a replacement for ${HOME_WIDGET_LABELS[editingWidgetId]}. Its slot and size will be preserved.` : 'Choose a widget for the next available position on your Home page.'}</p>
+              </div>
+              <button type="button" onClick={() => { setIsWidgetStoreOpen(false); setEditingWidgetId(null); }} className="atlas-widget-control" aria-label="Close widget store">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {storeWidgets.length > 0 ? (
+              <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                {storeWidgets.map(id => (
+                  <button key={id} type="button" onClick={() => replaceWidget(id)} className="atlas-widget-store-option">
+                    <span className="atlas-widget-store-option-icon"><Plus className="h-4 w-4" /></span>
+                    <span className="text-left">
+                      <span className="block font-serif text-base font-bold text-[#0C1D2D]">{HOME_WIDGET_LABELS[id]}</span>
+                      <span className="block text-[11px] text-[#47586A]">{editingWidgetId ? 'Replace this widget in place' : 'Add to the next available slot'}</span>
+                    </span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="mt-5 rounded-xl border border-[#D9C8A9] bg-[#EFE8D8] p-8 text-center">
+                <p className="font-serif text-lg font-bold text-[#0C1D2D]">All available widgets are already on Home.</p>
+                <p className="mt-1 text-xs text-[#47586A]">More widget types can be added to this store without changing the grid behavior.</p>
+              </div>
+            )}
           </div>
         </div>
-      </div>
+      )}
 
       {/* Modal */}
       <GameDetailModal

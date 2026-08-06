@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
-  Compass,
   Home,
   Gamepad2,
   Rocket,
@@ -18,7 +17,6 @@ import {
 } from 'lucide-react';
 import { useSidebar } from '../../context/SidebarContext';
 import { usePersonalGameLibrary } from '../../hooks/usePersonalGameLibrary';
-import { Badge } from '../ui/Badge';
 import { AddTabModal } from '../widgets/AddTabModal';
 
 const iconMap: Record<string, React.ReactNode> = {
@@ -58,20 +56,20 @@ export const Sidebar: React.FC = () => {
       <div className="beveled-sidebar-rail" />
 
       {/* Top Branding Emblem Header */}
-      <div className="p-5 border-b border-[#D9C8A9] relative z-10 space-y-2">
-        <div className="flex items-center gap-3">
-          {/* Astrolabe Compass Logo Emblem */}
-          <div className="w-12 h-12 rounded-full bg-[#0B2B3C] border-2 border-[#C5A059] flex items-center justify-center text-[#C5A059] shadow-md shrink-0 relative group">
-            <Compass className="w-7 h-7 text-[#C5A059] animate-in zoom-in duration-300" />
-            <div className="absolute inset-0 rounded-full border border-amber-300/30 animate-pulse" />
+      <div className="px-5 pt-5 pb-4 border-b border-[#D9C8A9] relative z-10 space-y-2">
+        <div className="flex flex-col items-center text-center gap-2">
+          <div className="atlas-brand-emblem h-24 w-24 overflow-hidden rounded-full border-2 border-[#C5A059] shrink-0 relative">
+            <img
+              src="/branding/play-atlas-compass-watercolor.png"
+              alt="Play Atlas compass and play emblem"
+              className="h-full w-full object-cover"
+            />
           </div>
 
-          <div>
-            <h1 className="font-serif text-3xl font-extrabold tracking-tight text-[#0C1D2D] leading-none">
-              Play Atlas
-            </h1>
-            <span className="text-[10px] uppercase font-extrabold text-[#8C6D37] tracking-widest block mt-1">
-              CARTOGRAPHIC HUB
+          <div className="flex flex-col items-center">
+            <div className="atlas-wordmark-crop" role="img" aria-label="Play Atlas" />
+            <span className="-mt-1 text-[9px] uppercase font-extrabold text-[#8C6D37] tracking-[0.22em] block">
+              DISCOVER · TRACK · PLAY
             </span>
           </div>
         </div>
@@ -84,7 +82,7 @@ export const Sidebar: React.FC = () => {
           to="/"
           end
           className={({ isActive }) =>
-            `flex items-center justify-between px-3.5 py-3 rounded-xl font-bold text-sm transition-all duration-200 mb-2.5 ${
+            `atlas-active-ribbon flex items-center justify-between px-3.5 py-3 rounded-lg font-bold text-sm transition-all duration-200 mb-2.5 ${
               isActive
                 ? 'bg-[#0B2B3C] text-white border border-[#C5A059] shadow-md'
                 : 'bg-[#FDFBF7] text-[#0C1D2D] hover:bg-[#EFE8D8] border border-[#D9C8A9]'
@@ -95,7 +93,7 @@ export const Sidebar: React.FC = () => {
             <>
               <div className="flex items-center gap-3">
                 <Home className={`w-4 h-4 ${isActive ? 'text-[#C5A059]' : 'text-[#8C6D37]'}`} />
-                <span className="font-serif text-base tracking-wide font-bold">Home</span>
+                <span className="atlas-nav-label">Home</span>
               </div>
               {isActive && <span className="text-[#C5A059] text-xs">✦</span>}
             </>
@@ -119,7 +117,7 @@ export const Sidebar: React.FC = () => {
               <>
                 <div className="flex items-center gap-3 truncate">
                   <Gamepad2 className={`w-4 h-4 ${isActive ? 'text-[#C5A059]' : 'text-[#8C6D37]'}`} />
-                  <span>My Games</span>
+                  <span className="atlas-nav-label">My Games</span>
                 </div>
                 {isActive && <span className="text-[#C5A059] text-xs">✦</span>}
               </>
@@ -147,12 +145,10 @@ export const Sidebar: React.FC = () => {
                         <span className="shrink-0">
                           {iconMap[item.iconName] || <Bookmark className={`w-4 h-4 ${isActive ? 'text-[#C5A059]' : 'text-[#8C6D37]'}`} />}
                         </span>
-                        <span className="truncate">{item.id === 'deals' ? 'Discounts' : item.label}</span>
+                        <span className="atlas-nav-label truncate">{item.id === 'deals' ? 'Discounts' : item.label}</span>
                       </div>
 
-                      {item.badge ? (
-                        <Badge variant={item.badgeColor || 'indigo'}>{item.badge}</Badge>
-                      ) : isActive ? (
+                      {isActive ? (
                         <span className="text-[#C5A059] text-xs">✦</span>
                       ) : null}
                     </>
@@ -204,7 +200,7 @@ export const Sidebar: React.FC = () => {
           }
         >
           <Settings className="w-4 h-4 text-[#8C6D37]" />
-          <span>Settings & Customization</span>
+          <span className="atlas-nav-label">Settings & Customization</span>
         </NavLink>
 
         {/* Real Personal Library Summary Counts (Bottom Footer Pill) */}

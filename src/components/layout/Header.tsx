@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, X, Loader2, Gamepad2, Sparkles } from 'lucide-react';
+import { Search, X, Loader2, Gamepad2, Sparkles, Menu } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useCatalogSearch } from '../../hooks/useCatalogSearch';
 import { CompactGameLookupRecord } from '../../types/catalog';
@@ -7,6 +7,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { UniversalActionMenu } from '../common/UniversalActionMenu';
 import { getGameTypeLabel, shouldShowGameTypeBadge } from '../../services/gameTypePresentationService';
 import { normalizeGameTypeCategory } from '../../utils/gameTypeUtils';
+import { useSidebar } from '../../context/SidebarContext';
 
 interface HeaderProps {
   onSelectGame?: (gameId: number, name: string) => void;
@@ -45,6 +46,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
   const themeRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
+  const { toggleMobileOpen } = useSidebar();
 
   const { title, subtitle } = getPageTitle(location.pathname);
   const { results, totalMatches, isSearching, search } = useCatalogSearch();
@@ -79,12 +81,20 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
   const presetList = Object.values(availablePresets);
 
   return (
-    <header className="sticky top-0 z-30 themed-header w-full px-4 md:px-6 py-3 flex flex-wrap md:flex-nowrap items-center justify-between gap-4 border-b border-[#D9C8A9] bg-[#F4EFE6]/95 backdrop-blur-sm shadow-xs select-none">
+    <header className="sticky top-0 z-30 themed-header w-full px-4 md:px-6 py-3 flex flex-wrap md:flex-nowrap items-center justify-between gap-3 md:gap-6 border-b border-[#D9C8A9] bg-[#F4EFE6]/95 backdrop-blur-sm shadow-xs select-none">
       {/* Left Header Title & Subtitle */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 min-w-fit">
+        <button
+          type="button"
+          onClick={toggleMobileOpen}
+          className="lg:hidden inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-[#C5A059] bg-[#FDFBF7] text-[#0B2B3C] shadow-xs hover:bg-[#EFE8D8] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
+          aria-label="Open navigation menu"
+        >
+          <Menu className="h-5 w-5" />
+        </button>
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="font-serif text-2xl md:text-3xl font-extrabold text-[#0C1D2D] leading-none tracking-tight">
+            <h1 className="atlas-title-engraved font-serif text-3xl md:text-4xl font-extrabold text-[#0C1D2D] leading-none tracking-tight">
               {title}
             </h1>
             <span className="text-[#C5A059] text-base leading-none">✦</span>
@@ -96,9 +106,9 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
       </div>
 
       {/* Center/Right Search Bar & Controls */}
-      <div className="flex items-center gap-3 flex-1 md:flex-initial max-w-xl justify-end">
+      <div className="flex min-w-0 items-center gap-2 md:gap-3 basis-full md:basis-auto md:flex-1 max-w-3xl justify-end">
         {/* Search Control */}
-        <div className="relative flex-1 max-w-md" ref={searchRef}>
+        <div className="relative min-w-0 flex-1 md:max-w-xl" ref={searchRef}>
           <div className="relative flex items-center">
             <Search className="absolute left-3.5 w-4 h-4 text-[#8C6D37] pointer-events-none" />
             <input
@@ -192,7 +202,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
             title="Customize Theme"
           >
             <Sparkles className="w-3.5 h-3.5 text-[#C5A059]" />
-            <span>Customize</span>
+            <span className="hidden sm:inline">Customize</span>
           </button>
 
           {/* Theme Preset Selector Popover */}

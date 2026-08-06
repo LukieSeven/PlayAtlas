@@ -29,8 +29,23 @@ import { EditPersonalDetailsModal } from '../components/widgets/EditPersonalDeta
 import { ExportImportModal } from '../components/widgets/ExportImportModal';
 import { getAllFamilies, getPlatformFamily, getPlatformDisplayName } from '../services/platformTaxonomyService';
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
+import { MinimumRatingFilter } from '../components/ui/MinimumRatingFilter';
 
 type MyGamesViewTab = 'all' | 'owned' | 'playing' | 'backlog' | 'completed' | 'wanted' | 'dropped';
+
+const SplatIcon: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className={className}>
+    <path
+      d="M11.9 3.2c1.2 0 1.5 2.2 2.6 2.6 1 .4 2.5-1.2 3.4-.3.8.8-.6 2.4-.2 3.4.4 1.1 2.8 1 2.8 2.2 0 1.1-2.3 1.4-2.7 2.4-.4 1 .9 2.7 0 3.5-.8.8-2.4-.6-3.4-.2-1.1.4-1.2 2.8-2.4 2.8-1.1 0-1.5-2.3-2.5-2.7-1-.4-2.6 1-3.5.1-.8-.8.6-2.4.2-3.4-.4-1.1-2.8-1.2-2.8-2.4 0-1.1 2.3-1.5 2.7-2.5.4-1-.9-2.7-.1-3.5.8-.8 2.5.6 3.5.2 1.1-.4 1.2-2.7 2.4-2.7Z"
+      fill="currentColor"
+      fillOpacity="0.24"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinejoin="round"
+    />
+    <circle cx="12" cy="11.7" r="2.6" fill="currentColor" />
+  </svg>
+);
 
 export const MyGamesPage: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -48,10 +63,7 @@ export const MyGamesPage: React.FC = () => {
   const [selectedOwnershipType, setSelectedOwnershipType] = useState<string>('all');
   const [selectedPlayStatus, setSelectedPlayStatus] = useState<string>('all');
   const [selectedInterestStatus, setSelectedInterestStatus] = useState<string>('all');
-  const [selectedRatingRange, setSelectedRatingRange] = useState<string>('all');
-  const [selectedTag, setSelectedTag] = useState<string>('all');
-  const [hasNotesOnly, setHasNotesOnly] = useState<boolean>(false);
-  const [hasCompletionsOnly, setHasCompletionsOnly] = useState<boolean>(false);
+  const [minimumRating, setMinimumRating] = useState<number>(0);
 
   // Sorting State
   const [sortBy, setSortBy] = useState<
@@ -119,17 +131,6 @@ export const MyGamesPage: React.FC = () => {
       wanted: meaningfulRecords.filter(r => r.interestStatus === 'wanted' || r.interestStatus === 'wishlist').length,
       dropped: meaningfulRecords.filter(r => r.currentPlayStatus === 'dropped').length,
     };
-  }, [meaningfulRecords]);
-
-  // Unique custom tags list for filter dropdown
-  const allCustomTags = useMemo(() => {
-    const set = new Set<string>();
-    meaningfulRecords.forEach(r => {
-      if (Array.isArray(r.customTags)) {
-        r.customTags.forEach(t => t && set.add(t.trim()));
-      }
-    });
-    return Array.from(set).sort();
   }, [meaningfulRecords]);
 
   // Apply Tab View + Search + Filters
@@ -203,22 +204,7 @@ export const MyGamesPage: React.FC = () => {
       }
 
       // 7. Rating Filter
-      if (selectedRatingRange !== 'all') {
-        if (selectedRatingRange === 'rated' && (rec.userRating === undefined || rec.userRating === null)) return false;
-        if (selectedRatingRange === 'unrated' && rec.userRating !== undefined && rec.userRating !== null) return false;
-        if (selectedRatingRange === 'high_rated' && (rec.userRating === undefined || rec.userRating < 8.0)) return false;
-      }
-
-      // 8. Custom Tag Filter
-      if (selectedTag !== 'all') {
-        if (!rec.customTags || !rec.customTags.includes(selectedTag)) return false;
-      }
-
-      // 9. Has Notes Only
-      if (hasNotesOnly && (!rec.userNotes || !rec.userNotes.trim())) return false;
-
-      // 10. Has Completions Only
-      if (hasCompletionsOnly && (!rec.completionHistory || rec.completionHistory.length === 0)) return false;
+      if (minimumRating > 0 && (rec.userRating === undefined || rec.userRating < minimumRating)) return false;
 
       return true;
     });
@@ -230,10 +216,7 @@ export const MyGamesPage: React.FC = () => {
     selectedOwnershipType,
     selectedPlayStatus,
     selectedInterestStatus,
-    selectedRatingRange,
-    selectedTag,
-    hasNotesOnly,
-    hasCompletionsOnly,
+    minimumRating,
   ]);
 
   // Apply Sorting
@@ -267,7 +250,7 @@ export const MyGamesPage: React.FC = () => {
   }, [filteredRecords, sortBy]);
 
   // Stable Collection Key to reset pagination only on collection identity changes
-  const collectionKey = `mygames:${activeTab}:${searchQuery}:${selectedPlatformFamily}:${selectedOwnershipType}:${selectedPlayStatus}:${selectedInterestStatus}:${selectedRatingRange}:${selectedTag}:${hasNotesOnly}:${hasCompletionsOnly}:${sortBy}`;
+  const collectionKey = `mygames:${activeTab}:${searchQuery}:${selectedPlatformFamily}:${selectedOwnershipType}:${selectedPlayStatus}:${selectedInterestStatus}:${minimumRating}:${sortBy}`;
 
   useEffect(() => {
     setVisibleCount(40);
@@ -325,20 +308,14 @@ export const MyGamesPage: React.FC = () => {
     if (selectedOwnershipType !== 'all') count++;
     if (selectedPlayStatus !== 'all') count++;
     if (selectedInterestStatus !== 'all') count++;
-    if (selectedRatingRange !== 'all') count++;
-    if (selectedTag !== 'all') count++;
-    if (hasNotesOnly) count++;
-    if (hasCompletionsOnly) count++;
+    if (minimumRating > 0) count++;
     return count;
   }, [
     selectedPlatformFamily,
     selectedOwnershipType,
     selectedPlayStatus,
     selectedInterestStatus,
-    selectedRatingRange,
-    selectedTag,
-    hasNotesOnly,
-    hasCompletionsOnly,
+    minimumRating,
   ]);
 
   const clearAllFilters = () => {
@@ -347,69 +324,18 @@ export const MyGamesPage: React.FC = () => {
     setSelectedOwnershipType('all');
     setSelectedPlayStatus('all');
     setSelectedInterestStatus('all');
-    setSelectedRatingRange('all');
-    setSelectedTag('all');
-    setHasNotesOnly(false);
-    setHasCompletionsOnly(false);
+    setMinimumRating(0);
   };
 
   const platformFamilies = getAllFamilies();
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-300">
-      {/* Parchment Header Dashboard */}
-      <div className="p-6 md:p-8 rounded-3xl border border-[#D9C8A9] shadow-md relative overflow-hidden bg-[#FDFBF7] text-[#0C1D2D]">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-          <div className="space-y-2 max-w-xl">
-            <div className="flex items-center gap-2 text-xs font-sans text-[#8C6D37] font-bold uppercase tracking-wider">
-              <Gamepad2 className="w-4 h-4 text-[#C5A059]" />
-              <span>Personal Game Library</span>
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold font-serif text-[#0C1D2D]">
-              My Games
-            </h1>
-            <p className="text-xs text-[#47586A] font-medium leading-relaxed font-sans">
-              Your authoritative personal video game collection. Track platform ownership, backlog priorities, play statuses, personal ratings, journal notes, and completion histories.
-            </p>
-
-            {/* Quick Live Stats Pills */}
-            <div className="flex flex-wrap items-center gap-2 pt-2 text-[11px] font-sans font-bold">
-              <span className="bg-[#EFE8D8] px-2.5 py-1 rounded-xl border border-[#D9C8A9] text-[#0C1D2D]">
-                Tracked: {counts.all}
-              </span>
-              <span className="bg-emerald-500/15 px-2.5 py-1 rounded-xl border border-emerald-600/30 text-emerald-900">
-                Owned: {counts.owned}
-              </span>
-              <span className="bg-indigo-500/15 px-2.5 py-1 rounded-xl border border-indigo-600/30 text-indigo-900">
-                Playing: {counts.playing}
-              </span>
-              <span className="bg-purple-500/15 px-2.5 py-1 rounded-xl border border-purple-600/30 text-purple-900">
-                Backlog: {counts.backlog}
-              </span>
-              <span className="bg-amber-500/15 px-2.5 py-1 rounded-xl border border-amber-600/30 text-amber-900">
-                Completed: {counts.completed}
-              </span>
-              <span className="bg-rose-500/15 px-2.5 py-1 rounded-xl border border-rose-600/30 text-rose-900">
-                Wanted: {counts.wanted}
-              </span>
-            </div>
-          </div>
-
-          {/* Backup & Import Action Button */}
-          <div className="shrink-0 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-            <button
-              onClick={() => setIsExportModalOpen(true)}
-              className="px-4 py-2.5 rounded-xl bg-[#0B2B3C] hover:bg-[#0F4C5C] text-white font-bold text-xs shadow-xs border border-[#C5A059] transition-all flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <Download className="w-4 h-4 text-[#C5A059]" />
-              <span>Backup / Export JSON</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
+    <div className="space-y-4 animate-in fade-in duration-300">
+      {/* Unified library navigation, counts, search, filters, and actions */}
+      <section className="atlas-dashboard-panel overflow-hidden text-[#0C1D2D]">
       {/* Primary Tab Views Segmented Bar */}
-      <div className="p-1.5 rounded-2xl border border-[#D9C8A9] bg-[#FDFBF7] shadow-xs overflow-x-auto">
+      <div className="flex items-center gap-2 px-3 py-2 border-b border-[#D9C8A9] bg-[#EFE8D8]/45">
+        <div className="min-w-0 flex-1 overflow-x-auto">
         <div className="flex items-center gap-1 min-w-max">
           {(
             [
@@ -419,7 +345,7 @@ export const MyGamesPage: React.FC = () => {
               { key: 'backlog', label: 'Backlog', count: counts.backlog, icon: Bookmark },
               { key: 'completed', label: 'Completed', count: counts.completed, icon: Trophy },
               { key: 'wanted', label: 'Wanted', count: counts.wanted, icon: Heart },
-              { key: 'dropped', label: 'Dropped', count: counts.dropped, icon: XCircle },
+              { key: 'dropped', label: 'Yuck!', count: counts.dropped, icon: SplatIcon },
             ] as const
           ).map(tab => {
             const Icon = tab.icon;
@@ -434,7 +360,7 @@ export const MyGamesPage: React.FC = () => {
                     : 'text-[#0C1D2D] hover:bg-[#EFE8D8]'
                 }`}
               >
-                <Icon className={`w-4 h-4 ${isActive ? 'text-[#C5A059]' : 'text-[#8C6D37]'}`} />
+                <Icon className={`w-4 h-4 ${tab.key === 'dropped' ? (isActive ? 'text-[#8FD39A]' : 'text-[#2B6E4E]') : isActive ? 'text-[#C5A059]' : 'text-[#8C6D37]'}`} />
                 <span>{tab.label}</span>
                 <span
                   className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
@@ -447,10 +373,18 @@ export const MyGamesPage: React.FC = () => {
             );
           })}
         </div>
+        </div>
+        <button
+          onClick={() => setIsExportModalOpen(true)}
+          className="shrink-0 px-3 py-2 rounded-xl bg-[#0B2B3C] hover:bg-[#0F4C5C] text-white font-bold text-xs shadow-xs border border-[#C5A059] transition-all flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <Download className="w-4 h-4 text-[#C5A059]" />
+          <span>Backup</span>
+        </button>
       </div>
 
       {/* Solid High-Contrast Local Search & Filter Control Surface */}
-      <div className="p-4 rounded-2xl border border-[#D9C8A9] shadow-xs bg-[#FDFBF7] space-y-3 text-xs font-semibold">
+      <div className="p-4 space-y-3 text-xs font-semibold">
         {/* Row 1: Search Bar & Primary Actions */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="relative flex-1">
@@ -532,54 +466,7 @@ export const MyGamesPage: React.FC = () => {
               <option value="previously_owned">Previously Owned</option>
             </select>
 
-            {/* Rating Range */}
-            <select
-              value={selectedRatingRange}
-              onChange={e => setSelectedRatingRange(e.target.value)}
-              className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9]"
-            >
-              <option value="all">All Ratings</option>
-              <option value="rated">Has Personal Rating</option>
-              <option value="high_rated">High Rated (8.0+)</option>
-              <option value="unrated">Unrated</option>
-            </select>
-
-            {/* Custom Tag */}
-            {allCustomTags.length > 0 && (
-              <select
-                value={selectedTag}
-                onChange={e => setSelectedTag(e.target.value)}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold bg-[#FFFFFF] text-[#0C1D2D] border border-[#D9C8A9]"
-              >
-                <option value="all">All Custom Tags</option>
-                {allCustomTags.map(t => (
-                  <option key={t} value={t}>
-                    Tag: {t}
-                  </option>
-                ))}
-              </select>
-            )}
-
-            {/* Toggles */}
-            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FFFFFF] border border-[#D9C8A9] cursor-pointer text-[11px] text-[#0C1D2D]">
-              <input
-                type="checkbox"
-                checked={hasNotesOnly}
-                onChange={e => setHasNotesOnly(e.target.checked)}
-                className="rounded accent-[#0B2B3C]"
-              />
-              <span>Has Notes</span>
-            </label>
-
-            <label className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-[#FFFFFF] border border-[#D9C8A9] cursor-pointer text-[11px] text-[#0C1D2D]">
-              <input
-                type="checkbox"
-                checked={hasCompletionsOnly}
-                onChange={e => setHasCompletionsOnly(e.target.checked)}
-                className="rounded accent-[#0B2B3C]"
-              />
-              <span>Has Completions</span>
-            </label>
+            <MinimumRatingFilter value={minimumRating} onChange={setMinimumRating} label="Minimum personal rating" />
 
             {activeFiltersCount > 0 && (
               <button
@@ -612,6 +499,7 @@ export const MyGamesPage: React.FC = () => {
           </div>
         </div>
       </div>
+      </section>
 
       {/* Main Content Area */}
       {meaningfulRecords.length === 0 ? (
