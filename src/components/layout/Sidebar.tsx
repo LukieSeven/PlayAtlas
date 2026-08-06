@@ -49,7 +49,7 @@ export const Sidebar: React.FC = () => {
   }, [rawRecords]);
 
   const isDefaultSystemTab = (id: string) => {
-    return ['home', 'my-games', 'new-releases', 'upcoming', 'calendar', 'discounts', 'deals', 'settings'].includes(id);
+    return ['home', 'my-games', 'lists', 'new-releases', 'upcoming', 'calendar', 'events', 'discounts', 'deals', 'settings'].includes(id);
   };
 
   return (

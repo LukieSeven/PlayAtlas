@@ -25,18 +25,29 @@ import { FantasyLandscapeArtwork } from '../components/ui/FantasyLandscapeArtwor
 import { Button } from '../components/ui/Button';
 import { getUpcomingGames, convertReleaseRecordToCompactRecord } from '../services/releaseCatalogService';
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
+import { loadUserLists } from '../services/userListService';
+import { UserGameList } from '../types/userList';
+import { UserListWidget } from '../components/widgets/UserListWidget';
+import { HomeWidgetSettingsModal } from '../components/widgets/HomeWidgetSettingsModal';
+import { HomeGameWidgetRenderer } from '../components/widgets/HomeGameWidgetRenderer';
+import { HomeWidgetConfiguration, HomeWidgetConfigurationMap } from '../types/homeWidget';
+import { hydrateHomeWidgetGames } from '../services/homeWidgetHydrationService';
+import { loadHomeWidgetConfigurations, resolveWidgetConfiguration, saveHomeWidgetConfigurations } from '../services/homeWidgetService';
+import { PERSONAL_GAME_BUCKETS, PersonalGameBucketId } from '../types/gameSource';
+import { compactGamesForBucket } from '../services/gameSourceService';
 
-type HomeWidgetId = 'featured' | 'playing' | 'deals' | 'progress' | 'releases' | 'events';
+type SystemHomeWidgetId = 'featured' | 'playing' | 'deals' | 'progress' | 'releases' | 'events';
+type HomeWidgetId = SystemHomeWidgetId | `list:${string}` | `bucket:${PersonalGameBucketId}`;
 type HomeWidgetWidth = 'half' | 'full';
 
 interface HomeWidgetPreferences {
   visible: HomeWidgetId[];
-  widths: Record<HomeWidgetId, HomeWidgetWidth>;
+  widths: Record<string, HomeWidgetWidth>;
 }
 
 const HOME_WIDGET_STORAGE_KEY = 'playatlas_home_widgets_v1';
-const HOME_WIDGET_IDS: HomeWidgetId[] = ['featured', 'playing', 'deals', 'progress', 'releases', 'events'];
-const HOME_WIDGET_LABELS: Record<HomeWidgetId, string> = {
+const HOME_WIDGET_IDS: SystemHomeWidgetId[] = ['featured', 'playing', 'deals', 'progress', 'releases', 'events'];
+const HOME_WIDGET_LABELS: Record<SystemHomeWidgetId, string> = {
   featured: 'Featured Upcoming Game',
   playing: 'Currently Playing',
   deals: 'Discounts & Deals',
@@ -45,7 +56,9 @@ const HOME_WIDGET_LABELS: Record<HomeWidgetId, string> = {
   events: 'Upcoming Events',
 };
 const DEFAULT_HOME_WIDGETS: HomeWidgetPreferences = {
-  visible: [...HOME_WIDGET_IDS],
+  // A fresh Home is public-catalog driven. Personal buckets and lists are
+  // available in the widget store only after the user explicitly adds them.
+  visible: ['featured', 'releases', 'deals', 'events'],
   widths: {
     featured: 'half',
     playing: 'half',
@@ -56,13 +69,24 @@ const DEFAULT_HOME_WIDGETS: HomeWidgetPreferences = {
   },
 };
 
-const loadHomeWidgetPreferences = (): HomeWidgetPreferences => {
+const getListWidgetId = (listId: string): HomeWidgetId => `list:${listId}`;
+const getListIdFromWidget = (id: HomeWidgetId): string | null => id.startsWith('list:') ? id.slice(5) : null;
+
+const getHomeWidgetLabel = (id: HomeWidgetId, lists: UserGameList[]): string => {
+  const listId = getListIdFromWidget(id);
+  if (listId) return lists.find(list => list.id === listId)?.name || 'Saved List';
+  if (id.startsWith('bucket:')) return PERSONAL_GAME_BUCKETS.find(bucket => bucket.id === id.slice(7))?.label || 'My Games Bucket';
+  return HOME_WIDGET_LABELS[id as SystemHomeWidgetId];
+};
+
+const loadHomeWidgetPreferences = (lists: UserGameList[]): HomeWidgetPreferences => {
   try {
     const saved = localStorage.getItem(HOME_WIDGET_STORAGE_KEY);
     if (!saved) return DEFAULT_HOME_WIDGETS;
     const parsed = JSON.parse(saved) as Partial<HomeWidgetPreferences>;
+    const availableIds: HomeWidgetId[] = [...HOME_WIDGET_IDS, ...PERSONAL_GAME_BUCKETS.map(bucket => `bucket:${bucket.id}` as HomeWidgetId), ...lists.map(list => getListWidgetId(list.id))];
     const savedOrder = Array.isArray(parsed.visible)
-      ? parsed.visible.filter((id, index): id is HomeWidgetId => HOME_WIDGET_IDS.includes(id as HomeWidgetId) && parsed.visible?.indexOf(id) === index)
+      ? parsed.visible.filter((id, index): id is HomeWidgetId => availableIds.includes(id as HomeWidgetId) && parsed.visible?.indexOf(id) === index)
       : DEFAULT_HOME_WIDGETS.visible;
     return {
       visible: savedOrder,
@@ -75,20 +99,21 @@ const loadHomeWidgetPreferences = (): HomeWidgetPreferences => {
 
 interface WidgetControlsProps {
   id: HomeWidgetId;
+  label: string;
   width: HomeWidgetWidth;
   onToggleWidth: (id: HomeWidgetId) => void;
   onEdit: (id: HomeWidgetId) => void;
   onRemove: (id: HomeWidgetId) => void;
 }
 
-const WidgetControls: React.FC<WidgetControlsProps> = ({ id, width, onToggleWidth, onEdit, onRemove }) => (
+const WidgetControls: React.FC<WidgetControlsProps> = ({ id, label, width, onToggleWidth, onEdit, onRemove }) => (
   <div className="atlas-widget-controls absolute right-3 top-3 z-30 flex items-center gap-1">
     <button
       type="button"
       onClick={() => onEdit(id)}
       className="atlas-widget-control"
-      title={`Replace or edit ${HOME_WIDGET_LABELS[id]}`}
-      aria-label={`Replace or edit ${HOME_WIDGET_LABELS[id]}`}
+      title={`Replace or edit ${label}`}
+      aria-label={`Replace or edit ${label}`}
     >
       <Pencil className="h-3.5 w-3.5" />
     </button>
@@ -97,7 +122,7 @@ const WidgetControls: React.FC<WidgetControlsProps> = ({ id, width, onToggleWidt
       onClick={() => onToggleWidth(id)}
       className="atlas-widget-control"
       title={width === 'full' ? 'Return widget to half width' : 'Expand widget to full width'}
-      aria-label={width === 'full' ? `Return ${HOME_WIDGET_LABELS[id]} to half width` : `Expand ${HOME_WIDGET_LABELS[id]} to full width`}
+      aria-label={width === 'full' ? `Return ${label} to half width` : `Expand ${label} to full width`}
     >
       {width === 'full' ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
     </button>
@@ -106,7 +131,7 @@ const WidgetControls: React.FC<WidgetControlsProps> = ({ id, width, onToggleWidt
       onClick={() => onRemove(id)}
       className="atlas-widget-control atlas-widget-control--danger"
       title="Remove widget from Home (it can be restored)"
-      aria-label={`Remove ${HOME_WIDGET_LABELS[id]} from Home`}
+      aria-label={`Remove ${label} from Home`}
     >
       <Trash2 className="h-3.5 w-3.5" />
     </button>
@@ -116,9 +141,14 @@ const WidgetControls: React.FC<WidgetControlsProps> = ({ id, width, onToggleWidt
 export const HomePage: React.FC = () => {
   const rawRecords = usePersonalGameLibrary();
   const yuckedIds = useMemo(() => getYuckedNumericIds(rawRecords), [rawRecords]);
-  const [widgetPreferences, setWidgetPreferences] = useState<HomeWidgetPreferences>(loadHomeWidgetPreferences);
+  const [userLists] = useState<UserGameList[]>(loadUserLists);
+  const [widgetPreferences, setWidgetPreferences] = useState<HomeWidgetPreferences>(() => loadHomeWidgetPreferences(userLists));
   const [isWidgetStoreOpen, setIsWidgetStoreOpen] = useState(false);
   const [editingWidgetId, setEditingWidgetId] = useState<HomeWidgetId | null>(null);
+  const [settingsWidgetId, setSettingsWidgetId] = useState<HomeWidgetId | null>(null);
+  const [widgetConfigurations, setWidgetConfigurations] = useState<HomeWidgetConfigurationMap>(loadHomeWidgetConfigurations);
+  const [hydratedListGames, setHydratedListGames] = useState<Record<string, CompactGameLookupRecord[]>>({});
+  const [hydratingLists, setHydratingLists] = useState<Set<string>>(new Set());
 
   // Selected Game state for Modal
   const [selectedGameForModal, setSelectedGameForModal] = useState<CompactGameLookupRecord | null>(null);
@@ -211,6 +241,25 @@ export const HomePage: React.FC = () => {
     };
   }, [recentReleases]);
 
+  useEffect(() => {
+    let isCurrent = true;
+    const listsToHydrate = userLists.filter(list => list.entries.length > 0);
+    if (listsToHydrate.length === 0) return;
+    setHydratingLists(new Set(listsToHydrate.map(list => list.id)));
+    Promise.all(listsToHydrate.map(async list => [list.id, await hydrateHomeWidgetGames(list.entries.map(entry => entry.game))] as const))
+      .then(results => {
+        if (!isCurrent) return;
+        setHydratedListGames(Object.fromEntries(results));
+        setHydratingLists(new Set());
+      })
+      .catch(error => {
+        if (!isCurrent) return;
+        console.warn('Home list hydration warning:', error);
+        setHydratingLists(new Set());
+      });
+    return () => { isCurrent = false; };
+  }, [userLists]);
+
   // Featured Game derived from real catalog if available
   const realFeaturedGame = recentReleases.length > 0 ? recentReleases[0] : null;
 
@@ -256,7 +305,7 @@ export const HomePage: React.FC = () => {
       visible: current.visible.map(id => id === editingWidgetId ? replacementId : id),
       widths: {
         ...current.widths,
-        [replacementId]: current.widths[editingWidgetId],
+        [replacementId]: current.widths[editingWidgetId] || 'half',
       },
     }));
     setEditingWidgetId(null);
@@ -268,9 +317,46 @@ export const HomePage: React.FC = () => {
     setIsWidgetStoreOpen(true);
   };
 
-  const hiddenWidgets = HOME_WIDGET_IDS.filter(id => !widgetPreferences.visible.includes(id));
+  const getWidgetConfiguration = (id: HomeWidgetId) => resolveWidgetConfiguration(widgetConfigurations, id, getHomeWidgetLabel(id, userLists));
+  const sourceOptions = [
+    ...PERSONAL_GAME_BUCKETS.map(bucket => ({ value: `bucket:${bucket.id}`, label: `${bucket.label} bucket` })),
+    ...userLists.map(list => ({ value: `list:${list.id}`, label: list.name })),
+  ];
+  const gamesForSource = (source?: string): CompactGameLookupRecord[] => {
+    if (!source) return [];
+    if (source.startsWith('bucket:')) return compactGamesForBucket(rawRecords, source.slice(7) as PersonalGameBucketId).map(game => hydratedCompactMap.get(game.id) || game);
+    if (source.startsWith('list:')) {
+      const listId = source.slice(5);
+      return hydratedListGames[listId] || userLists.find(list => list.id === listId)?.entries.map(entry => entry.game) || [];
+    }
+    if (source === 'system:releases' || source === 'system:featured') return recentReleases.map(game => hydratedCompactMap.get(game.id) || game);
+    if (source === 'system:playing') return playingRecords.map(convertPersonalRecordToCompact);
+    if (source === 'system:progress') return inProgressRecords.map(convertPersonalRecordToCompact);
+    return [];
+  };
+  const universalOverride = (id: SystemHomeWidgetId) => {
+    const configuration = getWidgetConfiguration(id);
+    const defaults = resolveWidgetConfiguration({}, id, HOME_WIDGET_LABELS[id]);
+    const isNonGamePlaceholder = id === 'deals' || id === 'events';
+    if (isNonGamePlaceholder && configuration.source === defaults.source && configuration.display.presentation === defaults.display.presentation) return null;
+    return <div className="absolute inset-0 z-20 overflow-auto bg-[#FDFBF7] p-4 md:p-5">
+      <div className="mb-3 border-b border-[#D9C8A9] pb-3 pr-28"><h3 className="font-serif text-lg font-bold text-[#0C1D2D]">{configuration.title}</h3></div>
+      <HomeGameWidgetRenderer games={gamesForSource(configuration.source)} display={configuration.display} yuckedIds={yuckedIds} allowCatalogSampling={!configuration.source} onSelect={setSelectedGameForModal} />
+    </div>;
+  };
+  const saveWidgetConfiguration = (id: HomeWidgetId, configuration: HomeWidgetConfiguration) => {
+    setWidgetConfigurations(current => {
+      const next = { ...current, [id]: configuration };
+      saveHomeWidgetConfigurations(next);
+      return next;
+    });
+    setSettingsWidgetId(null);
+  };
+
+  const availableWidgetIds: HomeWidgetId[] = [...HOME_WIDGET_IDS, ...PERSONAL_GAME_BUCKETS.map(bucket => `bucket:${bucket.id}` as HomeWidgetId), ...userLists.map(list => getListWidgetId(list.id))];
+  const hiddenWidgets = availableWidgetIds.filter(id => !widgetPreferences.visible.includes(id));
   const storeWidgets = editingWidgetId
-    ? HOME_WIDGET_IDS.filter(id => id !== editingWidgetId && !widgetPreferences.visible.includes(id))
+    ? availableWidgetIds.filter(id => id !== editingWidgetId && !widgetPreferences.visible.includes(id))
     : hiddenWidgets;
   const widgetGridClass = (id: HomeWidgetId) => widgetPreferences.widths[id] === 'full' ? 'xl:col-span-2' : 'xl:col-span-1';
   const widgetOrder = (id: HomeWidgetId) => widgetPreferences.visible.indexOf(id);
@@ -283,7 +369,8 @@ export const HomePage: React.FC = () => {
         <div className="home-widget-column space-y-4 min-w-0">
           {/* WIDGET 1: FEATURED UPCOMING GAME */}
           {widgetPreferences.visible.includes('featured') && <div style={{ order: widgetOrder('featured') }} className={`atlas-home-widget atlas-dashboard-panel atlas-dashboard-feature atlas-feature-layout overflow-hidden relative group ${widgetGridClass('featured')}`}>
-            <WidgetControls id="featured" width={widgetPreferences.widths.featured} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <WidgetControls id="featured" label={HOME_WIDGET_LABELS.featured} width={widgetPreferences.widths.featured || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+            {universalOverride('featured')}
             {/* Top Landscape Artwork Container */}
             <div className="atlas-feature-art relative h-52 md:h-64 w-full overflow-hidden bg-[#0B2B3C]">
               <FantasyLandscapeArtwork variant="featured" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
@@ -348,7 +435,8 @@ export const HomePage: React.FC = () => {
 
           {/* WIDGET 3: CURRENTLY PLAYING */}
           {widgetPreferences.visible.includes('playing') && <div style={{ order: widgetOrder('playing') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('playing')}`}>
-            <WidgetControls id="playing" width={widgetPreferences.widths.playing} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <WidgetControls id="playing" label={HOME_WIDGET_LABELS.playing} width={widgetPreferences.widths.playing || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+            {universalOverride('playing')}
             <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
@@ -360,7 +448,7 @@ export const HomePage: React.FC = () => {
             </div>
 
             {playingRecords.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="atlas-widget-card-grid">
                 {playingRecords.slice(0, 4).map(rec => {
                   const compact = convertPersonalRecordToCompact(rec);
                   const hydrated = hydratedCompactMap.get(compact.id) || compact;
@@ -387,7 +475,8 @@ export const HomePage: React.FC = () => {
 
           {/* WIDGET 5: DISCOUNTS & DEALS */}
           {widgetPreferences.visible.includes('deals') && <div style={{ order: widgetOrder('deals') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('deals')}`}>
-            <WidgetControls id="deals" width={widgetPreferences.widths.deals} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <WidgetControls id="deals" label={HOME_WIDGET_LABELS.deals} width={widgetPreferences.widths.deals || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+            {universalOverride('deals')}
             <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
@@ -413,7 +502,8 @@ export const HomePage: React.FC = () => {
         <div className="home-widget-column space-y-4 min-w-0">
           {/* WIDGET 2: TOP 10 IN PROGRESS */}
           {widgetPreferences.visible.includes('progress') && <div style={{ order: widgetOrder('progress') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('progress')}`}>
-            <WidgetControls id="progress" width={widgetPreferences.widths.progress} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <WidgetControls id="progress" label={HOME_WIDGET_LABELS.progress} width={widgetPreferences.widths.progress || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+            {universalOverride('progress')}
             <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
@@ -473,7 +563,8 @@ export const HomePage: React.FC = () => {
 
           {/* WIDGET 4: NEW RELEASES */}
           {widgetPreferences.visible.includes('releases') && <div style={{ order: widgetOrder('releases') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative ${widgetGridClass('releases')}`}>
-            <WidgetControls id="releases" width={widgetPreferences.widths.releases} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <WidgetControls id="releases" label={HOME_WIDGET_LABELS.releases} width={widgetPreferences.widths.releases || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+            {universalOverride('releases')}
             <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
@@ -530,7 +621,8 @@ export const HomePage: React.FC = () => {
 
           {/* WIDGET 6: UPCOMING EVENTS */}
           {widgetPreferences.visible.includes('events') && <div style={{ order: widgetOrder('events') }} className={`atlas-home-widget atlas-dashboard-panel p-4 md:p-5 space-y-3 relative overflow-hidden ${widgetGridClass('events')}`}>
-            <WidgetControls id="events" width={widgetPreferences.widths.events} onToggleWidth={toggleWidgetWidth} onEdit={openWidgetStore} onRemove={removeWidget} />
+            <WidgetControls id="events" label={HOME_WIDGET_LABELS.events} width={widgetPreferences.widths.events || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+            {universalOverride('events')}
             <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3 pr-28 relative z-10">
               <div className="flex items-center gap-2">
                 <span className="text-[#C5A059] text-sm">✦</span>
@@ -557,6 +649,28 @@ export const HomePage: React.FC = () => {
           </div>}
         </div>
 
+        {PERSONAL_GAME_BUCKETS.map(bucket => {
+          const widgetId = `bucket:${bucket.id}` as HomeWidgetId;
+          if (!widgetPreferences.visible.includes(widgetId)) return null;
+          const configuration = getWidgetConfiguration(widgetId);
+          return <div key={widgetId} style={{ order: widgetOrder(widgetId) }} className={`atlas-home-widget atlas-dashboard-panel relative p-4 md:p-5 ${widgetGridClass(widgetId)}`}>
+            <WidgetControls id={widgetId} label={bucket.label} width={widgetPreferences.widths[widgetId] || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+            <div className="mb-3 border-b border-[#D9C8A9] pb-3 pr-28"><h3 className="font-serif text-lg font-bold text-[#0C1D2D]">{configuration.title}</h3></div>
+            <HomeGameWidgetRenderer games={gamesForSource(configuration.source)} display={configuration.display} yuckedIds={yuckedIds} allowCatalogSampling={!configuration.source} onSelect={setSelectedGameForModal} />
+          </div>;
+        })}
+
+        {userLists.map(list => {
+          const widgetId = getListWidgetId(list.id);
+          if (!widgetPreferences.visible.includes(widgetId)) return null;
+          return (
+            <div key={widgetId} style={{ order: widgetOrder(widgetId) }} className={`atlas-home-widget atlas-dashboard-panel relative min-h-[310px] p-4 md:p-5 ${widgetGridClass(widgetId)}`}>
+              <WidgetControls id={widgetId} label={list.name} width={widgetPreferences.widths[widgetId] || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
+              <UserListWidget list={list} title={getWidgetConfiguration(widgetId).title} games={gamesForSource(getWidgetConfiguration(widgetId).source)} display={getWidgetConfiguration(widgetId).display} isHydrating={hydratingLists.has(list.id)} onSelect={setSelectedGameForModal} yuckedIds={yuckedIds} allowCatalogSampling={!getWidgetConfiguration(widgetId).source} />
+            </div>
+          );
+        })}
+
         <button
           type="button"
           onClick={() => openWidgetStore()}
@@ -580,7 +694,7 @@ export const HomePage: React.FC = () => {
             <div className="flex items-start justify-between gap-4 border-b border-[#D9C8A9] pb-4">
               <div>
                 <h2 id="widget-store-title" className="font-serif text-2xl font-bold text-[#0C1D2D]">{editingWidgetId ? 'Replace Widget' : 'Widget Store'}</h2>
-                <p className="mt-1 text-xs text-[#47586A]">{editingWidgetId ? `Choose a replacement for ${HOME_WIDGET_LABELS[editingWidgetId]}. Its slot and size will be preserved.` : 'Choose a widget for the next available position on your Home page.'}</p>
+                <p className="mt-1 text-xs text-[#47586A]">{editingWidgetId ? `Choose a replacement for ${getHomeWidgetLabel(editingWidgetId, userLists)}. Its slot and size will be preserved.` : 'Choose a widget for the next available position on your Home page.'}</p>
               </div>
               <button type="button" onClick={() => { setIsWidgetStoreOpen(false); setEditingWidgetId(null); }} className="atlas-widget-control" aria-label="Close widget store">
                 <X className="h-4 w-4" />
@@ -593,7 +707,7 @@ export const HomePage: React.FC = () => {
                   <button key={id} type="button" onClick={() => replaceWidget(id)} className="atlas-widget-store-option">
                     <span className="atlas-widget-store-option-icon"><Plus className="h-4 w-4" /></span>
                     <span className="text-left">
-                      <span className="block font-serif text-base font-bold text-[#0C1D2D]">{HOME_WIDGET_LABELS[id]}</span>
+                      <span className="block font-serif text-base font-bold text-[#0C1D2D]">{getHomeWidgetLabel(id, userLists)}</span>
                       <span className="block text-[11px] text-[#47586A]">{editingWidgetId ? 'Replace this widget in place' : 'Add to the next available slot'}</span>
                     </span>
                   </button>
@@ -608,6 +722,8 @@ export const HomePage: React.FC = () => {
           </div>
         </div>
       )}
+
+      {settingsWidgetId && <HomeWidgetSettingsModal configuration={getWidgetConfiguration(settingsWidgetId)} sourceOptions={sourceOptions} onSave={configuration => saveWidgetConfiguration(settingsWidgetId, configuration)} onClose={() => setSettingsWidgetId(null)} />}
 
       {/* Modal */}
       <GameDetailModal

@@ -248,7 +248,22 @@
 }
 
 .atlas-home-widget {
-  min-height: 310px;
+  height: 340px;
+  min-height: 340px;
+  overflow: auto;
+}
+
+.atlas-widget-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 220px));
+  justify-content: start;
+  gap: 0.75rem;
+}
+
+@media (max-width: 520px) {
+  .atlas-widget-card-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .atlas-widget-controls {
@@ -402,14 +417,14 @@
   .atlas-feature-layout {
     display: grid;
     grid-template-columns: minmax(250px, 0.86fr) minmax(320px, 1.25fr);
-    min-height: 310px;
+    min-height: 340px;
   }
 
   .atlas-feature-art {
     grid-column: 2;
     grid-row: 1;
     height: auto !important;
-    min-height: 310px;
+    min-height: 340px;
   }
 
   .atlas-feature-copy {

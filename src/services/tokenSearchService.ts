@@ -8,6 +8,7 @@ import { getBasePathAwareUrl } from './catalogDataSource';
 import { openIndexedDB } from './indexDbStorage';
 import { CompactGameLookupRecord } from '../types/catalog';
 import { calculateCatalogImportance } from '../utils/catalogRanking';
+import { getDevelopmentCatalogPlugin } from './developmentCatalogPlugin';
 
 export type { CompactGameLookupRecord };
 
@@ -92,6 +93,7 @@ export interface ProgressiveSearchResult {
   hasMore: boolean;
   nextOffset: number;
   report: SearchPerformanceReport;
+  source?: 'catalog' | 'development_plugin';
 }
 
 const cachedTokenBuckets = new Map<string, Record<string, number[]>>();
@@ -243,6 +245,26 @@ export async function resolveCompactRecordByGameId(
     console.warn(`Failed to resolve compact record for game ID ${numericId}:`, err);
     return null;
   }
+}
+
+/** Samples one compact catalog record without downloading the full catalog. */
+export async function sampleRandomCatalogGame(random: () => number = Math.random): Promise<CompactGameLookupRecord | null> {
+  const developmentPlugin = await getDevelopmentCatalogPlugin();
+  if (developmentPlugin) return developmentPlugin.sampleRandom(random());
+
+  const manifest = await fetchTokenManifest();
+  const totalRecords = manifest.lookupFiles.reduce((sum, file) => sum + file.recordCount, 0);
+  if (totalRecords === 0) return null;
+
+  let target = Math.floor(random() * totalRecords);
+  const selectedFile = manifest.lookupFiles.find(file => {
+    if (target < file.recordCount) return true;
+    target -= file.recordCount;
+    return false;
+  }) || manifest.lookupFiles[manifest.lookupFiles.length - 1];
+
+  const records = await fetchLookupFile(selectedFile.file);
+  return records[Math.min(target, records.length - 1)] || null;
 }
 
 function stripLeadingArticle(str: string): string {
@@ -403,6 +425,30 @@ export async function executeProgressiveTokenSearch(
   } else if (options && typeof options === 'object') {
     if (typeof options.offset === 'number') offset = options.offset;
     if (typeof options.limit === 'number') limit = options.limit;
+  }
+
+  const developmentPlugin = await getDevelopmentCatalogPlugin();
+  if (developmentPlugin) {
+    const previewResults = developmentPlugin.search(queryStr);
+    const pageSlice = previewResults.slice(offset, offset + limit);
+    return {
+      results: pageSlice,
+      totalMatchingResults: previewResults.length,
+      hasMore: offset + pageSlice.length < previewResults.length,
+      nextOffset: offset + pageSlice.length,
+      source: 'development_plugin',
+      report: {
+        query: queryStr,
+        tokenBucketsDownloaded: 0,
+        postingListIdCount: previewResults.length,
+        lookupFilesRequired: 0,
+        totalLookupBytesRequired: 0,
+        numberResultsRanked: previewResults.length,
+        timeToFirst20Ms: Date.now() - startTime,
+        totalColdSearchDownloadBytes: 0,
+        cachedRepeatDownloadBytes: 0,
+      },
+    };
   }
 
   const tokens = tokenizeTitle(queryStr);

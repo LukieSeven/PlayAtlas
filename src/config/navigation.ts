@@ -25,6 +25,12 @@ export const navigationConfig: NavSection[] = [
         badge: 'LIBRARY',
         badgeColor: 'indigo',
       },
+      {
+        id: 'lists',
+        label: 'Lists',
+        path: '/lists',
+        iconName: 'Trophy',
+      },
     ],
   },
   {
@@ -47,16 +53,22 @@ export const navigationConfig: NavSection[] = [
         badgeColor: 'amber',
       },
       {
-        id: 'calendar',
-        label: 'Games Calendar',
-        path: '/calendar',
-        iconName: 'CalendarDays',
-      },
-      {
         id: 'discounts',
         label: 'Discounts',
         path: '/discounts',
         iconName: 'Tag',
+      },
+      {
+        id: 'calendar',
+        label: 'Calendar',
+        path: '/calendar',
+        iconName: 'CalendarDays',
+      },
+      {
+        id: 'events',
+        label: 'Events',
+        path: '/events',
+        iconName: 'CalendarDays',
       },
     ],
   },

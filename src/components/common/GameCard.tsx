@@ -13,6 +13,7 @@ interface GameCardProps {
   game?: unknown; // Raw catalog record or GameCardViewModel
   viewModel?: GameCardViewModel;
   onSelect?: (record: CompactGameLookupRecord) => void;
+  onLikeChange?: (liked: boolean) => void;
   className?: string;
 }
 
@@ -20,6 +21,7 @@ export const GameCard: React.FC<GameCardProps> = ({
   game,
   viewModel: providedViewModel,
   onSelect,
+  onLikeChange,
   className = '',
 }) => {
   // Map raw catalog record if viewModel is not directly provided
@@ -42,6 +44,7 @@ export const GameCard: React.FC<GameCardProps> = ({
       isWanted ? undefined : 'wanted',
       { name: liveVm.title, coverUrl: liveVm.coverUrl, releaseYear: liveVm.releaseYearDisplay !== 'TBA' ? parseInt(liveVm.releaseYearDisplay, 10) : undefined }
     );
+    onLikeChange?.(!isWanted);
   };
 
   const handleYuckToggle = async (e: React.MouseEvent) => {
@@ -126,6 +129,7 @@ export const GameCard: React.FC<GameCardProps> = ({
             coverUrl={liveVm.coverUrl}
             releaseYear={liveVm.releaseYearDisplay !== 'TBA' ? parseInt(liveVm.releaseYearDisplay, 10) : undefined}
             personalRecord={personalRecord}
+            onLikeChange={onLikeChange}
           />
         </div>
 

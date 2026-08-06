@@ -12,6 +12,7 @@ dist
 dist-ssr
 *.local
 generated/
+public/dev-plugins/*.local.js
 
 # Editor directories and files
 .vscode/*

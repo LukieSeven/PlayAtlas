@@ -18,7 +18,7 @@ export const SidebarProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const saved = localStorage.getItem('playatlas_custom_tabs_v2');
     if (saved) {
       try {
-        return JSON.parse(saved);
+        return JSON.parse(saved) as NavItem[];
       } catch (e) {
         // Fallback to default items
       }

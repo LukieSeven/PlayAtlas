@@ -22,6 +22,7 @@ interface UniversalActionMenuProps {
   releaseYear?: number;
   className?: string;
   personalRecord?: PersonalGameRecord;
+  onLikeChange?: (liked: boolean) => void;
 }
 
 export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
@@ -31,6 +32,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
   releaseYear,
   className = '',
   personalRecord: providedPersonalRecord,
+  onLikeChange,
 }) => {
   const strId = String(gameId);
   const [isOwnershipModalOpen, setIsOwnershipModalOpen] = useState(false);
@@ -194,6 +196,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
                     e.stopPropagation();
                     const isLiked = interestStatus === 'wanted' || interestStatus === 'wishlist';
                     await personalGameStore.setInterestStatus(strId, isLiked ? undefined : 'wanted', catalogSnapshot);
+                    onLikeChange?.(!isLiked);
                   }}
                   className={`flex-1 py-1 text-[10px] font-bold rounded-lg capitalize flex items-center justify-center gap-1 transition-colors ${
                     interestStatus === 'wanted' || interestStatus === 'wishlist'

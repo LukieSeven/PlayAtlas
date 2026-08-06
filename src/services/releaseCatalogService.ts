@@ -3,6 +3,7 @@ import { fetchAndDecompressJson } from '../utils/decompression';
 import { GameItem } from '../types/game';
 import { CompactGameLookupRecord, CompactRankSignals } from '../types/catalog';
 import { openIndexedDB } from './indexDbStorage';
+import { getDevelopmentCatalogPlugin } from './developmentCatalogPlugin';
 
 export interface CompactPlatformReleaseDate {
   p: number; // platform ID
@@ -290,6 +291,20 @@ export function sortReleaseRecordsChronologically(
 
 export async function queryReleaseCatalog(options: ReleaseQueryOptions): Promise<ReleaseQueryResult> {
   const { dateStr: localToday, timezone: userTimezone } = getDynamicLocalDate();
+
+  const developmentPlugin = await getDevelopmentCatalogPlugin();
+  if (developmentPlugin) {
+    const isUpcoming = options.timeframe === 'upcoming' || options.timeframe === 'next_30_days';
+    const records = developmentPlugin.createReleaseRecords(isUpcoming);
+    return {
+      games: records.map(record => convertReleaseRecordToGameItem(record)),
+      records,
+      selectedDate: localToday,
+      userTimezone,
+      matchingPartitionsLoaded: 0,
+    };
+  }
+
   const { startDate, endDate } = calculateDynamicDateRange(options.timeframe, localToday);
 
   const manifest = await fetchReleaseManifest();
@@ -363,4 +378,31 @@ export async function getUpcomingGames(limit: number = 30): Promise<ReleaseFeedP
   const result = await queryReleaseCatalog({ timeframe: 'upcoming' });
   const records = result.records.slice(0, limit);
   return { items: records.map(r => ({ record: r })) };
+}
+
+export async function getReleaseRecordsForMonth(
+  year: number,
+  month: number,
+  options: { viewType?: 'first_release' | 'platform_release'; includeHidden?: boolean } = {},
+): Promise<ReleaseListingRecord[]> {
+  const monthKey = `${year}-${String(month).padStart(2, '0')}`;
+  const developmentPlugin = await getDevelopmentCatalogPlugin();
+  if (developmentPlugin) {
+    return developmentPlugin.createReleaseRecords(true).map((record, index) => ({
+      ...record,
+      firstReleaseDate: `${monthKey}-${String((index * 3) % 28 + 1).padStart(2, '0')}`,
+    }));
+  }
+
+  const manifest = await fetchReleaseManifest();
+  const monthlyPartitions = manifest.partitions.filter(partition => partition.key.startsWith(monthKey));
+  const targetPartitions = monthlyPartitions.length > 0
+    ? monthlyPartitions
+    : manifest.partitions.filter(partition => partition.key === String(year));
+  const loaded = (await Promise.all(targetPartitions.map(partition => fetchReleasePartitionFile(partition.file)))).flat();
+  return sortReleaseRecordsChronologically(loaded.filter(record => {
+    if (!options.includeHidden && record.defaultVisible === false) return false;
+    if (options.viewType === 'platform_release') return record.platformReleaseDates.some(release => release.d?.startsWith(monthKey));
+    return Boolean(record.firstReleaseDate?.startsWith(monthKey));
+  }), 'ascending');
 }

@@ -17,6 +17,8 @@ import {
   Download,
   Edit3,
   Star,
+  ListPlus,
+  X,
 } from 'lucide-react';
 import { usePersonalGameLibrary } from '../hooks/usePersonalGameLibrary';
 import { PersonalGameRecord } from '../types/personal';
@@ -31,6 +33,7 @@ import { getAllFamilies, getPlatformFamily, getPlatformDisplayName } from '../se
 import { hydrateCompactRecordsBatch, convertPersonalRecordToCompact } from '../services/catalogDetailService';
 import { MinimumRatingFilter } from '../components/ui/MinimumRatingFilter';
 import { SplatIcon } from '../components/ui/SplatIcon';
+import { addGameToUserList, createUserList, loadUserLists, saveUserLists } from '../services/userListService';
 
 type MyGamesViewTab = 'all' | 'owned' | 'playing' | 'backlog' | 'completed' | 'wanted' | 'dropped';
 
@@ -64,6 +67,11 @@ export const MyGamesPage: React.FC = () => {
 
   // Incremental Pagination State (Initial: 40, Load More: 20)
   const [visibleCount, setVisibleCount] = useState<number>(40);
+  const [isSaveToListOpen, setIsSaveToListOpen] = useState(false);
+  const [saveListMode, setSaveListMode] = useState<'new' | 'existing'>('new');
+  const [saveListName, setSaveListName] = useState('');
+  const [destinationListId, setDestinationListId] = useState('');
+  const [saveListMessage, setSaveListMessage] = useState('');
 
   // Hydration state for displayed compact records
   const [hydratedCompactMap, setHydratedCompactMap] = useState<Map<number, CompactGameLookupRecord>>(new Map());
@@ -318,6 +326,31 @@ export const MyGamesPage: React.FC = () => {
 
   const platformFamilies = getAllFamilies();
 
+  const openSaveToList = () => {
+    const label = activeTab === 'wanted' ? 'Liked Games' : activeTab === 'dropped' ? 'Yuck!' : activeTab === 'all' ? 'My Games' : `${activeTab[0].toUpperCase()}${activeTab.slice(1)} Games`;
+    const existing = loadUserLists();
+    setSaveListName(label);
+    setDestinationListId(existing[0]?.id || '');
+    setSaveListMode(existing.length > 0 ? 'existing' : 'new');
+    setSaveListMessage('');
+    setIsSaveToListOpen(true);
+  };
+
+  const saveCurrentViewToList = () => {
+    const existing = loadUserLists();
+    let target = saveListMode === 'existing' ? existing.find(list => list.id === destinationListId) : undefined;
+    if (!target) target = createUserList(saveListName, 'regular');
+    const games = sortedRecords.map(record => {
+      const compact = convertPersonalRecordToCompact(record);
+      return hydratedCompactMap.get(compact.id) || compact;
+    });
+    const updated = games.reduce((list, game) => addGameToUserList(list, game), target);
+    const added = updated.entries.length - target.entries.length;
+    const nextLists = existing.some(list => list.id === updated.id) ? existing.map(list => list.id === updated.id ? updated : list) : [...existing, updated];
+    saveUserLists(nextLists);
+    setSaveListMessage(`${added} game${added === 1 ? '' : 's'} added to ${updated.name}.`);
+  };
+
   return (
     <div className="space-y-4 animate-in fade-in duration-300">
       {/* Unified library navigation, counts, search, filters, and actions */}
@@ -363,6 +396,13 @@ export const MyGamesPage: React.FC = () => {
           })}
         </div>
         </div>
+        <button
+          onClick={openSaveToList}
+          className="shrink-0 px-3 py-2 rounded-xl bg-white hover:bg-[#EFE8D8] text-[#0B2B3C] font-bold text-xs shadow-xs border border-[#C5A059] transition-all flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <ListPlus className="w-4 h-4 text-[#8C6D37]" />
+          <span>Save to List</span>
+        </button>
         <button
           onClick={() => setIsExportModalOpen(true)}
           className="shrink-0 px-3 py-2 rounded-xl bg-[#0B2B3C] hover:bg-[#0F4C5C] text-white font-bold text-xs shadow-xs border border-[#C5A059] transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -644,6 +684,22 @@ export const MyGamesPage: React.FC = () => {
       )}
 
       {/* Modals */}
+      {isSaveToListOpen && <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0C1D2D]/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="save-bucket-title">
+        <div className="atlas-dashboard-panel w-full max-w-lg p-5 shadow-2xl">
+          <div className="flex items-start justify-between border-b border-[#D9C8A9] pb-4">
+            <div><h2 id="save-bucket-title" className="font-serif text-2xl font-bold text-[#0C1D2D]">Save View to List</h2><p className="mt-1 text-xs text-[#47586A]">Saves the {sortedRecords.length} games currently included by this bucket and its active filters.</p></div>
+            <button type="button" onClick={() => setIsSaveToListOpen(false)} className="atlas-widget-control" aria-label="Close Save to List"><X className="h-4 w-4" /></button>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-2">
+            <button type="button" onClick={() => setSaveListMode('new')} className={`rounded-xl border px-3 py-2 text-xs font-bold ${saveListMode === 'new' ? 'border-[#0B2B3C] bg-[#0B2B3C] text-white' : 'border-[#D9C8A9] bg-white'}`}>Create New List</button>
+            <button type="button" disabled={loadUserLists().length === 0} onClick={() => setSaveListMode('existing')} className={`rounded-xl border px-3 py-2 text-xs font-bold disabled:opacity-40 ${saveListMode === 'existing' ? 'border-[#0B2B3C] bg-[#0B2B3C] text-white' : 'border-[#D9C8A9] bg-white'}`}>Existing List</button>
+          </div>
+          {saveListMode === 'new' ? <input value={saveListName} onChange={event => setSaveListName(event.target.value)} placeholder="List name" className="mt-3 w-full rounded-xl border border-[#C8B584] bg-white px-3 py-2.5 text-xs font-bold" /> : <select value={destinationListId} onChange={event => setDestinationListId(event.target.value)} className="mt-3 w-full rounded-xl border border-[#C8B584] bg-white px-3 py-2.5 text-xs font-bold">{loadUserLists().map(list => <option key={list.id} value={list.id}>{list.name} · {list.entries.length} games</option>)}</select>}
+          {saveListMessage && <p className="mt-3 rounded-xl bg-[#E3F1E6] px-3 py-2 text-xs font-bold text-[#24573C]">{saveListMessage}</p>}
+          <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setIsSaveToListOpen(false)} className="rounded-xl border border-[#D9C8A9] px-4 py-2 text-xs font-bold">Close</button><button type="button" onClick={saveCurrentViewToList} disabled={sortedRecords.length === 0 || (saveListMode === 'new' && !saveListName.trim())} className="rounded-xl bg-[#0B2B3C] px-4 py-2 text-xs font-bold text-white disabled:opacity-40">Save Games</button></div>
+        </div>
+      </div>}
+
       <GameDetailModal
         selectedGame={selectedGameForModal}
         onClose={() => setSelectedGameForModal(null)}

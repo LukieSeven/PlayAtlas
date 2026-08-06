@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { X, LayoutDashboard, Trophy, Layers, Bookmark, Gamepad2, Share2, Settings } from 'lucide-react';
+import { X, LayoutDashboard, Trophy, Layers, Bookmark, Gamepad2, Share2, Settings, CalendarDays, Tag } from 'lucide-react';
 import { navigationConfig } from '../../config/navigation';
 import { useSidebar } from '../../context/SidebarContext';
 import { getBasePathAwareUrl } from '../../services/catalogDataSource';
@@ -13,6 +13,8 @@ const iconMap: Record<string, React.ReactNode> = {
   Gamepad2: <Gamepad2 className="w-5 h-5 text-cyan-400" />,
   Share2: <Share2 className="w-5 h-5 text-emerald-400" />,
   Settings: <Settings className="w-5 h-5 text-slate-300" />,
+  CalendarDays: <CalendarDays className="w-5 h-5 text-amber-400" />,
+  Tag: <Tag className="w-5 h-5 text-amber-400" />,
 };
 
 export const MobileNav: React.FC = () => {

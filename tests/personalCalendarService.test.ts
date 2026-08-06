@@ -1,0 +1,22 @@
+const memory = new Map<string, string>();
+(globalThis as any).localStorage = { getItem: (key: string) => memory.get(key) || null, setItem: (key: string, value: string) => memory.set(key, value) };
+import { addLikedGameToCalendar, addPersonalCalendarItem, loadPersonalCalendarItems, removePersonalCalendarItem, savePersonalCalendarItems } from '../src/services/personalCalendarService';
+
+let passed = 0;
+let failed = 0;
+const assert = (condition: boolean, message: string) => condition ? (passed++, console.log(`  PASS: ${message}`)) : (failed++, console.error(`  FAIL: ${message}`));
+console.log('Running Personal Calendar Tests...');
+const withGame = addPersonalCalendarItem([], { date: '2026-08-01', title: 'Game', kind: 'game', sourceId: 10 });
+assert(withGame.length === 1, 'Games can be imported into My Calendar');
+assert(addPersonalCalendarItem(withGame, { date: '2026-08-01', title: 'Game', kind: 'game', sourceId: 10 }) === withGame, 'Duplicate game-date imports are ignored');
+const withLikedGame = addLikedGameToCalendar(withGame, { releaseDate: '2026-08-20', title: 'Liked Game', sourceId: 20 });
+assert(withLikedGame.some(item => item.sourceId === 20 && item.date === '2026-08-20'), 'Liking a calendar game imports its exact release date into My Calendar');
+assert(addLikedGameToCalendar(withLikedGame, { releaseDate: '2026-08-20', title: 'Liked Game', sourceId: 20 }) === withLikedGame, 'Repeated Like notifications do not duplicate My Calendar entries');
+const withCustom = addPersonalCalendarItem(withGame, { date: '2026-08-12', title: 'Game night', kind: 'custom' });
+savePersonalCalendarItems(withCustom);
+assert(loadPersonalCalendarItems().length === 2, 'Calendar items persist locally');
+assert(removePersonalCalendarItem(withCustom, withCustom[0].id).length === 1, 'Calendar items can be removed');
+memory.set('playatlas_personal_calendar_v1', '{broken');
+assert(loadPersonalCalendarItems().length === 0, 'Malformed calendar storage fails safely');
+console.log(`\nPersonal Calendar Test Results: ${passed} passed, ${failed} failed.`);
+if (failed > 0) process.exit(1);

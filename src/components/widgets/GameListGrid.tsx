@@ -22,6 +22,8 @@ interface GameListGridProps {
   headerContent?: React.ReactNode;
   searchContent?: React.ReactNode;
   noticeContent?: React.ReactNode;
+  emptyTitle?: string;
+  emptyDescription?: string;
 }
 
 export const GameListGrid: React.FC<GameListGridProps> = ({
@@ -36,6 +38,8 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   headerContent,
   searchContent,
   noticeContent,
+  emptyTitle = 'No Matching Games Found',
+  emptyDescription = 'Try resetting platform or category filters to view more titles in the Play Atlas catalog.',
 }) => {
   const personalRecords = usePersonalGameLibrary();
   const yuckedIds = useMemo(() => getYuckedNumericIds(personalRecords), [personalRecords]);
@@ -204,9 +208,9 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
       ) : sortedGames.length === 0 ? (
         <div className="themed-panel p-12 text-center rounded-3xl space-y-3 border border-[var(--panel-border)] bg-[#fefcf6]">
           <ShieldAlert className="w-10 h-10 mx-auto text-amber-600 opacity-80" />
-          <h3 className="text-base font-bold themed-heading">No Matching Games Found</h3>
+          <h3 className="text-base font-bold themed-heading">{emptyTitle}</h3>
           <p className="text-xs text-[var(--text-secondary)] max-w-sm mx-auto font-medium">
-            Try resetting platform or category filters to view more titles in the Play Atlas catalog.
+            {emptyDescription}
           </p>
         </div>
       ) : (

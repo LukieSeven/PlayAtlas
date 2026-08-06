@@ -10,6 +10,7 @@ import { normalizeGameTypeCategory } from '../../utils/gameTypeUtils';
 import { useSidebar } from '../../context/SidebarContext';
 import { usePersonalGameLibrary } from '../../hooks/usePersonalGameLibrary';
 import { getYuckedNumericIds } from '../../utils/personalGameVisibility';
+import { isDevelopmentCatalogPluginConfigured } from '../../services/developmentCatalogPlugin';
 
 interface HeaderProps {
   onSelectGame?: (gameId: number, name: string) => void;
@@ -24,11 +25,13 @@ const getPageTitle = (pathname: string): { title: string; subtitle: string } => 
     case '/upcoming':
       return { title: 'Upcoming Games', subtitle: 'Upcoming titles spotlight' };
     case '/calendar':
-      return { title: 'Games Calendar', subtitle: 'Scheduled gaming events and releases' };
+      return { title: 'Calendar', subtitle: 'Game releases, events, and personal dates' };
     case '/discounts':
       return { title: 'Discounts & Deals', subtitle: 'Featured platform game sales' };
+    case '/events':
+      return { title: 'Events', subtitle: 'Showcases, conventions, and community dates' };
     case '/lists':
-      return { title: 'Ranked Lists', subtitle: 'Curated library rankings' };
+      return { title: 'Lists', subtitle: 'Create collections and tier rankings' };
     case '/tier-lists':
       return { title: 'Tier Lists', subtitle: 'Personal tier ratings' };
     case '/collections':
@@ -103,6 +106,11 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
               {title}
             </h1>
             <span className="text-[#C5A059] text-base leading-none">✦</span>
+            {isDevelopmentCatalogPluginConfigured() && (
+              <span className="rounded-full border border-amber-500/50 bg-amber-100 px-2 py-0.5 font-sans text-[9px] font-extrabold uppercase tracking-wider text-amber-900">
+                Development catalog plugin
+              </span>
+            )}
           </div>
           <p className="text-xs text-[#47586A] font-sans font-medium mt-0.5">
             {subtitle}
