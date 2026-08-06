@@ -19,6 +19,7 @@ import {
 import { useSidebar } from '../../context/SidebarContext';
 import { usePersonalGameLibrary } from '../../hooks/usePersonalGameLibrary';
 import { AddTabModal } from '../widgets/AddTabModal';
+import { getBasePathAwareUrl } from '../../services/catalogDataSource';
 
 const iconMap: Record<string, React.ReactNode> = {
   Home: <Home className="w-4 h-4 text-[#C5A059]" />,
@@ -61,7 +62,7 @@ export const Sidebar: React.FC = () => {
         <div className="flex flex-col items-center text-center gap-2">
           <div className="atlas-brand-emblem h-24 w-24 overflow-hidden rounded-full border-2 border-[#C5A059] shrink-0 relative">
             <img
-              src="/branding/play-atlas-compass-watercolor.png"
+              src={getBasePathAwareUrl('branding/play-atlas-compass-watercolor.png')}
               alt="Play Atlas compass and play emblem"
               className="h-full w-full object-cover"
             />

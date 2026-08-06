@@ -24,6 +24,10 @@ const games: CompactGameLookupRecord[] = [
 
 assert(matchesCatalogPlatformFamily(games[0], 'pc'), 'Platform filtering uses platform metadata, not the game ID');
 assert(!matchesCatalogPlatformFamily(games[1], 'pc'), 'Unrelated platform families are excluded');
+assert(
+  matchesCatalogPlatformFamily({ id: 99, name: 'Awaiting hydration' }, 'nintendo'),
+  'Compact records without platforms remain eligible for detail hydration',
+);
 assert(matchesCatalogFormat(games[1], 'main_game'), 'Main-game grouping includes remakes');
 assert(matchesCatalogFormat(games[2], 'pack'), 'Pack and expansion grouping includes standalone expansions');
 assert(matchesCatalogFormat(games[3], 'mod'), 'Mod grouping includes community content');

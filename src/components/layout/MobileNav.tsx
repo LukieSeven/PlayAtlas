@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import { X, LayoutDashboard, Trophy, Layers, Bookmark, Gamepad2, Share2, Settings } from 'lucide-react';
 import { navigationConfig } from '../../config/navigation';
 import { useSidebar } from '../../context/SidebarContext';
+import { getBasePathAwareUrl } from '../../services/catalogDataSource';
 
 const iconMap: Record<string, React.ReactNode> = {
   LayoutDashboard: <LayoutDashboard className="w-5 h-5 text-amber-400" />,
@@ -34,7 +35,7 @@ export const MobileNav: React.FC = () => {
           <div className="flex items-center justify-between border-b border-[#D9C8A9]/60 pb-4">
             <div className="flex items-center gap-2 min-w-0">
               <img
-                src="/branding/play-atlas-compass-watercolor.png"
+                src={getBasePathAwareUrl('branding/play-atlas-compass-watercolor.png')}
                 alt=""
                 className="h-10 w-10 shrink-0 rounded-full border border-[#C5A059] object-cover"
               />

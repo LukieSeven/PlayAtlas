@@ -22,9 +22,9 @@ function runThemeTokenTests() {
   assert(watercolor.headingFontFamily.includes('Cormorant Garamond'), 'headingFontFamily includes Cormorant Garamond');
   assert(watercolor.displayHeadingFont.includes('Cormorant Garamond'), 'displayHeadingFont includes Cormorant Garamond');
   assert(watercolor.sidebarEdgeStyle === 'beveled-arrow', 'sidebarEdgeStyle is beveled-arrow');
-  assert(watercolor.landmassTextureUrl === '/branding/watercolor-landmass-forest.svg', 'landmassTextureUrl is forest landmass asset');
-  assert(watercolor.coastlineTextureUrl === '/branding/watercolor-coastline.svg', 'coastlineTextureUrl is coastline asset');
-  assert(watercolor.paperTextureUrl === '/branding/watercolor-paper-grain.svg', 'paperTextureUrl is official paper grain asset');
+  assert(watercolor.landmassTextureUrl === './branding/watercolor-landmass-forest.svg', 'landmassTextureUrl is base-path-safe forest landmass asset');
+  assert(watercolor.coastlineTextureUrl === './branding/watercolor-coastline.svg', 'coastlineTextureUrl is base-path-safe coastline asset');
+  assert(watercolor.paperTextureUrl === './branding/watercolor-paper-grain.svg', 'paperTextureUrl is base-path-safe paper grain asset');
   assert(watercolor.paperTextureOpacity === 0.35, 'paperTextureOpacity is 0.35');
   assert(watercolor.washOpacity === 0.85, 'washOpacity is 0.85 (rich 2-3x watercolor visual presence)');
 

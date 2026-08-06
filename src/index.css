@@ -78,7 +78,7 @@
   --focus-ring: var(--atlas-focus-ring);
   --shadow-style: var(--atlas-shadow-md);
   --border-radius: var(--atlas-radius-lg);
-  --paper-texture-url: url('/branding/watercolor-paper-grain.svg');
+  --paper-texture-url: url('../branding/watercolor-paper-grain.svg');
   --paper-texture-opacity: 0.35;
   --atlas-line-opacity: 0.35;
 }
@@ -156,7 +156,7 @@
   inset: 0;
   background-image: 
     var(--paper-texture-url),
-    url('/branding/watercolor-paper-grain.svg');
+    url('../branding/watercolor-paper-grain.svg');
   background-position: center center, center center;
   background-repeat: repeat, repeat;
   background-size: 600px 600px, 200px 200px;
@@ -173,9 +173,9 @@
   pointer-events: none;
   z-index: 0;
   background-image:
-    url('/branding/watercolor-landmass-forest.svg'),
-    url('/branding/watercolor-wash-ocean.svg'),
-    url('/branding/watercolor-wash-teal.svg');
+    url('../branding/watercolor-landmass-forest.svg'),
+    url('../branding/watercolor-wash-ocean.svg'),
+    url('../branding/watercolor-wash-teal.svg');
   background-position:
     left -120px bottom -120px,
     left 16% top -180px,
@@ -197,11 +197,11 @@
   pointer-events: none;
   z-index: 0;
   background-image:
-    url('/branding/watercolor-coastline.svg'),
-    url('/branding/watercolor-wash-ocean.svg'),
-    url('/branding/watercolor-wash-teal.svg'),
-    url('/branding/dotted-route.svg'),
-    url('/branding/map-contour-lines.svg');
+    url('../branding/watercolor-coastline.svg'),
+    url('../branding/watercolor-wash-ocean.svg'),
+    url('../branding/watercolor-wash-teal.svg'),
+    url('../branding/dotted-route.svg'),
+    url('../branding/map-contour-lines.svg');
   background-position: right -80px top 80px, left -50px bottom -50px, top 10px right 10px, bottom 40px left 260px, right 5% bottom 8%;
   background-repeat: no-repeat;
   background-size: 520px 520px, 650px 650px, 700px 450px, 450px 200px, 360px 360px;
@@ -233,7 +233,7 @@
 .atlas-wordmark-crop {
   width: 218px;
   height: 58px;
-  background-image: url('/branding/play-atlas-wordmark-watercolor.png');
+  background-image: url('../branding/play-atlas-wordmark-watercolor.png');
   background-repeat: no-repeat;
   background-size: 292px auto;
   background-position: -45px -57px;

@@ -22,7 +22,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     // Official Parchment Paper, Forest Landmass & Atlas Text System
     paperBase: '#f7f4ea',
     paperHighlight: '#fefcf5',
-    paperTextureUrl: '/branding/watercolor-paper-grain.svg',
+    paperTextureUrl: './branding/watercolor-paper-grain.svg',
     paperTextureOpacity: 0.35,
     paperGrainOpacity: 0.35,
     washBlue: '#2b7a94',
@@ -31,8 +31,8 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     washNavy: '#0f2b48',
     washOpacity: 0.85, // 2-3x richer watercolor visual presence
     pigmentEdgeOpacity: 0.6,
-    landmassTextureUrl: '/branding/watercolor-landmass-forest.svg',
-    coastlineTextureUrl: '/branding/watercolor-coastline.svg',
+    landmassTextureUrl: './branding/watercolor-landmass-forest.svg',
+    coastlineTextureUrl: './branding/watercolor-coastline.svg',
     mapLabelOpacity: 0.14,
     routeDensity: 'high',
     coastlineOpacity: 0.35,

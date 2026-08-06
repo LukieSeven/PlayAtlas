@@ -9,6 +9,10 @@ export function matchesCatalogPlatformFamily(
   selectedFamily: string,
 ): boolean {
   if (selectedFamily === 'all') return true;
+  // Compact search records receive platform metadata during visible-record
+  // hydration. Keep unknown records eligible so the filter cannot prevent the
+  // hydration required to determine whether they match.
+  if (!game.platforms || game.platforms.length === 0) return true;
   return (game.platforms || []).some(
     platform => getPlatformFamilyForCatalogValue(platform) === selectedFamily,
   );
