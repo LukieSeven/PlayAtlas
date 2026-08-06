@@ -20,6 +20,8 @@ import { CompactGameLookupRecord } from '../types/catalog';
 import { PersonalCalendarItem } from '../types/personalCalendar';
 import { calculateCatalogImportance } from '../utils/catalogRanking';
 import { getYuckedNumericIds } from '../utils/personalGameVisibility';
+import { getEventsCatalog, getEventsForMonth } from '../services/eventCatalogService';
+import type { CatalogEvent } from '../types/events';
 
 type CalendarMode = 'games' | 'events' | 'personal';
 const weekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -51,6 +53,7 @@ export const CalendarPage: React.FC = () => {
   const [cursor, setCursor] = useState(() => new Date(today.getFullYear(), today.getMonth(), 1));
   const [mode, setMode] = useState<CalendarMode>('games');
   const [releases, setReleases] = useState<ReleaseListingRecord[]>([]);
+  const [catalogEvents, setCatalogEvents] = useState<CatalogEvent[]>([]);
   const [personalItems, setPersonalItems] = useState<PersonalCalendarItem[]>(loadPersonalCalendarItems);
   const [selectedGame, setSelectedGame] = useState<CompactGameLookupRecord | null>(null);
   const [expandedGame, setExpandedGame] = useState<{ record: ReleaseListingRecord; date: string } | null>(null);
@@ -87,6 +90,12 @@ export const CalendarPage: React.FC = () => {
     return () => { active = false; };
   }, [year, month, viewType]);
 
+  useEffect(() => {
+    let active = true;
+    getEventsCatalog().then(events => { if (active) setCatalogEvents(events); }).catch(() => { if (active) setCatalogEvents([]); });
+    return () => { active = false; };
+  }, []);
+
   const filteredReleases = useMemo(() => releases
     .filter(record => {
       if (getExactCalendarReleaseDates(record, viewType, calendarMonthKey).length === 0) return false;
@@ -116,6 +125,15 @@ export const CalendarPage: React.FC = () => {
     filteredReleases.forEach(record => releaseDates(record).forEach(date => map.set(date, [...(map.get(date) || []), record])));
     return map;
   }, [filteredReleases, viewType, year, month]);
+  const eventsByDate = useMemo(() => {
+    const map = new Map<string, CatalogEvent[]>();
+    getEventsForMonth(catalogEvents, year, month + 1).forEach(event => {
+      const start = new Date(event.startTime);
+      const date = formatYMD(start.getFullYear(), start.getMonth(), start.getDate());
+      map.set(date, [...(map.get(date) || []), event]);
+    });
+    return map;
+  }, [catalogEvents, year, month]);
 
   const firstWeekday = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
@@ -184,12 +202,6 @@ export const CalendarPage: React.FC = () => {
         </section>
       )}
 
-      {mode === 'events' ? (
-        <div className="atlas-dashboard-panel p-8 text-center">
-          <h2 className="font-serif text-2xl font-bold text-[#0C1D2D]">Events Calendar</h2>
-          <p className="mt-2 text-sm text-[#47586A]">Event dates will appear here when the events API is connected. The calendar structure is ready for that feed.</p>
-        </div>
-      ) : (
         <section className="atlas-dashboard-panel relative overflow-x-auto p-3">
           {error && <p className="mb-3 rounded-xl bg-rose-50 p-3 text-xs font-bold text-rose-800">{error}</p>}
           <div className="min-w-[900px]">
@@ -200,6 +212,7 @@ export const CalendarPage: React.FC = () => {
               {cells.map((day, index) => {
                 const date = day ? formatYMD(year, month, day) : '';
                 const dayReleases = date ? releasesByDate.get(date) || [] : [];
+                const dayEvents = date ? eventsByDate.get(date) || [] : [];
                 const dayPersonal = date ? personalItems.filter(item => item.date === date) : [];
                 const isToday = day && date === formatYMD(today.getFullYear(), today.getMonth(), today.getDate());
                 return (
@@ -209,6 +222,8 @@ export const CalendarPage: React.FC = () => {
                       <div className="space-y-1.5">
                         {mode === 'games'
                           ? dayReleases.slice(0, 5).map(record => <GameReleaseItem key={`${record.sourceId}:${date}`} record={record} date={date} viewType={viewType} onExpand={expandGame} />)
+                          : mode === 'events'
+                            ? dayEvents.slice(0, 5).map(event => <a key={event.id} href={event.liveStreamUrl || event.links[0]?.url || '#'} target={event.liveStreamUrl || event.links[0] ? '_blank' : undefined} rel="noreferrer" className="block rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5"><span className="block line-clamp-2 text-[10px] font-bold text-[#0C1D2D]">{event.name}</span><span className="text-[9px] text-[#8C6D37]">{new Date(event.startTime).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span></a>)
                           : dayPersonal.map(item => (
                             <div key={item.id} className="flex items-start justify-between gap-1 rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5">
                               <span><span className="block line-clamp-2 text-[10px] font-bold text-[#0C1D2D]">{item.title}</span><span className="text-[9px] uppercase text-[#8C6D37]">{item.kind}</span></span>
@@ -227,7 +242,6 @@ export const CalendarPage: React.FC = () => {
           </div>
           {isLoading && <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-white/30"><span className="rounded-xl bg-[#0B2B3C] px-4 py-2 text-xs font-bold text-white">Loading releases…</span></div>}
         </section>
-      )}
 
       {expandedDate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0C1D2D]/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="calendar-day-title">

@@ -563,9 +563,11 @@ async function runBrowserCatalogBuilder() {
     }
   }
 
+  const catalogBuildId = `build-${Date.now()}`;
   const releaseManifest = {
     schemaVersion: 3,
     rankingSchemaVersion: RANKING_SCHEMA_VERSION,
+    catalogBuildId,
     generatedAt: new Date().toISOString(),
     recordCount: totalCatalogRecords,
     totalBytes: totalReleaseCompressedBytes,
@@ -583,8 +585,6 @@ async function runBrowserCatalogBuilder() {
   fs.writeFileSync(releaseManifestPath, JSON.stringify(releaseManifest, null, 2), 'utf-8');
 
   // --- WRITE MASTER BROWSER CATALOG MANIFEST FIRST ---
-  const catalogBuildId = `build-${Date.now()}`;
-
   const outputBrowserManifest = {
     source: 'igdb',
     schemaVersion: 3,

@@ -46,6 +46,7 @@ export interface ReleaseManifestPartition {
 
 export interface ReleaseCatalogManifest {
   schemaVersion: number;
+  catalogBuildId?: string;
   generatedAt: string;
   recordCount: number;
   partitionCount: number;
@@ -176,8 +177,10 @@ export async function fetchSharedPlatformsMetadata(): Promise<Record<number, { n
 }
 
 export async function fetchReleasePartitionFile(relPath: string): Promise<ReleaseListingRecord[]> {
-  if (cachedPartitionsMap.has(relPath)) {
-    return cachedPartitionsMap.get(relPath)!;
+  const manifest = await fetchReleaseManifest();
+  const cacheKey = getReleasePartitionCacheKey(manifest, relPath);
+  if (cachedPartitionsMap.has(cacheKey)) {
+    return cachedPartitionsMap.get(cacheKey)!;
   }
 
   try {
@@ -185,20 +188,19 @@ export async function fetchReleasePartitionFile(relPath: string): Promise<Releas
     const cachedObj: any = await new Promise((resolve, reject) => {
       const tx = db.transaction('release_partitions', 'readonly');
       const store = tx.objectStore('release_partitions');
-      const req = store.get(relPath);
+      const req = store.get(cacheKey);
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => reject(req.error);
     });
 
     if (cachedObj && Array.isArray(cachedObj.records)) {
-      cachedPartitionsMap.set(relPath, cachedObj.records);
+      cachedPartitionsMap.set(cacheKey, cachedObj.records);
       return cachedObj.records;
     }
   } catch (err) {
     console.warn('IndexedDB partition check warning:', err);
   }
 
-  const manifest = await fetchReleaseManifest();
   const partInfo = manifest.partitions.find(p => p.file === relPath);
 
   const fileUrl = getBasePathAwareUrl(`data/${relPath}`);
@@ -207,12 +209,12 @@ export async function fetchReleasePartitionFile(relPath: string): Promise<Releas
     partInfo?.sha256
   );
 
-  cachedPartitionsMap.set(relPath, records);
+  cachedPartitionsMap.set(cacheKey, records);
 
   try {
     const db = await openIndexedDB();
     const tx = db.transaction('release_partitions', 'readwrite');
-    tx.objectStore('release_partitions').put({ year: relPath, records });
+    tx.objectStore('release_partitions').put({ year: cacheKey, records });
   } catch (err) {
     // Non-critical cache write error
   }
@@ -286,6 +288,10 @@ export function convertReleaseRecordToCompactRecord(
     rating: record.rank?.totalRating ?? record.rank?.userRating ?? record.rank?.criticRating,
     rank: record.rank,
   };
+}
+
+export function getReleasePartitionCacheKey(manifest: Pick<ReleaseCatalogManifest, 'catalogBuildId' | 'generatedAt'>, relPath: string): string {
+  return `${manifest.catalogBuildId || manifest.generatedAt}:${relPath}`;
 }
 
 export function getReleaseMonthKeys(year: number, month: number): { datePrefix: string; partitionKey: string } {

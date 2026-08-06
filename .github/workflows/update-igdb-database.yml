@@ -56,6 +56,14 @@ jobs:
           IGDB_IMPORT_LIMIT: 500
         run: npm run build:igdb-test
 
+      - name: Build IGDB Events Feed (Test Mode)
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
+        env:
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+          PLAY_ATLAS_EVENTS_OUTPUT_DIR: public/data/events
+        run: npm run build:igdb-events
+
       - name: Run Production Build Validation (Test Mode)
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' }}
         run: npm run build
@@ -68,6 +76,7 @@ jobs:
           path: |
             public/data/igdb_index_manifest.json
             public/data/igdb_index.json
+            public/data/events/events.json
             dist/
           retention-days: 14
 
@@ -271,6 +280,19 @@ jobs:
           fi
           echo "Verifying rebuilt catalog in ${AUTHORITATIVE_CATALOG_DIR}..."
           npm run verify:browser-catalog -- "${AUTHORITATIVE_CATALOG_DIR}"
+
+      - name: Build IGDB Events Feed
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
+        env:
+          IGDB_CLIENT_ID: ${{ secrets.IGDB_CLIENT_ID }}
+          IGDB_CLIENT_SECRET: ${{ secrets.IGDB_CLIENT_SECRET }}
+        run: |
+          if [ -d "generated/browser-catalog-rebuilt" ]; then
+            EVENTS_DIR="generated/browser-catalog-rebuilt/events"
+          else
+            EVENTS_DIR="generated/browser-catalog-test/events"
+          fi
+          PLAY_ATLAS_EVENTS_OUTPUT_DIR="${EVENTS_DIR}" npm run build:igdb-events
 
       # --- 5. STEP 3 & 4 & 5: CREATE ROOT-NORMALIZED ZIP & VERIFY EXTRACTED ARCHIVE ---
       - name: Create and Locally Verify Master ZIP Archive Layout

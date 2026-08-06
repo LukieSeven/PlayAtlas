@@ -10,6 +10,7 @@
     "build:igdb-test": "IGDB_IMPORT_MODE=test tsx scripts/build-igdb-index.ts",
     "build:igdb-full": "IGDB_IMPORT_MODE=full tsx scripts/build-igdb-index.ts",
     "build:browser-catalog": "tsx scripts/build-browser-catalog.ts",
+    "build:igdb-events": "tsx scripts/build-igdb-events.ts",
     "verify:igdb-full": "tsx scripts/verify-igdb-catalog.ts generated/igdb-full-test",
     "verify:browser-catalog": "tsx scripts/verify-browser-catalog.ts",
     "lint": "eslint .",

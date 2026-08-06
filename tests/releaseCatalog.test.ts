@@ -5,6 +5,7 @@ import {
   fetchReleaseManifest,
   getReleaseMonthKeys,
   getExactCalendarReleaseDates,
+  getReleasePartitionCacheKey,
   isUnreleasedFirstReleaseWithinRange,
   sortUpcomingReleaseRecordsByPopularity,
   UPCOMING_DISCOVERY_DAYS,
@@ -66,6 +67,15 @@ async function runReleaseCatalogRegressionTests() {
   const augustKeys = getReleaseMonthKeys(2026, 8);
   assertEqual(augustKeys.partitionKey, '2026/08', 'Calendar uses the published slash-delimited monthly partition key');
   assertEqual(augustKeys.datePrefix, '2026-08', 'Calendar retains ISO date prefixes when filtering release records');
+  assertEqual(
+    getReleasePartitionCacheKey({ catalogBuildId: 'build-new', generatedAt: 'ignored' }, 'releases/2026/08.json.gz'),
+    'build-new:releases/2026/08.json.gz',
+    'release partition cache identity is namespaced by catalogBuildId',
+  );
+  assert(
+    getReleasePartitionCacheKey({ catalogBuildId: 'build-a', generatedAt: 'same' }, 'releases/2026/08.json.gz') !== getReleasePartitionCacheKey({ catalogBuildId: 'build-b', generatedAt: 'same' }, 'releases/2026/08.json.gz'),
+    'a catalog build change invalidates persisted release partitions',
+  );
 
   const calendarDateRecord = {
     firstReleaseDate: '2026-08-01',

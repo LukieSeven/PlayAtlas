@@ -19,6 +19,7 @@ function assert(condition: boolean, description: string) {
 }
 
 console.log('Running New Releases range regression tests...');
+assert(pageSource.includes("useState<TimeFrame>('day')"), 'New Releases defaults to Today');
 assert(pageSource.includes('timeframe,'), 'selected timeframe is passed directly to the release catalog query');
 assert(!pageSource.includes("timeframe === 'day' ? 'past_30_days'"), 'Today is not incorrectly expanded to the past 30 days');
 assert(pageSource.includes("setTimeframe('day')"), 'Today control selects the exact-day bucket');

@@ -11,7 +11,7 @@ type TimeFrame = 'day' | 'week' | 'month';
 type ReleaseViewMode = 'first_release' | 'platform_release';
 
 export const NewReleasesPage: React.FC = () => {
-  const [timeframe, setTimeframe] = useState<TimeFrame>('month'); // Default to month so page is rich
+  const [timeframe, setTimeframe] = useState<TimeFrame>('day');
   const [viewType, setViewType] = useState<ReleaseViewMode>('first_release');
   
   // Release feed state
