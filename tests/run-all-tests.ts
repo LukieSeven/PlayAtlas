@@ -10,6 +10,7 @@ const testFiles = [
   'browserCatalog.test.ts',
   'searchEngine.test.ts',
   'catalogRanking.test.ts',
+  'gameListControls.test.ts',
   'catalogDetail.test.ts',
   'pagination.test.ts',
   'theme.test.ts',

@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { SortAsc, LayoutGrid, List as ListIcon, ShieldAlert, ChevronDown } from 'lucide-react';
 import { CompactGameLookupRecord } from '../../types/catalog';
-import { normalizeGameTypeCategory } from '../../utils/gameTypeUtils';
 import { GameCard } from '../common/GameCard';
-import { getAllFamilies, getPlatformFamily } from '../../services/platformTaxonomyService';
+import { getAllFamilies } from '../../services/platformTaxonomyService';
 import { MinimumRatingFilter } from '../ui/MinimumRatingFilter';
 import { usePersonalGameLibrary } from '../../hooks/usePersonalGameLibrary';
 import { getYuckedNumericIds } from '../../utils/personalGameVisibility';
+import { matchesCatalogFormat, matchesCatalogPlatformFamily, sortCatalogGames, CatalogSortMode } from '../../utils/gameListControls';
 
 interface GameListGridProps {
   collectionKey?: string;
@@ -42,7 +42,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   const [selectedPlatformFamily, setSelectedPlatformFamily] = useState<string>('all');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [minimumRating, setMinimumRating] = useState<number>(0);
-  const [sortBy, setSortBy] = useState<'relevance' | 'name' | 'yearAsc' | 'yearDesc'>('relevance');
+  const [sortBy, setSortBy] = useState<CatalogSortMode>('relevance');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   // Real Incremental Rendering State (Initial batch: 40)
@@ -58,16 +58,10 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
     return games.filter(game => {
       if (yuckedIds.has(game.id)) return false;
       // Platform Family Filter
-      if (selectedPlatformFamily !== 'all') {
-        const matchFamily = selectedPlatformFamily === 'all' || getPlatformFamily(game.id) === selectedPlatformFamily;
-        if (!matchFamily) return false;
-      }
+      if (!matchesCatalogPlatformFamily(game, selectedPlatformFamily)) return false;
 
       // Category Filter
-      if (selectedCategory !== 'all') {
-        const cat = normalizeGameTypeCategory(game.gameType || undefined, game.name);
-        if (cat !== selectedCategory) return false;
-      }
+      if (!matchesCatalogFormat(game, selectedCategory)) return false;
 
       if (minimumRating > 0 && (game.rating === undefined || game.rating < minimumRating)) return false;
 
@@ -77,18 +71,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
   // Sort games
   const sortedGames = useMemo(() => {
-    const list = [...filteredGames];
-    switch (sortBy) {
-      case 'name':
-        return list.sort((a, b) => a.name.localeCompare(b.name));
-      case 'yearAsc':
-        return list.sort((a, b) => (a.year || 0) - (b.year || 0));
-      case 'yearDesc':
-        return list.sort((a, b) => (b.year || 0) - (a.year || 0));
-      case 'relevance':
-      default:
-        return list; // Retain deterministic search ranking order
-    }
+    return sortCatalogGames(filteredGames, sortBy);
   }, [filteredGames, sortBy]);
 
   // Real Incremental Slice (only mounts visible cards)

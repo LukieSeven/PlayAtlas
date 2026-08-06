@@ -72,6 +72,26 @@ export function getPlatformFamily(platformId: number): PlatformFamilyKey {
   return info ? info.family : 'legacy';
 }
 
+export function getPlatformFamilyForCatalogValue(platform: number | string): PlatformFamilyKey {
+  if (typeof platform === 'number') return getPlatformFamily(platform);
+
+  const normalized = platform.toLowerCase().trim();
+  const exact = Object.values(platformDatabase).find(info =>
+    info.name.toLowerCase() === normalized || info.abbreviation.toLowerCase() === normalized
+  );
+  if (exact) return exact.family;
+
+  if (/windows|\bpc\b|linux|mac\b|steam deck/.test(normalized)) return 'pc';
+  if (/playstation|\bps[1-5]?\b|psp|vita/.test(normalized)) return 'playstation';
+  if (/xbox|xone|xsx/.test(normalized)) return 'xbox';
+  if (/nintendo|switch|game boy|\b3?ds\b|wii|gamecube|\bnes\b|snes|n64/.test(normalized)) return 'nintendo';
+  if (/android|\bios\b|mobile/.test(normalized)) return 'mobile';
+  if (/oculus|quest|virtual reality|\bvr\b/.test(normalized)) return 'vr';
+  if (/arcade/.test(normalized)) return 'arcade';
+  if (/handheld/.test(normalized)) return 'handheld';
+  return 'legacy';
+}
+
 export function groupPlatformsByFamily(platformIds: number[]): Record<PlatformFamilyKey, number[]> {
   const result: Record<PlatformFamilyKey, number[]> = {
     pc: [],
