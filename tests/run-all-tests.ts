@@ -33,6 +33,7 @@ const testFiles = [
   'personalInitialization.test.ts',
   'personalGameVisibility.test.ts',
   'actionMenuPortal.test.ts',
+  'dealsService.test.ts',
 ];
 
 interface TestSuiteSummary {

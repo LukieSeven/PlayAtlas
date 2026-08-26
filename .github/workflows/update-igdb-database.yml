@@ -57,6 +57,12 @@ jobs:
           PLAY_ATLAS_EVENTS_OUTPUT_DIR: public/data/events
         run: npm run build:events
 
+      - name: Build ITAD Game Deals Feed
+        env:
+          ITAD_CLIENT_ID: ${{ secrets.ITAD_CLIENT_ID }}
+          ITAD_SECRET: ${{ secrets.ITAD_SECRET }}
+        run: npm run build:deals
+
       - name: Run Production Build Validation
         run: npm run build
 

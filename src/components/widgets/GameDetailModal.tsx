@@ -9,6 +9,7 @@ import { usePersonalGameRecord } from '../../hooks/usePersonalGameRecord';
 import { normalizeExternalGameScore } from '../../services/scoreNormalizationService';
 import { getPlatformDisplayName } from '../../services/platformTaxonomyService';
 import { Badge } from '../ui/Badge';
+import { PriceWidget } from '../common/PriceWidget';
 
 interface GameDetailModalProps {
   selectedGame: CompactGameLookupRecord | null;
@@ -146,6 +147,9 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
 
             {/* Summary Description & Personal Status Widget */}
             <div className="sm:col-span-2 space-y-4">
+              {/* Best Price Deal Widget */}
+              <PriceWidget gameId={detail.id} />
+
               {/* Personal Status Dashboard Box */}
               <div className="p-4 rounded-2xl bg-[#f5f0e1] border border-[#c8b584] space-y-3 shadow-inner">
                 <div className="flex items-center justify-between text-xs font-mono font-bold text-[#0f2b48]">

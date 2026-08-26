@@ -12,6 +12,8 @@
     "build:browser-catalog": "tsx scripts/build-browser-catalog.ts",
     "build:events": "tsx scripts/build-igdb-events.ts",
     "build:igdb-events": "npm run build:events",
+    "build:deals": "tsx scripts/fetch-deals.ts",
+    "fetch:deals": "tsx scripts/fetch-deals.ts",
     "verify:igdb-full": "tsx scripts/verify-igdb-catalog.ts generated/igdb-full-test",
     "verify:browser-catalog": "tsx scripts/verify-browser-catalog.ts",
     "lint": "eslint .",
