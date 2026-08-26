@@ -2,7 +2,7 @@ name: IGDB Database Pipeline Importer & Pages Deployment
 
 on:
   schedule:
-    - cron: '0 0 * * 0' # Weekly automatic IGDB catalog update
+    - cron: '0 2 * * *' # Nightly automatic IGDB catalog and ITAD deals update at 2:00 AM UTC
   workflow_dispatch:
     inputs:
       operation:
