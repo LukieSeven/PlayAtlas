@@ -1,6 +1,5 @@
 import fs from 'fs';
 import path from 'path';
-import zlib from 'zlib';
 
 function loadEnvFile() {
   const envPaths = [path.join(process.cwd(), '.env'), path.join(process.cwd(), '.env.local')];
@@ -24,7 +23,8 @@ function loadEnvFile() {
 loadEnvFile();
 
 const ITAD_SECRET = process.env.ITAD_SECRET || process.env.ITAD_CLIENT_ID;
-const OUTPUT_FILE = path.join(process.cwd(), 'public', 'data', 'deals.json');
+const DEALS_OUTPUT_DIR = process.env.PLAY_ATLAS_DEALS_OUTPUT_DIR || path.join(process.cwd(), 'public', 'data');
+const OUTPUT_FILE = path.join(DEALS_OUTPUT_DIR, 'deals.json');
 
 export interface DealPrice {
   amount: number;
@@ -34,6 +34,8 @@ export interface DealPrice {
 
 export interface GameDeal {
   gameId: number;
+  gameTitle?: string;
+  coverUrl?: string;
   itadId: string;
   storeId: string;
   storeName: string;
@@ -57,11 +59,18 @@ export interface DealsDataset {
 interface CatalogEntry {
   id: number;
   name: string;
+  coverUrl?: string;
   externalIds?: {
     steam?: string;
     gog?: string;
     epic?: string;
   };
+}
+
+export interface CatalogGameInfo {
+  gameId: number;
+  gameTitle: string;
+  coverUrl?: string;
 }
 
 async function fetchWithRetry(url: string, options: RequestInit, retries = 3): Promise<Response> {
@@ -86,31 +95,39 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3): P
 /**
  * Load external game IDs from catalog index files
  */
-function loadCatalogExternalIds(): Map<string, number> {
-  const shopIdToGameId = new Map<string, number>();
+function loadCatalogExternalIds(): Map<string, CatalogGameInfo> {
+  const shopIdToGameInfo = new Map<string, CatalogGameInfo>();
 
-  // Check public/data/igdb_index.json
-  const indexPath = path.join(process.cwd(), 'public', 'data', 'igdb_index.json');
-  if (fs.existsSync(indexPath)) {
-    try {
-      const raw = fs.readFileSync(indexPath, 'utf-8');
-      const records: CatalogEntry[] = JSON.parse(raw);
-      for (const rec of records) {
-        if (rec.externalIds) {
-          if (rec.externalIds.steam) {
-            shopIdToGameId.set(`app/${rec.externalIds.steam}`, rec.id);
-          }
-          if (rec.externalIds.gog) {
-            shopIdToGameId.set(`game/${rec.externalIds.gog}`, rec.id);
+  // Check public/data/igdb_index.json or generated catalog directories
+  const candidatePaths = [
+    path.join(process.cwd(), 'public', 'data', 'igdb_index.json'),
+    path.join(process.cwd(), 'generated', 'igdb-full-test', 'igdb_index.json'),
+  ];
+
+  for (const indexPath of candidatePaths) {
+    if (fs.existsSync(indexPath)) {
+      try {
+        const raw = fs.readFileSync(indexPath, 'utf-8');
+        const records: CatalogEntry[] = JSON.parse(raw);
+        for (const rec of records) {
+          if (rec.externalIds) {
+            const info: CatalogGameInfo = { gameId: rec.id, gameTitle: rec.name, coverUrl: rec.coverUrl };
+            if (rec.externalIds.steam) {
+              shopIdToGameInfo.set(`app/${rec.externalIds.steam}`, info);
+            }
+            if (rec.externalIds.gog) {
+              shopIdToGameInfo.set(`game/${rec.externalIds.gog}`, info);
+            }
           }
         }
+        if (shopIdToGameInfo.size > 0) break;
+      } catch (e) {
+        console.warn(`[ITAD Ingestion] Warning parsing ${indexPath}:`, e);
       }
-    } catch (e) {
-      console.warn('[ITAD Ingestion] Warning parsing igdb_index.json:', e);
     }
   }
 
-  return shopIdToGameId;
+  return shopIdToGameInfo;
 }
 
 async function main() {
@@ -125,7 +142,7 @@ async function main() {
 
   if (!ITAD_SECRET) {
     console.warn('⚠️ ITAD_SECRET / ITAD_CLIENT_ID not found in environment.');
-    console.warn('Writing clean empty dataset to public/data/deals.json without fake records.');
+    console.warn('Writing clean empty dataset to deals.json without fake records.');
 
     const emptyDataset: DealsDataset = {
       schemaVersion: 1,
@@ -139,10 +156,10 @@ async function main() {
     return;
   }
 
-  const shopIdToGameId = loadCatalogExternalIds();
-  console.log(`🔍 Catalog external IDs collected: ${shopIdToGameId.size} mapping entries.`);
+  const shopIdToGameInfo = loadCatalogExternalIds();
+  console.log(`🔍 Catalog external IDs collected: ${shopIdToGameInfo.size} mapping entries.`);
 
-  if (shopIdToGameId.size === 0) {
+  if (shopIdToGameInfo.size === 0) {
     console.warn('⚠️ No external storefront IDs found in local catalog.');
     const emptyDataset: DealsDataset = {
       schemaVersion: 1,
@@ -155,7 +172,7 @@ async function main() {
     return;
   }
 
-  const shopLookupIds = Array.from(shopIdToGameId.keys());
+  const shopLookupIds = Array.from(shopIdToGameInfo.keys());
   const BATCH_SIZE = 100;
   const itadDeals: GameDeal[] = [];
 
@@ -179,11 +196,11 @@ async function main() {
       }
 
       const lookupMap: Record<string, string | null> = await lookupRes.json();
-      const validItadIds: { itadId: string; gameId: number }[] = [];
+      const validItadIds: { itadId: string; info: CatalogGameInfo }[] = [];
 
       for (const [shopId, itadId] of Object.entries(lookupMap)) {
-        if (itadId && shopIdToGameId.has(shopId)) {
-          validItadIds.push({ itadId, gameId: shopIdToGameId.get(shopId)! });
+        if (itadId && shopIdToGameInfo.has(shopId)) {
+          validItadIds.push({ itadId, info: shopIdToGameInfo.get(shopId)! });
         }
       }
 
@@ -211,7 +228,9 @@ async function main() {
         if (!matched || !item.price) continue;
 
         const deal: GameDeal = {
-          gameId: matched.gameId,
+          gameId: matched.info.gameId,
+          gameTitle: matched.info.gameTitle,
+          coverUrl: matched.info.coverUrl,
           itadId: item.id,
           storeId: item.price.shop?.id || 'store',
           storeName: item.price.shop?.name || 'Storefront',

@@ -10,6 +10,8 @@ export interface DealPrice {
 
 export interface GameDeal {
   gameId: number; // Play Atlas primitive numeric ID or IGDB sourceId
+  gameTitle?: string; // Game display title (e.g. "Elden Ring")
+  coverUrl?: string; // Cover artwork URL
   itadId: string; // ITAD game UUID
   storeId: string; // e.g. "steam", "gog", "epic", "humble"
   storeName: string; // e.g. "Steam", "GOG", "Epic Games Store"

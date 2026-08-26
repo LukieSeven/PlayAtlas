@@ -177,7 +177,7 @@ export const DiscountsPage: React.FC = () => {
               type="text"
               value={searchQuery}
               onChange={e => setSearchQuery(e.target.value)}
-              placeholder="Search store name or game ID..."
+              placeholder="Search game title or store name..."
               className="w-full pl-9 pr-3 py-2 rounded-xl text-xs font-semibold bg-[#FDFBF7] text-[#0C1D2D] border border-[#C5A059] placeholder:text-[#718294] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
             />
           </div>
@@ -299,12 +299,19 @@ export const DiscountsPage: React.FC = () => {
               >
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-2">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#EFE8D8] text-[#0C1D2D] border border-[#D9C8A9]">
-                      Game ID: #{deal.gameId}
-                    </span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      {deal.coverUrl && (
+                        <div className="w-7 h-9 rounded bg-[#EFE8D8] border border-[#D9C8A9] overflow-hidden shrink-0">
+                          <img src={deal.coverUrl} alt={deal.gameTitle || 'Cover'} className="w-full h-full object-cover" />
+                        </div>
+                      )}
+                      <h4 className="font-bold text-xs text-[#0C1D2D] truncate">
+                        {deal.gameTitle || `Game ID: #${deal.gameId}`}
+                      </h4>
+                    </div>
 
                     {deal.isHistoricalLow && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#C5A059]/20 text-[#8C6D37] border border-[#C5A059] flex items-center gap-0.5">
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#C5A059]/20 text-[#8C6D37] border border-[#C5A059] flex items-center gap-0.5 shrink-0">
                         <Star className="w-2.5 h-2.5 fill-current" />
                         <span>Historical Low</span>
                       </span>

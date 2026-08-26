@@ -318,6 +318,19 @@ jobs:
           fi
           PLAY_ATLAS_EVENTS_OUTPUT_DIR="${EVENTS_DIR}" npm run build:events
 
+      - name: Build ITAD Game Deals Feed
+        if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
+        env:
+          ITAD_CLIENT_ID: ${{ secrets.ITAD_CLIENT_ID }}
+          ITAD_SECRET: ${{ secrets.ITAD_SECRET }}
+        run: |
+          if [ -d "generated/browser-catalog-rebuilt" ]; then
+            DEALS_DIR="generated/browser-catalog-rebuilt"
+          else
+            DEALS_DIR="generated/browser-catalog-test"
+          fi
+          PLAY_ATLAS_DEALS_OUTPUT_DIR="${DEALS_DIR}" npm run build:deals
+
       # --- 5. STEP 3 & 4 & 5: CREATE ROOT-NORMALIZED ZIP & VERIFY EXTRACTED ARCHIVE ---
       - name: Create and Locally Verify Master ZIP Archive Layout
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
@@ -394,6 +407,9 @@ jobs:
           echo "📦 Copying single authoritative catalog source into dist/data..."
           echo "Authoritative catalog source: ${SRC_DIR}"
           cp -a "${SRC_DIR}/." dist/data/
+          if [ -f "public/data/deals.json" ]; then
+            cp -f public/data/deals.json dist/data/deals.json
+          fi
           rm -f dist/data/play-atlas-full-catalog.zip
           rm -f dist/data/play-atlas-full-catalog.zip.sha256
 
