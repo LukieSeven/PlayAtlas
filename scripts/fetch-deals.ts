@@ -98,10 +98,12 @@ async function fetchWithRetry(url: string, options: RequestInit, retries = 3): P
 function loadCatalogExternalIds(): Map<string, CatalogGameInfo> {
   const shopIdToGameInfo = new Map<string, CatalogGameInfo>();
 
-  // Check public/data/igdb_index.json or generated catalog directories
+  // Check generated catalog directories and public/data fallback
   const candidatePaths = [
-    path.join(process.cwd(), 'public', 'data', 'igdb_index.json'),
+    path.join(process.cwd(), 'generated', 'browser-catalog-rebuilt', 'igdb_index.json'),
+    path.join(process.cwd(), 'generated', 'browser-catalog-test', 'igdb_index.json'),
     path.join(process.cwd(), 'generated', 'igdb-full-test', 'igdb_index.json'),
+    path.join(process.cwd(), 'public', 'data', 'igdb_index.json'),
   ];
 
   for (const indexPath of candidatePaths) {
@@ -113,14 +115,22 @@ function loadCatalogExternalIds(): Map<string, CatalogGameInfo> {
           if (rec.externalIds) {
             const info: CatalogGameInfo = { gameId: rec.id, gameTitle: rec.name, coverUrl: rec.coverUrl };
             if (rec.externalIds.steam) {
-              shopIdToGameInfo.set(`app/${rec.externalIds.steam}`, info);
+              const cleanSteam = String(rec.externalIds.steam).replace(/^app\//, '');
+              shopIdToGameInfo.set(`steam/${cleanSteam}`, info);
             }
             if (rec.externalIds.gog) {
-              shopIdToGameInfo.set(`game/${rec.externalIds.gog}`, info);
+              const cleanGog = String(rec.externalIds.gog).replace(/^game\//, '');
+              shopIdToGameInfo.set(`gog/${cleanGog}`, info);
+            }
+            if (rec.externalIds.epic) {
+              shopIdToGameInfo.set(`epic/${rec.externalIds.epic}`, info);
             }
           }
         }
-        if (shopIdToGameInfo.size > 0) break;
+        if (shopIdToGameInfo.size > 0) {
+          console.log(`[ITAD Ingestion] Loaded catalog records from ${indexPath}`);
+          break;
+        }
       } catch (e) {
         console.warn(`[ITAD Ingestion] Warning parsing ${indexPath}:`, e);
       }
