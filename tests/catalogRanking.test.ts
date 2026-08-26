@@ -16,7 +16,7 @@ const assert = (condition: boolean, message: string) => {
 
 console.log('🧪 Running Catalog Ranking & Enrichment Tests...');
 
-assert(BATCH_LIMIT === 250, 'Test importer defines two 250-record query batches by default');
+assert(BATCH_LIMIT === 200, 'Test importer defines 200-record query batches by default');
 assert(normalizeIgdbRating(63) === 6.3, 'IGDB score 63 normalizes to 6.3 stars');
 assert(normalizeIgdbRating(100) === 10, 'IGDB score 100 normalizes to 10 stars');
 assert(normalizeIgdbRating(undefined) === undefined, 'Missing score remains unrated');
