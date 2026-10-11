@@ -56,6 +56,31 @@ try {
   }
   await assert.rejects(writeDealsFeed(directory, outputFile, '', request), /ITAD_API_KEY/);
   assert.equal(fs.readFileSync(outputFile, 'utf8'), previous);
+
+  write('igdb_index.json', { records: [record, {
+    ...record, id: 'igdb:102', sourceId: 102, externalIds: { steam: '221' },
+  }] });
+  const omittedPriceRequest: typeof fetch = async (input, options) => {
+    if (String(input).includes('/lookup/id/shop/61/')) {
+      return new Response(JSON.stringify({ 'app/220': 'uuid-101', 'app/221': 'uuid-missing' }));
+    }
+    if (String(input).includes('/games/overview/')) {
+      // An otherwise valid overview omits the unavailable game completely.
+      return request(input, { ...options, body: JSON.stringify(['uuid-101']) });
+    }
+    return request(input, options);
+  };
+  const partialDataset = await writeDealsFeed(directory, outputFile, 'test-key', omittedPriceRequest);
+  assert.equal(partialDataset.totalDeals, 1);
+  assert.equal(partialDataset.deals[0].gameId, 101);
+  const partialFeed = fs.readFileSync(outputFile, 'utf8');
+  await assert.rejects(writeDealsFeed(directory, outputFile, 'test-key', async (input, options) => {
+    if (String(input).includes('/games/overview/')) return new Response(JSON.stringify({ prices: [] }));
+    return omittedPriceRequest(input, options);
+  }), /no usable deals/);
+  assert.equal(fs.readFileSync(outputFile, 'utf8'), partialFeed);
+  fs.writeFileSync(outputFile, previous);
+  write('igdb_index.json', { records: [record] });
   await assert.rejects(writeDealsFeed(directory, outputFile, 'test-key', async (input, options) => {
     if (String(input).includes('/games/overview/')) return new Response(JSON.stringify([]));
     return request(input, options);

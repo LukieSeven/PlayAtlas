@@ -144,6 +144,7 @@ export async function ingestDeals(
   }
   if (!matchedGames.size) throw new Error('ITAD lookup matched no catalog games; preserving existing feed.');
   const deals: GameDeal[] = [];
+  let omittedPrices = 0;
   const updatedAt = new Date().toISOString();
   const ids = [...matchedGames.keys()];
   for (let offset = 0; offset < ids.length; offset += 100) {
@@ -152,7 +153,10 @@ export async function ingestDeals(
     if (!Array.isArray(overview?.prices)) throw new Error('Invalid ITAD overview response');
     for (const id of batch) {
       const item = overview.prices.find(price => price.id === id);
-      if (!item) throw new Error(`Incomplete ITAD overview for ${id}`);
+      if (!item) {
+        omittedPrices++;
+        continue;
+      }
       if (item.current === null) continue;
       const current = item.current;
       if (!current?.shop?.name || !Number.isInteger(current.shop.id) || !Number.isFinite(current.cut)) {
@@ -169,6 +173,10 @@ export async function ingestDeals(
           historyLowPrice, voucher: current.voucher ?? null, updatedAt });
       }
     }
+  }
+  if (omittedPrices) {
+    console.warn(`ITAD returned no price entry for ${omittedPrices} matched games; skipped those games.`);
+    if (!deals.length) throw new Error('ITAD omitted price entries and returned no usable deals; preserving existing feed.');
   }
   return { schemaVersion: 1, generatedAt: updatedAt, totalDeals: deals.length, deals };
 }
