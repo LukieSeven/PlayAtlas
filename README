@@ -85,6 +85,17 @@ GitHub Actions secrets. Production runs use the github-pages environment, so
 environment-scoped secrets must be available there. Test runs use repository
 secrets. Missing pricing credentials now fail ingestion visibly.
 
+Production workflows check pricing API access before starting the full import.
+Transient network errors, rate limits, and server errors are retried. Unavailable
+games omitted by lookup or price responses are skipped; entirely missing price
+results still fail rather than replace the previous feed. The deployed feed comes
+from the generated catalog, never from the checked-in sample.
+
+If a downstream step fails, an Actions recovery catalog artifact is retained for
+seven days. To retry without reimporting IGDB, start a new run on main with
+operation deploy_existing and recovery_run_id set to the failed run's numeric ID.
+This explicitly restores that run's artifact instead of an older release.
+
 ## License
 
 Play Atlas is proprietary software.

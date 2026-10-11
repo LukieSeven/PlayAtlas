@@ -14,6 +14,10 @@ on:
           - full
           - deploy_existing
         default: test
+      recovery_run_id:
+        description: 'Optional failed run ID to restore its saved catalog (deploy_existing only)'
+        required: false
+        type: string
 
 concurrency:
   group: ${{ github.event_name == 'workflow_dispatch' && inputs.operation == 'test' && 'igdb-test' || 'pages' }}
@@ -88,6 +92,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
       pages: write
       id-token: write
 
@@ -111,6 +116,12 @@ jobs:
         run: npm test
 
       # --- 2. FULL CATALOG EXECUTION & RE-BUILD ---
+      - name: Check Pricing Access Before Catalog Import
+        env:
+          ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
+          ITAD_SECRET: ${{ secrets.ITAD_SECRET }}
+        run: npm run build:deals -- --check-access
+
       - name: Run Complete IGDB Catalog Importer
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.operation == 'full') }}
         env:
@@ -142,8 +153,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
+          RECOVERY_RUN_ID: ${{ inputs.recovery_run_id }}
         run: |
           set -euo pipefail
+
+          if [ -n "${RECOVERY_RUN_ID}" ] && [[ ! "${RECOVERY_RUN_ID}" =~ ^[0-9]+$ ]]; then
+            echo "::error::recovery_run_id must be a numeric GitHub Actions run ID."
+            exit 1
+          fi
 
           rm -rf \
             generated/release-download \
@@ -160,7 +177,7 @@ jobs:
 
           IS_RELEASE_VALID=false
 
-          if gh release view v1.0.0-catalog --repo "${GH_REPO}" >/dev/null 2>&1; then
+          if [ -z "${RECOVERY_RUN_ID}" ] && gh release view v1.0.0-catalog --repo "${GH_REPO}" >/dev/null 2>&1; then
             echo "✅ Release v1.0.0-catalog exists. Downloading catalog archive..."
 
             if gh release download v1.0.0-catalog --repo "${GH_REPO}" --pattern "play-atlas-full-catalog.zip" --dir generated/release-download; then
@@ -216,11 +233,12 @@ jobs:
 
             find_artifact_by_prefix() {
               PREFIX="$1"
-              gh api "repos/${GH_REPO}/actions/artifacts?per_page=100" --paginate --jq "
+              gh api "repos/${GH_REPO}/actions/artifacts?per_page=100" --paginate --slurp --jq "
                 [
-                  .artifacts[]
+                  .[].artifacts[]
                   | select(.expired == false)
                   | select(.name | startswith(\"${PREFIX}\"))
+                  | select(\"${RECOVERY_RUN_ID}\" == \"\" or (.workflow_run.id | tostring) == \"${RECOVERY_RUN_ID}\")
                 ]
                 | sort_by(.created_at)
                 | reverse
@@ -300,6 +318,7 @@ jobs:
 
       # --- 4. STEP 2: VERIFY REBUILT CATALOG ---
       - name: Verify Rebuilt Browser Catalog
+        id: verify_browser_catalog
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         run: |
           AUTHORITATIVE_CATALOG_DIR=""
@@ -361,7 +380,7 @@ jobs:
           sha256sum "${ZIP_PATH}" | cut -d' ' -f1 > "${ZIP_PATH}.sha256"
 
           echo "🔍 Top 40 ZIP archive entries:"
-          unzip -Z1 "${ZIP_PATH}" | head -n 40
+          unzip -Z1 "${ZIP_PATH}" | sed -n '1,40p'
 
           TEST_DIR="${RUNNER_TEMP:-/tmp}/test-release-unzip"
           rm -rf "${TEST_DIR}"
@@ -413,9 +432,8 @@ jobs:
           echo "📦 Copying single authoritative catalog source into dist/data..."
           echo "Authoritative catalog source: ${SRC_DIR}"
           cp -a "${SRC_DIR}/." dist/data/
-          if [ -f "public/data/deals.json" ]; then
-            cp -f public/data/deals.json dist/data/deals.json
-          fi
+          test -f dist/data/deals.json
+          cmp "${SRC_DIR}/deals.json" dist/data/deals.json
           rm -f dist/data/play-atlas-full-catalog.zip
           rm -f dist/data/play-atlas-full-catalog.zip.sha256
 
@@ -464,3 +482,15 @@ jobs:
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         id: deployment
         uses: actions/deploy-pages@v4
+
+      - name: Preserve Verified Catalog After Downstream Failure
+        if: ${{ failure() && steps.verify_browser_catalog.outcome == 'success' }}
+        uses: actions/upload-artifact@v6
+        with:
+          name: play-atlas-browser-catalog-recovery-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            generated/browser-catalog-test/
+            generated/browser-catalog-rebuilt/
+          if-no-files-found: ignore
+          compression-level: 0
+          retention-days: 7

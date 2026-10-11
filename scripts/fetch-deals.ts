@@ -66,7 +66,9 @@ export function loadCatalogExternalIds(directory: string): StoreLookup[] {
       const gameId = record.sourceId ?? Number(String(record.id).replace(/^igdb[:_]/, ''));
       if (!Number.isSafeInteger(gameId) || gameId <= 0) continue;
       for (const source of ['steam', 'gog', 'epic']) {
-        const rawId = record.externalIds?.[source];
+        const value = record.externalIds?.[source];
+        if (!value) continue;
+        const rawId = String(value).trim();
         if (!rawId) continue;
         // Steam's lookup expects app/123, not steam/123. Other shops use their native IDs.
         const shopGameId = source === 'steam' && /^\d+$/.test(rawId) ? `app/${rawId}` : rawId;
@@ -93,18 +95,23 @@ function normalizePrice(price: ApiPrice): DealPrice {
   }).format(price.amount) };
 }
 
-export async function ingestDeals(
-  catalogDirectory: string, apiKey: string, request: typeof fetch = fetch,
-): Promise<DealsDataset> {
+function createItadApi(apiKey: string, request: typeof fetch) {
+  apiKey = apiKey.trim();
   if (!apiKey) throw new Error('ITAD_API_KEY is required (legacy ITAD_SECRET is also accepted).');
-  const stores = loadCatalogExternalIds(catalogDirectory);
   const headers = { 'Content-Type': 'application/json', 'ITAD-API-Key': apiKey };
   async function api(endpoint: string, body?: string): Promise<unknown> {
     for (let attempt = 0; attempt < 3; attempt++) {
-      const response = await request(`https://api.isthereanydeal.com${endpoint}`, {
-        method: body === undefined ? 'GET' : 'POST', headers, body,
-        signal: AbortSignal.timeout(30_000),
-      });
+      let response: Response;
+      try {
+        response = await request(`https://api.isthereanydeal.com${endpoint}`, {
+          method: body === undefined ? 'GET' : 'POST', headers, body,
+          signal: AbortSignal.timeout(30_000),
+        });
+      } catch {
+        if (attempt === 2) throw new Error(`ITAD ${endpoint} failed after three network/timeout attempts.`);
+        await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1)));
+        continue;
+      }
       if ((response.status === 429 || response.status >= 500) && attempt < 2) {
         const retryAfter = response.headers.get('Retry-After');
         const seconds = retryAfter ? Number(retryAfter) : NaN;
@@ -114,14 +121,36 @@ export async function ingestDeals(
         await new Promise(resolve => setTimeout(resolve, delay));
         continue;
       }
-      if (!response.ok) throw new Error(`ITAD ${endpoint} failed: HTTP ${response.status}`);
+      if (!response.ok) {
+        const hint = response.status === 401 || response.status === 403
+          ? ' Check that ITAD_SECRET contains an active API key with pricing access.' : '';
+        throw new Error(`ITAD ${endpoint} failed: HTTP ${response.status}.${hint}`);
+      }
       return response.json();
     }
     throw new Error(`ITAD ${endpoint} retries exhausted`);
   }
+  return api;
+}
+
+/** Validate pricing access without downloading or building a catalog. */
+export async function checkPricingAccess(apiKey: string, request: typeof fetch = fetch): Promise<void> {
+  const api = createItadApi(apiKey, request);
+  // A public example UUID; it need not have a current price to validate endpoint access.
+  const result = await api('/games/overview/v2?country=US', JSON.stringify(['018d937e-f835-710c-b95b-928e277b187e'])) as { prices: OverviewItem[] };
+  if (!Array.isArray(result?.prices)) throw new Error('Invalid ITAD overview response');
+}
+
+export async function ingestDeals(
+  catalogDirectory: string, apiKey: string, request: typeof fetch = fetch,
+): Promise<DealsDataset> {
+  const api = createItadApi(apiKey, request);
+  const stores = loadCatalogExternalIds(catalogDirectory);
   const shops = await api('/service/shops/map/v1') as { id: number; title: string }[];
   if (!Array.isArray(shops)) throw new Error('Invalid ITAD shop map');
   const matchedGames = new Map<string, Map<number, CatalogGameInfo>>();
+  let priceAccessChecked = false;
+  let omittedLookups = 0;
   for (const store of stores) {
     const expected = store.source === 'epic' ? ['epic game store', 'epic games store'] : [store.source];
     const shop = shops.find(item => expected.includes(item.title.toLowerCase()));
@@ -132,7 +161,7 @@ export async function ingestDeals(
       const lookup = await api(`/lookup/id/shop/${shop.id}/v1`, JSON.stringify(batch)) as Record<string, string | null>;
       if (!lookup || Array.isArray(lookup) || typeof lookup !== 'object') throw new Error('Invalid ITAD lookup response');
       for (const shopGameId of batch) {
-        if (!(shopGameId in lookup)) throw new Error('Incomplete ITAD lookup response');
+        if (!(shopGameId in lookup)) { omittedLookups++; continue; }
         const itadId = lookup[shopGameId];
         if (!itadId) continue;
         if (typeof itadId !== 'string') throw new Error('Invalid ITAD game ID');
@@ -140,14 +169,23 @@ export async function ingestDeals(
         for (const game of store.ids.get(shopGameId)!) games.set(game.gameId, game);
         matchedGames.set(itadId, games);
       }
+      // Catch invalid pricing credentials before spending minutes on the full lookup pass.
+      if (!priceAccessChecked && matchedGames.size) {
+        const probe = await api('/games/overview/v2?country=US', JSON.stringify([matchedGames.keys().next().value])) as { prices: OverviewItem[] };
+        if (!Array.isArray(probe?.prices)) throw new Error('Invalid ITAD overview response');
+        priceAccessChecked = true;
+      }
     }
   }
+  if (omittedLookups) console.warn(`Skipped ${omittedLookups} storefront IDs omitted by ITAD lookup.`);
+  console.log(`ITAD lookup matched ${matchedGames.size} unique games. Fetching prices...`);
   if (!matchedGames.size) throw new Error('ITAD lookup matched no catalog games; preserving existing feed.');
   const deals: GameDeal[] = [];
   let omittedPrices = 0;
   const updatedAt = new Date().toISOString();
   const ids = [...matchedGames.keys()];
   for (let offset = 0; offset < ids.length; offset += 100) {
+    if (offset % 5000 === 0) console.log(`ITAD price progress: ${offset}/${ids.length} games`);
     const batch = ids.slice(offset, offset + 100);
     const overview = await api('/games/overview/v2?country=US', JSON.stringify(batch)) as { prices: OverviewItem[] };
     if (!Array.isArray(overview?.prices)) throw new Error('Invalid ITAD overview response');
@@ -193,11 +231,15 @@ export async function writeDealsFeed(catalogDirectory: string, outputFile: strin
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   loadEnvFile();
+  const apiKey = process.env.ITAD_API_KEY || process.env.ITAD_SECRET || '';
   const catalogDirectory = process.env.PLAY_ATLAS_DEALS_CATALOG_DIR
     || ['generated/browser-catalog-rebuilt', 'generated/browser-catalog-test', 'generated/igdb-full-test', 'public/data']
       .find(directory => fs.existsSync(directory))!;
   const outputFile = path.join(process.env.PLAY_ATLAS_DEALS_OUTPUT_DIR || 'public/data', 'deals.json');
-  writeDealsFeed(catalogDirectory, outputFile, process.env.ITAD_API_KEY || process.env.ITAD_SECRET || '')
-    .then(dataset => console.log(`Published ${dataset.totalDeals} deals to ${outputFile}`))
+  const operation = process.argv.includes('--check-access')
+    ? checkPricingAccess(apiKey).then(() => console.log('ITAD pricing access verified.'))
+    : writeDealsFeed(catalogDirectory, outputFile, apiKey)
+      .then(dataset => console.log(`Published ${dataset.totalDeals} deals to ${outputFile}`));
+  operation
     .catch(error => { console.error('[ITAD ingestion failed]', error.message); process.exitCode = 1; });
 }

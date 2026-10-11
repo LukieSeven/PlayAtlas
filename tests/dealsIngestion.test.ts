@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
-import { loadCatalogExternalIds, writeDealsFeed } from '../scripts/fetch-deals';
+import { checkPricingAccess, loadCatalogExternalIds, writeDealsFeed } from '../scripts/fetch-deals';
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'play-atlas-deals-'));
 const record = { id: 'igdb:101', sourceId: 101, name: 'Test Game', externalIds: { steam: '220', gog: '123', epic: 'test-game' } };
@@ -48,7 +48,7 @@ try {
   assert.equal(dataset.deals[0].currentPrice.amountFormatted, '$0.00');
   assert.equal(dataset.deals[0].historyLowPrice?.amount, 0);
   assert.equal(dataset.deals[0].isHistoricalLow, true);
-  assert.equal(requests.length, 5);
+  assert.equal(requests.length, 6);
   const previous = fs.readFileSync(outputFile, 'utf8');
   for (const status of [401, 404]) {
     await assert.rejects(writeDealsFeed(directory, outputFile, 'test-key', async () => new Response('', { status })));
@@ -101,6 +101,63 @@ try {
   write('browser_catalog_manifest.json', { fullCatalog: { chunks: [{ file: 'chunks/game_index_1.json.gz' }] } });
   requests = [];
   assert.equal((await writeDealsFeed(directory, outputFile, 'test-key', request)).totalDeals, 1);
+
+  await checkPricingAccess('test-key', async () => new Response(JSON.stringify({ prices: [] })));
+  await assert.rejects(checkPricingAccess('', request), /ITAD_API_KEY/);
+  await assert.rejects(checkPricingAccess('test-key', async () => new Response('', { status: 403 })), /active API key/);
+  await assert.rejects(checkPricingAccess('test-key', async () => new Response('{}')), /overview/);
+
+  assert.equal((await writeDealsFeed(directory, outputFile, 'test-key', async (input, options) => {
+    if (String(input).includes('/lookup/id/shop/35/')) return new Response('{}');
+    return request(input, options);
+  })).totalDeals, 1);
+
+  for (const temporaryFailure of ['network', 'rate-limit', 'server']) {
+    let attempts = 0;
+    const result = await writeDealsFeed(directory, outputFile, '  test-key  ', async (input, options) => {
+      assert.equal((options!.headers as Record<string, string>)['ITAD-API-Key'], 'test-key');
+      if (String(input).endsWith('/service/shops/map/v1') && attempts++ === 0) {
+        if (temporaryFailure === 'network') throw new TypeError('fetch failed');
+        return new Response('', { status: temporaryFailure === 'rate-limit' ? 429 : 503, headers: { 'Retry-After': '0' } });
+      }
+      return request(input, options);
+    });
+    assert.equal(result.totalDeals, 1);
+    assert.equal(attempts, 2);
+  }
+
+  let lookupCalls = 0;
+  const existing = fs.readFileSync(outputFile, 'utf8');
+  await assert.rejects(writeDealsFeed(directory, outputFile, 'test-key', async (input, options) => {
+    if (String(input).includes('/lookup/')) lookupCalls++;
+    if (String(input).includes('/games/overview/')) return new Response('', { status: 403 });
+    return request(input, options);
+  }), /active API key/);
+  assert.equal(lookupCalls, 1);
+  assert.equal(fs.readFileSync(outputFile, 'utf8'), existing);
+
+  const largeCatalog = Array.from({ length: 205 }, (_, index) => ({
+    ...record, id: `igdb:${index + 1}`, sourceId: index + 1, externalIds: { steam: String(index + 1) },
+  }));
+  fs.writeFileSync(path.join(directory, 'chunks/game_index_1.json.gz'), zlib.gzipSync(JSON.stringify(largeCatalog)));
+  const priceBatchSizes: number[] = [];
+  const lookupBatchSizes: number[] = [];
+  const noCurrentPrices = await writeDealsFeed(directory, outputFile, 'test-key', async (input, options) => {
+    const url = String(input);
+    const body: string[] = options?.body ? JSON.parse(String(options.body)) : [];
+    if (url.includes('/lookup/')) {
+      lookupBatchSizes.push(body.length);
+      return new Response(JSON.stringify(Object.fromEntries(body.map(id => [id, `uuid-${id}`]))));
+    }
+    if (url.includes('/games/overview/')) {
+      priceBatchSizes.push(body.length);
+      return new Response(JSON.stringify({ prices: body.map(id => ({ id, current: null, lowest: null })) }));
+    }
+    return request(input, options);
+  });
+  assert.equal(noCurrentPrices.totalDeals, 0);
+  assert.deepEqual(lookupBatchSizes, [100, 100, 5]);
+  assert.deepEqual(priceBatchSizes, [1, 100, 100, 5]);
   console.log('Deals ingestion regression checks passed.');
 } finally {
   // Delete only this test's unique temporary directory.
