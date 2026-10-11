@@ -39,6 +39,9 @@ jobs:
       - name: Install Dependencies
         run: npm ci
 
+      - name: Run Lint Checks
+        run: npm run lint
+
       - name: Run Unit Tests & Search Benchmarks
         run: npm test
 
@@ -59,7 +62,7 @@ jobs:
 
       - name: Build ITAD Game Deals Feed
         env:
-          ITAD_CLIENT_ID: ${{ secrets.ITAD_CLIENT_ID }}
+          ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
           ITAD_SECRET: ${{ secrets.ITAD_SECRET }}
         run: npm run build:deals
 
@@ -100,6 +103,9 @@ jobs:
 
       - name: Install Dependencies
         run: npm ci
+
+      - name: Run Lint Checks
+        run: npm run lint
 
       - name: Run Unit Tests & Search Benchmarks
         run: npm test
@@ -321,7 +327,7 @@ jobs:
       - name: Build ITAD Game Deals Feed
         if: ${{ github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && (inputs.operation == 'full' || inputs.operation == 'deploy_existing')) }}
         env:
-          ITAD_CLIENT_ID: ${{ secrets.ITAD_CLIENT_ID }}
+          ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
           ITAD_SECRET: ${{ secrets.ITAD_SECRET }}
         run: |
           if [ -d "generated/browser-catalog-rebuilt" ]; then
@@ -329,7 +335,7 @@ jobs:
           else
             DEALS_DIR="generated/browser-catalog-test"
           fi
-          PLAY_ATLAS_DEALS_OUTPUT_DIR="${DEALS_DIR}" npm run build:deals
+          PLAY_ATLAS_DEALS_CATALOG_DIR="${DEALS_DIR}" PLAY_ATLAS_DEALS_OUTPUT_DIR="${DEALS_DIR}" npm run build:deals
 
       # --- 5. STEP 3 & 4 & 5: CREATE ROOT-NORMALIZED ZIP & VERIFY EXTRACTED ARCHIVE ---
       - name: Create and Locally Verify Master ZIP Archive Layout

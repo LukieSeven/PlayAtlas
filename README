@@ -1,3 +1,90 @@
+# Play Atlas
+
+A React 19 and TypeScript game discovery and personal-library app, built with
+Vite and Tailwind CSS. IGDB catalogs power search, release listings, and details;
+IsThereAnyDeal supplies US storefront prices. Personal records stay in the
+browser's IndexedDB and localStorage. GitHub Actions builds data and deploys
+the static app to GitHub Pages.
+
+## Local setup
+
+Use Node.js 22.13 or newer and npm:
+
+```sh
+npm ci
+npm run dev
+```
+
+The checked-in catalog is a small sample. Production browsing needs the generated
+browser catalog under public/data (including browser_catalog_manifest.json,
+search/, releases/, and chunks/). To generate one, configure IGDB credentials in
+.env.local, then run:
+
+```sh
+npm run build:igdb-full
+npm run build:browser-catalog
+```
+
+These write generated/igdb-full-test and generated/browser-catalog-test. Set
+PLAY_ATLAS_BROWSER_DATA_DIR=public/data when building a catalog for the local app,
+or copy the generated browser catalog contents to public/data. Environment
+variables can be set in .env.local, including on Windows. The build:igdb-test
+script uses POSIX inline variable syntax; on PowerShell use
+`$env:IGDB_IMPORT_MODE='test'; npx tsx scripts/build-igdb-index.ts` instead.
+An optional VITE_CATALOG_PLUGIN_URL loads a development-only catalog module;
+it is separate from pricing and is not included in production.
+
+## Credentials and pricing
+
+Create .env.local (ignored by Git) with the credentials you need:
+
+```dotenv
+IGDB_CLIENT_ID=your-twitch-client-id
+IGDB_CLIENT_SECRET=your-twitch-client-secret
+ITAD_API_KEY=your-isthereanydeal-api-key
+```
+
+ITAD_API_KEY must be the API key from your registered ITAD application, rather
+than its OAuth client ID or client secret. The legacy ITAD_SECRET variable is
+accepted for deployments that already store the API key under that name.
+Never prefix these credentials with VITE_; that would expose them to browsers.
+
+```sh
+npm run build:deals
+```
+
+PLAY_ATLAS_DEALS_CATALOG_DIR explicitly selects the catalog directory. Without
+it, ingestion tries generated/browser-catalog-rebuilt, generated/browser-catalog-test,
+generated/igdb-full-test, then public/data. It supports importer envelopes,
+legacy arrays, and raw/compressed full-catalog chunks. PLAY_ATLAS_DEALS_OUTPUT_DIR
+selects where deals.json is written (default public/data).
+
+Ingestion looks up native Steam, GOG, and Epic product IDs and stores ITAD's
+current best US price per matched game. Failed requests, invalid responses,
+missing credentials, or missing storefront mappings fail the command without
+replacing the existing feed. A successful feed can include ordinary full prices
+as well as discounts. Prices update when ingestion runs, not on every page visit.
+API reference: https://docs.isthereanydeal.com/
+
+## Checks and deployment
+
+```sh
+npm test
+npm run lint
+npm run build
+```
+
+The test suite includes mocked ITAD ingestion tests; live ingestion requires
+credentials. Browser tests can be run with `npx playwright test` after installing
+Playwright browsers. The production build goes to dist/.
+
+The IGDB Database Pipeline Importer & Pages Deployment workflow runs nightly at
+02:00 UTC and supports manual test, full, and deploy_existing operations. Configure
+IGDB_CLIENT_ID, IGDB_CLIENT_SECRET, and ITAD_API_KEY (or legacy ITAD_SECRET) in
+GitHub Actions secrets. Production runs use the github-pages environment, so
+environment-scoped secrets must be available there. Test runs use repository
+secrets. Missing pricing credentials now fail ingestion visibly.
+
 ## License
 
 Play Atlas is proprietary software.
@@ -6,4 +93,4 @@ Copyright © 2026 David McCoy. All rights reserved. No permission is granted to
 copy, modify, distribute, host, or commercially use the project except with
 written authorization.
 
-See [LICENSE.md](LICENSE.md) for complete terms.
+See [LICENSE](LICENSE) for complete terms.

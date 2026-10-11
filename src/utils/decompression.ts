@@ -28,14 +28,13 @@ async function doFetchAndDecompress<T>(
 
   // Validate SHA-256 hash if provided
   if (expectedSha256) {
-    let hashHex = '';
+    let hashHex: string;
     if (typeof crypto !== 'undefined' && crypto.subtle) {
       const hashBuffer = await crypto.subtle.digest('SHA-256', arrayBuffer);
       const hashArray = Array.from(new Uint8Array(hashBuffer));
       hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
     } else {
-      const nodeCrypto = await import('crypto');
-      hashHex = nodeCrypto.createHash('sha256').update(new Uint8Array(arrayBuffer)).digest('hex');
+      throw new Error('This browser requires Web Crypto support to verify catalog files. Use HTTPS or localhost.');
     }
 
     if (hashHex.toLowerCase() !== expectedSha256.toLowerCase()) {
@@ -43,20 +42,14 @@ async function doFetchAndDecompress<T>(
     }
   }
 
-  let jsonText = '';
+  let jsonText: string;
 
   if (typeof DecompressionStream !== 'undefined') {
     const ds = new DecompressionStream('gzip');
     const decompressedStream = new Response(arrayBuffer).body!.pipeThrough(ds);
     jsonText = await new Response(decompressedStream).text();
   } else {
-    try {
-      const zlib = await import('zlib');
-      const decompressedBuffer = zlib.gunzipSync(Buffer.from(arrayBuffer));
-      jsonText = decompressedBuffer.toString('utf-8');
-    } catch (err) {
-      throw new Error(`Gzip decompression failed for ${url}: ${err}`);
-    }
+    throw new Error('This browser requires DecompressionStream support to read the catalog. Please use a current browser.');
   }
 
   return JSON.parse(jsonText) as T;

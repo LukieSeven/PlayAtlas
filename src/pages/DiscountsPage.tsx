@@ -7,6 +7,7 @@ import { Button } from '../components/ui/Button';
 export const DiscountsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'freebies'>('all');
   const [deals, setDeals] = useState<GameDeal[]>([]);
+  const [allDeals, setAllDeals] = useState<GameDeal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Filters State
@@ -47,6 +48,7 @@ export const DiscountsPage: React.FC = () => {
   // Load summary metrics on mount
   useEffect(() => {
     loadDealsDataset().then(ds => {
+      setAllDeals(ds.deals);
       const freebies = ds.deals.filter(d => d.currentPrice.amount === 0 || d.cut === 100).length;
       const historicalLows = ds.deals.filter(d => d.isHistoricalLow).length;
       setStats({
@@ -62,12 +64,12 @@ export const DiscountsPage: React.FC = () => {
   }, [searchQuery, minDiscount, maxPrice, storeFilter, historicalLowOnly, sortBy, activeTab]);
 
   const uniqueStores = useMemo(() => {
-    const set = new Set<string>();
-    deals.forEach(d => {
-      if (d.storeName) set.add(d.storeName);
+    const stores = new Map<string, string>();
+    allDeals.forEach(d => {
+      if (d.storeName) stores.set(d.storeId, d.storeName);
     });
-    return Array.from(set).sort();
-  }, [deals]);
+    return Array.from(stores, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+  }, [allDeals]);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -220,8 +222,8 @@ export const DiscountsPage: React.FC = () => {
             >
               <option value="all">All Stores</option>
               {uniqueStores.map(store => (
-                <option key={store} value={store.toLowerCase()}>
-                  {store}
+                <option key={store.id} value={store.id}>
+                  {store.name}
                 </option>
               ))}
             </select>
@@ -277,7 +279,7 @@ export const DiscountsPage: React.FC = () => {
             <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">No Deals Currently Found</h3>
             <p className="text-xs text-[#718294] max-w-sm mx-auto">
               {stats.totalDeals === 0
-                ? 'No deals dataset is installed locally. Run the ITAD ingestion script or check back later.'
+                ? 'Prices are unavailable right now. Please check back later.'
                 : 'No active storefront deals match your selected filters.'}
             </p>
           </div>

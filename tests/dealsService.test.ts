@@ -127,6 +127,11 @@ async function runTests() {
   const sortedByPriceLow = await getAllDeals({ sortBy: 'price_low' });
   assert(sortedByPriceLow[0].currentPrice.amount === 0, 'sortBy: price_low puts $0.00 first');
 
+  setDealsDatasetCache({ ...sampleDataset, deals: [{ ...sampleDeals[0], storeId: '61', gameTitle: 'Elden Ring' }] });
+  assert((await getAllDeals({ query: 'ELDEN' })).length === 1, 'Title search is case insensitive');
+  assert((await getAllDeals({ storeId: '61' })).length === 1, 'Numeric ITAD shop IDs filter correctly');
+  assert((await getAllDeals({ storeId: 'steam' })).length === 0, 'Store names are not confused with shop IDs');
+
   // Test 9: Empty dataset safety
   setDealsDatasetCache({
     schemaVersion: 1,

@@ -17,7 +17,10 @@ export const PriceWidget: React.FC<PriceWidgetProps> = ({ gameId, deals, classNa
     let isMounted = true;
 
     if (deals && deals.length > 0) {
-      const best = deals.reduce((top, current) => (current.cut > top.cut ? current : top), deals[0]);
+      const best = deals.reduce((top, current) => (
+        current.cut > top.cut || (current.cut === top.cut && current.currentPrice.amount < top.currentPrice.amount)
+          ? current : top
+      ), deals[0]);
       setBestDeal(best);
       setIsLoading(false);
       return;

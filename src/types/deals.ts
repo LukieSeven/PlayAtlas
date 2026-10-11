@@ -13,7 +13,7 @@ export interface GameDeal {
   gameTitle?: string; // Game display title (e.g. "Elden Ring")
   coverUrl?: string; // Cover artwork URL
   itadId: string; // ITAD game UUID
-  storeId: string; // e.g. "steam", "gog", "epic", "humble"
+  storeId: string; // ITAD numeric shop ID serialized as a string (e.g. "61")
   storeName: string; // e.g. "Steam", "GOG", "Epic Games Store"
   regularPrice: DealPrice;
   currentPrice: DealPrice;

@@ -160,7 +160,7 @@ async function fetchWithRetry(url: string, attempts = 3): Promise<Response> {
 async function fetchEventsForGamersRest(startYear: number, endYear: number): Promise<CatalogEvent[]> {
   const events: CatalogEvent[] = [];
   let page = 1;
-  let totalPages = 1;
+  let totalPages: number;
   do {
     const params = new URLSearchParams({ start_date: `${startYear}-01-01`, end_date: `${endYear}-12-31`, per_page: '50', page: String(page) });
     const response = await fetchWithRetry(`${eventsForGamersEndpoint}?${params}`);
@@ -236,7 +236,7 @@ async function fetchEventsForGamers(startYear: number, endYear: number): Promise
   } catch (restError) {
     console.warn(`Events for Gamers REST import failed; using public iCalendar fallback: ${restError}`);
     const response = await fetch(eventsForGamersIcs, { signal: AbortSignal.timeout(45_000) });
-    if (!response.ok) throw new Error(`Events for Gamers iCalendar request failed: HTTP ${response.status}`);
+    if (!response.ok) throw new Error(`Events for Gamers iCalendar request failed: HTTP ${response.status}`, { cause: restError });
     return normalizeEventsForGamersIcs(await response.text(), startYear, endYear);
   }
 }

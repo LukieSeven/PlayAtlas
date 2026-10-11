@@ -642,7 +642,7 @@ async function runIgdbImporter() {
     let duplicateCount = 0;
     let invalidCount = 0;
     let successfulBatches = 0;
-    let finalBatchSize = 0;
+    let finalBatchSize: number;
 
     const globalSeenIds = new Set<number>();
     let currentChunkBuffer: GameIndexRecord[] = [];

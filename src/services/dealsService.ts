@@ -40,7 +40,6 @@ export async function loadDealsDataset(): Promise<DealsDataset> {
         totalDeals: 0,
         deals: [],
       };
-      cachedDataset = emptyDataset;
       return emptyDataset;
     } finally {
       fetchPromise = null;
@@ -102,11 +101,12 @@ export async function getAllDeals(filters?: DealsFilterOptions): Promise<GameDea
     return results;
   }
 
-  // Filter by query (store name or ITAD ID)
+  // Search titles and storefront metadata.
   if (filters.query && filters.query.trim().length > 0) {
     const q = filters.query.trim().toLowerCase();
     results = results.filter(
       d =>
+        (d.gameTitle ?? '').toLowerCase().includes(q) ||
         d.storeName.toLowerCase().includes(q) ||
         d.storeId.toLowerCase().includes(q) ||
         String(d.gameId).includes(q)
@@ -150,6 +150,9 @@ export async function getAllDeals(filters?: DealsFilterOptions): Promise<GameDea
         break;
       case 'price_high':
         results.sort((a, b) => b.currentPrice.amount - a.currentPrice.amount);
+        break;
+      case 'title':
+        results.sort((a, b) => (a.gameTitle ?? '').localeCompare(b.gameTitle ?? ''));
         break;
     }
   }

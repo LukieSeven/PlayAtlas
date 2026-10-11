@@ -21,7 +21,7 @@ export function reconcileCatalogCounts(
 
   const allowedDifference = Math.max(10, Math.ceil(actualImportedRecordCount * 0.0001));
 
-  let status: CountReconciliationStatus = 'failed';
+  let status: CountReconciliationStatus;
   let warningMessage: string | null = null;
 
   if (countDifferenceFromStart === 0 && countDifferenceFromEnd === 0) {

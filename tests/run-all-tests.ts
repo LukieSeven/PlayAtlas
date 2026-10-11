@@ -34,6 +34,7 @@ const testFiles = [
   'personalGameVisibility.test.ts',
   'actionMenuPortal.test.ts',
   'dealsService.test.ts',
+  'dealsIngestion.test.ts',
 ];
 
 interface TestSuiteSummary {

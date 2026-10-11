@@ -310,7 +310,7 @@ export async function getGameDetailForCompactRecord(
           chunkData = cachedObj.records;
           inMemoryChunkCache.set(chunkFile, chunkData!);
         }
-      } catch {}
+      } catch { /* Continue with uncached or compact catalog data. */ }
 
       // 3. Network fetch and decompress
       if (!chunkData) {
@@ -327,7 +327,7 @@ export async function getGameDetailForCompactRecord(
               downloadedAt: new Date().toISOString(),
               records: chunkData,
             });
-          } catch {}
+          } catch { /* Continue with uncached or compact catalog data. */ }
         } catch (err) {
           console.warn(`Failed to load chunk ${chunkFile}:`, err);
         }
@@ -397,7 +397,7 @@ export async function fetchGameDetailsForCompactRecords(
               chunkData = cachedObj.records;
               inMemoryChunkCache.set(chunkFile, chunkData!);
             }
-          } catch {}
+          } catch { /* Continue with uncached or compact catalog data. */ }
 
           if (!chunkData) {
             try {
@@ -413,8 +413,8 @@ export async function fetchGameDetailsForCompactRecords(
                   downloadedAt: new Date().toISOString(),
                   records: chunkData,
                 });
-              } catch {}
-            } catch {}
+              } catch { /* Continue with uncached or compact catalog data. */ }
+            } catch { /* Continue with uncached or compact catalog data. */ }
           }
         }
       }

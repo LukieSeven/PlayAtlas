@@ -266,7 +266,7 @@ export async function installFullCatalog(
     req.onerror = () => reject(req.error);
   });
 
-  let completedChunks = completedChunkFiles.size;
+  let completedChunks: number;
   let recordsInstalled = 0;
   let bytesDownloaded = 0;
   const totalChunks = chunks.length;
