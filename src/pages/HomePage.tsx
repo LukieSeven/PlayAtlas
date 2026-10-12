@@ -37,6 +37,8 @@ import { hydrateHomeWidgetGames } from '../services/homeWidgetHydrationService';
 import { loadHomeWidgetConfigurations, resolveWidgetConfiguration, saveHomeWidgetConfigurations } from '../services/homeWidgetService';
 import { PERSONAL_GAME_BUCKETS, PersonalGameBucketId } from '../types/gameSource';
 import { compactGamesForBucket } from '../services/gameSourceService';
+import { getTopDeals } from '../services/dealsService';
+import type { GameDeal } from '../types/deals';
 
 type SystemHomeWidgetId = 'featured' | 'playing' | 'deals' | 'progress' | 'releases' | 'upcoming' | 'events';
 type HomeWidgetId = SystemHomeWidgetId | `list:${string}` | `bucket:${PersonalGameBucketId}`;
@@ -169,6 +171,18 @@ export const HomePage: React.FC = () => {
   const [recentReleases, setRecentReleases] = useState<CompactGameLookupRecord[]>([]);
   const [upcomingGames, setUpcomingGames] = useState<CompactGameLookupRecord[]>([]);
   const [catalogEvents, setCatalogEvents] = useState<CatalogEvent[]>([]);
+  const [topDeals, setTopDeals] = useState<GameDeal[]>([]);
+  const [dealsLoading, setDealsLoading] = useState(false);
+  const dealsVisible = widgetPreferences.visible.includes('deals');
+  useEffect(() => {
+    if (!dealsVisible) return;
+    let active = true;
+    setDealsLoading(true);
+    getTopDeals().then(deals => { if (active) setTopDeals(deals); })
+      .catch(error => console.warn('Home deals unavailable:', error))
+      .finally(() => { if (active) setDealsLoading(false); });
+    return () => { active = false; };
+  }, [dealsVisible]);
 
   // Hydration state for displayed compact records
   const [hydratedCompactMap, setHydratedCompactMap] = useState<Map<number, CompactGameLookupRecord>>(new Map());
@@ -519,7 +533,17 @@ export const HomePage: React.FC = () => {
               </Link>
             </div>
 
-            {/* Themed Empty State for Deals Widget */}
+            {dealsLoading ? <p role="status" className="text-sm text-[#47586A]">Loading top deals...</p> : topDeals.length > 0 ? (
+              <ol aria-label="Top 10 deals" className="space-y-2">
+                {topDeals.map(deal => <li key={`${deal.gameId}-${deal.storeId}`}>
+                  <a href={deal.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-xl border border-[#D9C8A9] bg-white/70 p-2 hover:bg-[#EFE8D8]">
+                    {deal.coverUrl && <img src={deal.coverUrl} alt="" loading="lazy" decoding="async" className="h-12 w-9 shrink-0 rounded object-cover" />}
+                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-bold text-[#0C1D2D]">{deal.gameTitle || `Game #${deal.gameId}`}</span><span className="text-xs text-[#47586A]">{deal.storeName}</span></span>
+                    <span className="text-right text-xs font-bold text-[#0C1D2D]">{deal.currentPrice.amountFormatted}<span className="block text-emerald-700">-{deal.cut}%</span></span>
+                  </a>
+                </li>)}
+              </ol>
+            ) : (
             <div className="p-6 text-center rounded-2xl bg-[#EFE8D8] border border-[#D9C8A9] space-y-2">
               <Tag className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
               <h4 className="font-bold text-xs text-[#0C1D2D]">No active deals or sales available</h4>
@@ -527,6 +551,7 @@ export const HomePage: React.FC = () => {
                 Check back for updated platform storefront discounts and promotional sales.
               </p>
             </div>
+            )}
           </div>}
         </div>
 

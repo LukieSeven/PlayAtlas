@@ -4,6 +4,7 @@ import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import type { DealPrice, DealsDataset, GameDeal } from '../src/types/deals';
 import { buildCompactRankSignals, calculateDealPopularity } from '../src/utils/catalogRanking';
+import { writeDealsPreview } from './deals-preview';
 
 interface CatalogEntry {
   id: number | string;
@@ -231,6 +232,7 @@ export async function writeDealsFeed(catalogDirectory: string, outputFile: strin
   const temporaryFile = `${outputFile}.tmp`;
   fs.writeFileSync(temporaryFile, JSON.stringify(dataset));
   fs.renameSync(temporaryFile, outputFile);
+  writeDealsPreview(path.dirname(outputFile), dataset);
   return dataset;
 }
 

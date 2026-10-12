@@ -45,6 +45,7 @@ try {
   assert.equal(loadCatalogExternalIds(directory)[0].ids.get('app/220')![0].gameId, 101);
   const dataset = await writeDealsFeed(directory, outputFile, 'test-key', request);
   assert.equal(dataset.totalDeals, 1); // UUID shared across stores is queried once.
+  assert.equal(JSON.parse(fs.readFileSync(path.join(directory, 'deals-preview.json'), 'utf8')).totalDeals, 1);
   assert.equal(dataset.deals[0].storeId, '61');
   assert.equal(dataset.deals[0].currentPrice.amountFormatted, '$0.00');
   assert.equal(dataset.deals[0].historyLowPrice?.amount, 0);
@@ -175,6 +176,9 @@ try {
   assert.equal(enriched.deals[1].popularityScore, 0);
   assert.equal(enriched.deals[0].currentPrice.amount, rankedDataset.deals[0].currentPrice.amount);
   assert.equal(enriched.generatedAt, rankedDataset.generatedAt);
+  const preview = JSON.parse(fs.readFileSync(path.join(directory, 'deals-preview.json'), 'utf8'));
+  assert.equal(preview.totalDeals, 2);
+  assert.equal(preview.deals[0].gameId, 101);
   console.log('Deals ingestion regression checks passed.');
 } finally {
   // Delete only this test's unique temporary directory.

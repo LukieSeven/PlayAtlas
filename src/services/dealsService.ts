@@ -5,6 +5,20 @@
 
 import { GameDeal, DealsDataset, DealsFilterOptions } from '../types/deals';
 import { getBasePathAwareUrl } from './catalogDataSource';
+import { comparePopularDeals, topPopularDeals } from '../utils/dealRanking';
+
+export async function getTopDeals(): Promise<GameDeal[]> {
+  try {
+    const response = await fetch(getBasePathAwareUrl('data/deals-preview.json'));
+    if (!response.ok) throw new Error(`Deals preview HTTP ${response.status}`);
+    const dataset: DealsDataset = await response.json();
+    if (!Array.isArray(dataset.deals)) throw new Error('Invalid deals preview');
+    return topPopularDeals(dataset.deals);
+  } catch {
+    // Compatibility with older catalogs which predate the small Home feed.
+    return topPopularDeals((await loadDealsDataset()).deals);
+  }
+}
 
 let cachedDataset: DealsDataset | null = null;
 let fetchPromise: Promise<DealsDataset> | null = null;
@@ -143,12 +157,7 @@ export async function getAllDeals(filters?: DealsFilterOptions): Promise<GameDea
   if (filters.sortBy) {
     switch (filters.sortBy) {
       case 'popular': {
-        const score = (deal: GameDeal) => {
-          const discounted = deal.cut > 0 || deal.currentPrice.amount < deal.regularPrice.amount;
-          const popularity = Number.isFinite(deal.popularityScore) ? Math.max(0, Math.min(100, deal.popularityScore!)) : 0;
-          return (discounted ? 1000 : 0) + popularity * 0.8 + Math.max(0, Math.min(100, deal.cut)) * 0.2;
-        };
-        results.sort((a, b) => score(b) - score(a) || b.cut - a.cut || a.gameId - b.gameId);
+        results.sort(comparePopularDeals);
         break;
       }
       case 'discount':

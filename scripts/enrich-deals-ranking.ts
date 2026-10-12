@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { calculateDealPopularity } from '../src/utils/catalogRanking';
 import type { CompactGameLookupRecord } from '../src/types/catalog';
 import type { DealsDataset } from '../src/types/deals';
+import { writeDealsPreview } from './deals-preview';
 
 /** Add ranks to existing prices without calling ITAD or reimporting IGDB. */
 export function enrichDealsRanking(directory: string): void {
@@ -24,6 +25,7 @@ export function enrichDealsRanking(directory: string): void {
   const output = path.join(directory, 'deals.json');
   fs.writeFileSync(`${output}.tmp`, JSON.stringify(dataset));
   fs.renameSync(`${output}.tmp`, output);
+  writeDealsPreview(directory, dataset);
   console.log(`Enriched popularity for ${dataset.deals.length} existing prices.`);
 }
 
