@@ -4,6 +4,7 @@ import os from 'node:os';
 import path from 'node:path';
 import zlib from 'node:zlib';
 import { checkPricingAccess, loadCatalogExternalIds, writeDealsFeed } from '../scripts/fetch-deals';
+import { enrichDealsRanking } from '../scripts/enrich-deals-ranking';
 
 const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'play-atlas-deals-'));
 const record = { id: 'igdb:101', sourceId: 101, name: 'Test Game', externalIds: { steam: '220', gog: '123', epic: 'test-game' } };
@@ -158,6 +159,22 @@ try {
   assert.equal(noCurrentPrices.totalDeals, 0);
   assert.deepEqual(lookupBatchSizes, [100, 100, 5]);
   assert.deepEqual(priceBatchSizes, [1, 100, 100, 5]);
+  fs.mkdirSync(path.join(directory, 'search'));
+  write('search/token_manifest.json', { lookupFiles: [{ file: 'search/games.json.gz' }] });
+  fs.writeFileSync(path.join(directory, 'search/games.json.gz'), zlib.gzipSync(JSON.stringify([
+    { id: 101, gameType: 'main_game', defaultVisible: true, rank: { totalRatingCount: 5000, userRatingCount: 5000, totalRating: 9, hypeCount: 100 } },
+  ])));
+  write('browser_catalog_manifest.json', { searchManifest: 'search/token_manifest.json' });
+  const rankedDataset = JSON.parse(previous);
+  rankedDataset.deals.push({ ...rankedDataset.deals[0], gameId: 202 });
+  rankedDataset.totalDeals = 2;
+  write('deals.json', rankedDataset);
+  enrichDealsRanking(directory);
+  const enriched = JSON.parse(fs.readFileSync(outputFile, 'utf8'));
+  assert.ok(enriched.deals[0].popularityScore > 50);
+  assert.equal(enriched.deals[1].popularityScore, 0);
+  assert.equal(enriched.deals[0].currentPrice.amount, rankedDataset.deals[0].currentPrice.amount);
+  assert.equal(enriched.generatedAt, rankedDataset.generatedAt);
   console.log('Deals ingestion regression checks passed.');
 } finally {
   // Delete only this test's unique temporary directory.

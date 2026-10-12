@@ -3,6 +3,7 @@ import path from 'node:path';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import type { DealPrice, DealsDataset, GameDeal } from '../src/types/deals';
+import { buildCompactRankSignals, calculateDealPopularity } from '../src/utils/catalogRanking';
 
 interface CatalogEntry {
   id: number | string;
@@ -10,8 +11,10 @@ interface CatalogEntry {
   name: string;
   coverUrl?: string;
   externalIds?: Record<string, string | undefined>;
+  gameType?: string;
+  defaultVisible?: boolean;
 }
-interface CatalogGameInfo { gameId: number; gameTitle: string; coverUrl?: string }
+interface CatalogGameInfo { gameId: number; gameTitle: string; coverUrl?: string; popularityScore: number }
 interface StoreLookup { source: string; ids: Map<string, CatalogGameInfo[]> }
 interface ApiPrice { amount: number; currency: string }
 interface OverviewItem {
@@ -75,7 +78,9 @@ export function loadCatalogExternalIds(directory: string): StoreLookup[] {
         const ids = stores.get(source) ?? new Map<string, CatalogGameInfo[]>();
         const games = ids.get(shopGameId) ?? [];
         if (!games.some(game => game.gameId === gameId)) {
-          games.push({ gameId, gameTitle: record.name, coverUrl: record.coverUrl });
+          games.push({ gameId, gameTitle: record.name, coverUrl: record.coverUrl,
+            popularityScore: calculateDealPopularity({ ...record, rank: buildCompactRankSignals(record) }),
+          });
         }
         ids.set(shopGameId, games);
         stores.set(source, ids);

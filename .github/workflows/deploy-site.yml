@@ -1,0 +1,57 @@
+name: Deploy Website Only (Reuse Existing Data)
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Build Website
+        run: npm run build
+      - name: Restore Verified Published Catalog
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          mkdir -p generated/site-deploy
+          gh release download v1.0.0-catalog --pattern 'play-atlas-full-catalog.zip*' --dir generated/site-deploy
+          cd generated/site-deploy
+          EXPECTED_HASH=$(tr -d '\r\n' < play-atlas-full-catalog.zip.sha256)
+          [[ "$EXPECTED_HASH" =~ ^[0-9a-fA-F]{64}$ ]]
+          printf '%s  %s\n' "$EXPECTED_HASH" play-atlas-full-catalog.zip | sha256sum -c -
+          cd ../..
+          rm -rf dist/data
+          mkdir -p dist/data
+          unzip -q generated/site-deploy/play-atlas-full-catalog.zip -d dist/data
+          npm run verify:browser-catalog -- dist/data
+          npx tsx scripts/enrich-deals-ranking.ts dist/data
+          test -f dist/data/deals.json
+          TOTAL_BYTES=$(du -sb dist | cut -f1)
+          test "$TOTAL_BYTES" -le 943718400
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

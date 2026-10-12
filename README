@@ -68,6 +68,15 @@ API reference: https://docs.isthereanydeal.com/
 
 ## Checks and deployment
 
+Discounts renders 48 cards per page. Popular Deals is the default sort: 80% IGDB
+catalog prominence (rating evidence, hype, and catalog signals), 20% discount
+percentage, with discounted offers ahead of full-price offers. Highest Discount
+and price sorts remain available.
+
+For frontend-only fixes, run the Deploy Website Only (Reuse Existing Data)
+workflow on main. It reuses the verified published catalog and prices and adds
+popularity scores locally, without an IGDB import or ITAD scrape.
+
 ```sh
 npm test
 npm run lint

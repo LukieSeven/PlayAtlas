@@ -2,6 +2,10 @@ import { CompactGameLookupRecord, CompactRankSignals } from '../types/catalog';
 
 export const RANKING_SCHEMA_VERSION = 1;
 
+export function calculateDealPopularity(record: Pick<CompactGameLookupRecord, 'gameType' | 'defaultVisible' | 'rank'>): number {
+  return Math.max(0, Math.min(100, calculateCatalogImportance(record) / 3));
+}
+
 export function normalizeIgdbRating(value: unknown): number | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 100) return undefined;
   return value / 10;

@@ -11,6 +11,7 @@ export interface DealPrice {
 export interface GameDeal {
   gameId: number; // Play Atlas primitive numeric ID or IGDB sourceId
   gameTitle?: string; // Game display title (e.g. "Elden Ring")
+  popularityScore?: number; // 0–100 IGDB catalog prominence score
   coverUrl?: string; // Cover artwork URL
   itadId: string; // ITAD game UUID
   storeId: string; // ITAD numeric shop ID serialized as a string (e.g. "61")
@@ -39,5 +40,5 @@ export interface DealsFilterOptions {
   historicalLowOnly?: boolean;
   freebiesOnly?: boolean;
   query?: string; // search term for game title
-  sortBy?: 'discount' | 'price_low' | 'price_high' | 'title';
+  sortBy?: 'popular' | 'discount' | 'price_low' | 'price_high' | 'title';
 }

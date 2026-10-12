@@ -132,6 +132,18 @@ async function runTests() {
   assert((await getAllDeals({ storeId: '61' })).length === 1, 'Numeric ITAD shop IDs filter correctly');
   assert((await getAllDeals({ storeId: 'steam' })).length === 0, 'Store names are not confused with shop IDs');
 
+  setDealsDatasetCache({ ...sampleDataset, deals: [
+    { ...sampleDeals[2], gameTitle: 'Unknown Freebie', popularityScore: 0 },
+    { ...sampleDeals[0], gameId: 104, gameTitle: 'Major Game', popularityScore: 90, cut: 20 },
+    { ...sampleDeals[1], gameTitle: 'Known Game', popularityScore: 60, cut: 70 },
+    { ...sampleDeals[0], gameId: 105, gameTitle: 'Full Price Game', popularityScore: 100, cut: 0, currentPrice: sampleDeals[0].regularPrice },
+  ] });
+  const popular = await getAllDeals({ sortBy: 'popular' });
+  assert(popular[0].gameTitle === 'Major Game', 'Popular discounted titles outrank unknown freebies');
+  assert(popular[1].gameTitle === 'Known Game', 'Discount size contributes within popularity ranking');
+  assert(popular[popular.length - 1].gameTitle === 'Full Price Game', 'Full prices follow actual discounts');
+  assert((await getAllDeals({ sortBy: 'discount' }))[0].gameTitle === 'Unknown Freebie', 'Discount-only sort remains available');
+
   // Test 9: Empty dataset safety
   setDealsDatasetCache({
     schemaVersion: 1,

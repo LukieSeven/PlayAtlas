@@ -4,11 +4,14 @@ import { GameDeal, DealsFilterOptions } from '../types/deals';
 import { getAllDeals, loadDealsDataset } from '../services/dealsService';
 import { Button } from '../components/ui/Button';
 
+const DEALS_PER_PAGE = 48;
+
 export const DiscountsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'freebies'>('all');
   const [deals, setDeals] = useState<GameDeal[]>([]);
   const [allDeals, setAllDeals] = useState<GameDeal[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [page, setPage] = useState(1);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
@@ -16,7 +19,7 @@ export const DiscountsPage: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [historicalLowOnly, setHistoricalLowOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<'discount' | 'price_low' | 'price_high'>('discount');
+  const [sortBy, setSortBy] = useState<'popular' | 'discount' | 'price_low' | 'price_high'>('popular');
 
   // Summary Metrics
   const [stats, setStats] = useState({ totalDeals: 0, freebiesCount: 0, historicalLowsCount: 0 });
@@ -60,6 +63,7 @@ export const DiscountsPage: React.FC = () => {
   }, []);
 
   useEffect(() => {
+    setPage(1);
     fetchDeals();
   }, [searchQuery, minDiscount, maxPrice, storeFilter, historicalLowOnly, sortBy, activeTab]);
 
@@ -71,13 +75,18 @@ export const DiscountsPage: React.FC = () => {
     return Array.from(stores, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [allDeals]);
 
+  const pageCount = Math.max(1, Math.ceil(deals.length / DEALS_PER_PAGE));
+  const currentPage = Math.min(page, pageCount);
+  const pageStart = (currentPage - 1) * DEALS_PER_PAGE;
+  const visibleDeals = deals.slice(pageStart, pageStart + DEALS_PER_PAGE);
+
   const clearFilters = () => {
     setSearchQuery('');
     setMinDiscount(0);
     setMaxPrice(undefined);
     setStoreFilter('all');
     setHistoricalLowOnly(false);
-    setSortBy('discount');
+    setSortBy('popular');
   };
 
   return (
@@ -236,6 +245,7 @@ export const DiscountsPage: React.FC = () => {
               onChange={e => setSortBy(e.target.value as any)}
               className="w-full px-3 py-2 rounded-xl text-xs font-semibold bg-[#FDFBF7] text-[#0C1D2D] border border-[#D9C8A9] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
             >
+              <option value="popular">Popular Deals</option>
               <option value="discount">Highest Discount</option>
               <option value="price_low">Price: Low to High</option>
               <option value="price_high">Price: High to Low</option>
@@ -291,12 +301,13 @@ export const DiscountsPage: React.FC = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {deals.map(deal => {
+          {visibleDeals.map(deal => {
             const isFree = deal.currentPrice.amount === 0 || deal.cut === 100;
 
             return (
               <div
                 key={`${deal.gameId}-${deal.storeId}-${deal.itadId}`}
+                data-testid="deal-card"
                 className="p-4 rounded-2xl bg-[#FDFBF7] border border-[#D9C8A9] shadow-xs space-y-3 flex flex-col justify-between hover:border-[#C5A059] transition-all"
               >
                 <div className="space-y-2">
@@ -304,7 +315,7 @@ export const DiscountsPage: React.FC = () => {
                     <div className="flex items-center gap-2 min-w-0">
                       {deal.coverUrl && (
                         <div className="w-7 h-9 rounded bg-[#EFE8D8] border border-[#D9C8A9] overflow-hidden shrink-0">
-                          <img src={deal.coverUrl} alt={deal.gameTitle || 'Cover'} className="w-full h-full object-cover" />
+                          <img src={deal.coverUrl} alt={deal.gameTitle || 'Cover'} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                         </div>
                       )}
                       <h4 className="font-bold text-xs text-[#0C1D2D] truncate">
@@ -362,6 +373,18 @@ export const DiscountsPage: React.FC = () => {
             );
           })}
         </div>
+      )}
+      {!isLoading && deals.length > 0 && (
+        <nav aria-label="Deals pagination" className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <span role="status">
+            Showing {pageStart + 1}–{Math.min(pageStart + DEALS_PER_PAGE, deals.length)} of {deals.length.toLocaleString()} results
+          </span>
+          <div className="flex items-center gap-3">
+            <Button variant="secondary" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</Button>
+            <span>Page {currentPage} of {pageCount.toLocaleString()}</span>
+            <Button variant="secondary" disabled={currentPage === pageCount} onClick={() => setPage(currentPage + 1)}>Next</Button>
+          </div>
+        </nav>
       )}
     </div>
   );

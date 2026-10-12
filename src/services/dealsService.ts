@@ -142,6 +142,15 @@ export async function getAllDeals(filters?: DealsFilterOptions): Promise<GameDea
   // Apply sorting
   if (filters.sortBy) {
     switch (filters.sortBy) {
+      case 'popular': {
+        const score = (deal: GameDeal) => {
+          const discounted = deal.cut > 0 || deal.currentPrice.amount < deal.regularPrice.amount;
+          const popularity = Number.isFinite(deal.popularityScore) ? Math.max(0, Math.min(100, deal.popularityScore!)) : 0;
+          return (discounted ? 1000 : 0) + popularity * 0.8 + Math.max(0, Math.min(100, deal.cut)) * 0.2;
+        };
+        results.sort((a, b) => score(b) - score(a) || b.cut - a.cut || a.gameId - b.gameId);
+        break;
+      }
       case 'discount':
         results.sort((a, b) => b.cut - a.cut);
         break;
