@@ -63,7 +63,7 @@ production utilities have been replaced by the shared scale. Long titles wrap
 instead of being forced into one truncated line. Catalog cards use fewer columns
 and 24 px gaps; dashboard widgets retain matching 440 px heights with scrolling.
 Discount cards use full-width 3:4 portrait cover art above the title and all deal
-details, with equal-height cards and aligned store/action footers.
+details. Cards size to their contents, with a compact store/action footer.
 
 - **Display Font**: `Cormorant Garamond` (Self-hosted via `@fontsource/cormorant-garamond`).
   - Used for: Page titles, sidebar branding, section headers, widget titles (`h1`, `h2`, `h3`, `.atlas-heading-display`).

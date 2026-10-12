@@ -300,7 +300,7 @@ export const DiscountsPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 items-stretch">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 items-start">
           {visibleDeals.map(deal => {
             const isFree = deal.currentPrice.amount === 0 || deal.cut === 100;
 
@@ -317,7 +317,7 @@ export const DiscountsPage: React.FC = () => {
                     <div className="flex h-full items-center justify-center p-6 text-center text-[var(--text-secondary)]"><ShoppingBag className="h-16 w-16 opacity-50" aria-label="Cover unavailable" /></div>
                   )}
                 </div>
-                <div className="flex flex-1 flex-col justify-between gap-5 p-5">
+                <div className="flex flex-col gap-3 p-5 pb-[18px]">
                 <div className="space-y-4">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex w-full items-center gap-4 min-w-0">
@@ -354,7 +354,7 @@ export const DiscountsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-5 border-t border-[#D9C8A9]/60 flex flex-wrap items-center justify-between gap-4">
+                <div className="pt-[18px] border-t border-[#D9C8A9]/60 flex flex-wrap items-center justify-between gap-4">
                   <div className="text-sm font-semibold text-[var(--text-secondary)] break-words min-w-0">
                     {deal.storeName}
                     {deal.voucher && <span className="block text-xs font-mono text-[#718294]">Code: {deal.voucher}</span>}
