@@ -62,11 +62,13 @@ retain the larger readable scale. Compact box-art cards use 18–20 px titles,
 with 16 px grid gaps; phones use two columns with 12 px gaps. The representative
 discount card occupies about 60% less area than the previous large design.
 Discount cards retain full-width 3:4 cover art and all existing deal details.
-Cards size to their contents, with a compact store/action footer. Dashboard
+Cards use uniform dimensions with fixed title, price, and store/action slots.
+Long titles occupy up to two lines, with their full text available on hover. Dashboard
 widgets retain matching 440 px heights with scrolling.
 
 The desktop sidebar is 240 px wide, with inline compact branding, 16 px menu
-labels, and a three-column library summary. Default tabs fit without scrolling
+labels, a larger separated Home tab, and a three-column library summary. Search
+uses the same display font and a distinct search icon. Default tabs fit without scrolling
 at a 600 px viewport height. The navigation retains scrolling for extra custom
 tabs. The compact mobile drawer also fits the default menu at 390 × 667 px.
 

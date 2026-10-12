@@ -19,6 +19,14 @@ for (const viewport of [{ width: 1440, height: 900 }, { width: 1366, height: 768
       expect(box!.y).toBeGreaterThanOrEqual(0);
       expect(box!.y + box!.height).toBeLessThanOrEqual(viewport.height);
     }
+    const home = sidebar.getByRole('link', { name: 'Home', exact: true });
+    const search = sidebar.getByRole('link', { name: 'Search Catalog', exact: true });
+    const library = sidebar.locator('a[href="#/my-games"]');
+    const font = (link: typeof home) => link.locator('.atlas-nav-label').evaluate(element => getComputedStyle(element).fontFamily);
+    expect(await font(search)).toBe(await font(library));
+    expect(await search.locator('svg').evaluate(element => element.innerHTML)).not.toBe(await library.locator('svg').evaluate(element => element.innerHTML));
+    expect((await home.boundingBox())!.height).toBeGreaterThan((await library.boundingBox())!.height);
+    expect((await search.boundingBox())!.y - ((await home.boundingBox())!.y + (await home.boundingBox())!.height)).toBeGreaterThanOrEqual(12);
     fs.mkdirSync('generated/readability', { recursive: true });
     await sidebar.screenshot({ path: `generated/readability/compact-sidebar-${viewport.height}.png` });
   });

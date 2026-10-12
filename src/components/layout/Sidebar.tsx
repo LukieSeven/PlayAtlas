@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { NavLink } from 'react-router-dom';
 import {
   Home,
+  Search,
   Gamepad2,
   Rocket,
   Flame,
@@ -85,7 +86,7 @@ export const Sidebar: React.FC = () => {
           to="/"
           end
           className={({ isActive }) =>
-            `atlas-active-ribbon flex items-center justify-between px-3.5 py-3 rounded-lg font-bold text-sm transition-all duration-200 mb-2.5 ${
+            `atlas-sidebar-home atlas-active-ribbon flex items-center justify-between px-3.5 py-3 rounded-lg font-bold text-sm transition-all duration-200 mb-2.5 ${
               isActive
                 ? 'bg-[#0B2B3C] text-white border border-[#C5A059] shadow-md'
                 : 'bg-[#FDFBF7] text-[#0C1D2D] hover:bg-[#EFE8D8] border border-[#D9C8A9]'
@@ -106,7 +107,7 @@ export const Sidebar: React.FC = () => {
         {/* Discovery & Navigation Feeds */}
         <nav className="space-y-0.5 font-sans">
           <NavLink to="/search" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold ${isActive ? 'bg-[#0B2B3C] text-white border border-[#C5A059]' : 'text-[#0C1D2D] hover:bg-[#EFE8D8]'}`}>
-            <Gamepad2 className="w-4 h-4 text-[#C5A059]" /> Search Catalog
+            <Search className="w-4 h-4 text-[#C5A059]" /><span className="atlas-nav-label">Search Catalog</span>
           </NavLink>
           {/* My Games Main Navigation */}
           <NavLink

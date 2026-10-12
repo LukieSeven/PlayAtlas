@@ -754,3 +754,33 @@
 .atlas-compact-mobile-nav a { padding: 5px 10px; font-size: 16px; line-height: 20px; }
 .atlas-compact-mobile-nav > div:last-child { padding-top: 8px; }
 .atlas-compact-mobile-nav h4, .atlas-compact-mobile-nav > div:last-child { font-size: 12px; line-height: 16px; }
+
+/* Fixed content slots keep every poster card the same size. */
+.atlas-compact-deal-card { display: grid; grid-template-rows: auto 216px; position: relative; }
+.atlas-deal-art { position: relative; }
+.atlas-deal-history { position: absolute; top: 8px; left: 8px; max-width: calc(100% - 16px); background: var(--panel-bg); }
+.atlas-deal-details { display: grid; grid-template-rows: 50px 42px 1fr; gap: 8px; min-height: 0; }
+.atlas-deal-information { display: contents; }
+.atlas-deal-title-row { min-width: 0; height: 50px; }
+.atlas-compact-deal-card h4 { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
+.atlas-deal-price-row { display: flex; align-items: center; justify-content: space-between; gap: 6px; min-width: 0; }
+.atlas-deal-price-group { display: flex; flex-direction: column; align-items: flex-start; gap: 0; min-width: 0; }
+.atlas-deal-price-group > span { max-width: 100%; white-space: nowrap; }
+.atlas-deal-price-group .text-2xl { line-height: 24px; }
+.atlas-deal-price-group .text-xs { height: 18px; line-height: 18px; }
+.atlas-deal-footer { display: grid; grid-template-rows: 36px 32px; gap: 6px; min-width: 0; }
+.atlas-deal-store { overflow: hidden; line-height: 18px; }
+.atlas-deal-store .text-xs { line-height: 18px; }
+.atlas-deal-footer a { min-height: 32px; justify-content: center; width: 100%; }
+.atlas-compact-game-card { display: grid; grid-template-rows: auto 112px; gap: 8px; }
+.atlas-compact-game-card > div:last-child { height: 112px; min-height: 0; }
+.atlas-compact-game-card h3 { height: 50px; min-height: 50px; }
+.atlas-compact-sidebar a.atlas-sidebar-home { min-height: 40px; padding-block: 9px; margin-bottom: 12px; }
+.atlas-compact-sidebar .atlas-sidebar-home .atlas-nav-label { font-size: 19px; }
+.atlas-sidebar-home svg { width: 18px; height: 18px; }
+@media (max-width: 639px) {
+  .atlas-compact-deal-card { grid-template-rows: auto 206px; }
+  .atlas-deal-details { grid-template-rows: 45px 42px 1fr; }
+  .atlas-deal-title-row { height: 45px; }
+  .atlas-compact-game-card h3 { height: 45px; min-height: 45px; }
+}

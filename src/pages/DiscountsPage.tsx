@@ -320,40 +320,39 @@ export const DiscountsPage: React.FC = () => {
                 data-testid="deal-card"
                 className="atlas-compact-deal-card group overflow-hidden rounded-2xl bg-[#FDFBF7] border border-[#D9C8A9] shadow-xs flex flex-col hover:border-[#C5A059] transition-all"
               >
-                <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#EFE8D8] border-b border-[#D9C8A9]">
+                <div className="atlas-deal-art relative aspect-[3/4] w-full overflow-hidden bg-[#EFE8D8] border-b border-[#D9C8A9]">
                   {deal.coverUrl ? (
                     <img src={deal.coverUrl.replace('t_cover_small', 't_cover_big')} alt={deal.gameTitle || 'Game cover'} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
                   ) : (
                     <div className="flex h-full items-center justify-center p-6 text-center text-[var(--text-secondary)]"><ShoppingBag className="h-16 w-16 opacity-50" aria-label="Cover unavailable" /></div>
                   )}
-                </div>
-                <div className="flex flex-col gap-2 p-3">
-                <div className="space-y-2">
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="flex w-full items-center gap-4 min-w-0">
-                      <h4 className="font-bold text-xl text-[#0C1D2D] leading-tight break-words">
-                        {deal.gameTitle || `Game ID: #${deal.gameId}`}
-                      </h4>
-                    </div>
-
                     {deal.isHistoricalLow && (
-                      <span className="px-2 py-1 rounded text-xs font-extrabold bg-[#C5A059]/20 text-[var(--text-primary)] border border-[#C5A059] flex items-center gap-1 shrink-0">
+                      <span className="atlas-deal-history px-2 py-1 rounded text-xs font-extrabold bg-[#C5A059]/20 text-[var(--text-primary)] border border-[#C5A059] flex items-center gap-1 shrink-0">
                         <Star className="w-2.5 h-2.5 fill-current" />
                         <span>Historical Low</span>
                       </span>
                     )}
+                </div>
+                <div className="atlas-deal-details p-3">
+                <div className="atlas-deal-information">
+                  <div className="atlas-deal-title-row">
+                    <div className="flex w-full items-center gap-4 min-w-0">
+                      <h4 title={deal.gameTitle || `Game ID: #${deal.gameId}`} className="font-bold text-xl text-[#0C1D2D] leading-tight break-words">
+                        {deal.gameTitle || `Game ID: #${deal.gameId}`}
+                      </h4>
+                    </div>
+
+
                   </div>
 
-                  <div className="flex flex-wrap items-baseline justify-between gap-2 pt-0">
+                  <div className="atlas-deal-price-row">
                     <div className="atlas-deal-price-group flex items-baseline gap-2">
                       <span className="font-extrabold text-2xl text-[#0C1D2D]">
                         {isFree ? 'FREE' : deal.currentPrice.amountFormatted}
                       </span>
-                      {deal.regularPrice.amount > deal.currentPrice.amount && (
-                        <span className="line-through text-xs text-[#718294] font-mono">
-                          {deal.regularPrice.amountFormatted}
-                        </span>
-                      )}
+                      <span aria-hidden={deal.regularPrice.amount <= deal.currentPrice.amount} className="line-through text-xs text-[#718294] font-mono">
+                        {deal.regularPrice.amount > deal.currentPrice.amount ? deal.regularPrice.amountFormatted : '\u00a0'}
+                      </span>
                     </div>
 
                     {deal.cut > 0 && (
@@ -364,10 +363,10 @@ export const DiscountsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-2 border-t border-[#D9C8A9]/60 flex flex-wrap items-center justify-between gap-2">
-                  <div className="text-sm font-semibold text-[var(--text-secondary)] break-words min-w-0">
-                    {deal.storeName}
-                    {deal.voucher && <span className="block text-xs font-mono text-[#718294]">Code: {deal.voucher}</span>}
+                <div className="atlas-deal-footer pt-2 border-t border-[#D9C8A9]/60">
+                  <div className="atlas-deal-store text-sm font-semibold text-[var(--text-secondary)] min-w-0">
+                    <span title={deal.storeName} className="block truncate">{deal.storeName}</span>
+                    {deal.voucher && <span title={`Code: ${deal.voucher}`} className="block truncate text-xs font-mono text-[#718294]">Code: {deal.voucher}</span>}
                   </div>
 
                   {deal.url && (
