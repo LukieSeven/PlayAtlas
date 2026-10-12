@@ -386,7 +386,7 @@ export const HomePage: React.FC = () => {
     const isNonGamePlaceholder = id === 'deals' || id === 'events';
     if (isNonGamePlaceholder && configuration.source === defaults.source && configuration.display.presentation === defaults.display.presentation) return null;
     return <div className="absolute inset-0 z-20 overflow-auto bg-[var(--panel-elevated-bg)] p-4 md:p-5" style={{ backgroundColor: 'rgb(from var(--panel-elevated-bg) r g b / 1)' }}>
-      <div className="mb-4 border-b border-[#D9C8A9] pb-4 pt-10"><h3 className="font-serif text-lg font-bold text-[#0C1D2D]">{configuration.title}</h3></div>
+      <div className="mb-4 border-b border-[#D9C8A9] pb-4 pt-10"><h3 className="atlas-widget-heading">{configuration.title}</h3></div>
       <HomeGameWidgetRenderer games={gamesForSource(configuration.source)} display={configuration.display} yuckedIds={yuckedIds} allowCatalogSampling={!configuration.source} onSelect={setSelectedGameForModal} />
     </div>;
   };
@@ -485,8 +485,8 @@ export const HomePage: React.FC = () => {
             {universalOverride('playing')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                <span className="text-[#C5A059] text-sm">✦</span>
-                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">CURRENTLY PLAYING</h3>
+                
+                <h3 className="atlas-widget-heading">Currently Playing</h3>
               </div>
               <Link to="/my-games?view=playing" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
                 View All
@@ -525,8 +525,8 @@ export const HomePage: React.FC = () => {
             {universalOverride('deals')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                <span className="text-[#C5A059] text-sm">✦</span>
-                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">DISCOUNTS & DEALS</h3>
+                
+                <h3 className="atlas-widget-heading">Discounts & Deals</h3>
               </div>
               <Link to="/discounts" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
                 View All
@@ -538,7 +538,7 @@ export const HomePage: React.FC = () => {
                 {topDeals.map(deal => <li key={`${deal.gameId}-${deal.storeId}`}>
                   <a href={deal.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 rounded-xl border border-[#D9C8A9] bg-white/70 p-2 hover:bg-[#EFE8D8]">
                     {deal.coverUrl && <img src={deal.coverUrl} alt="" loading="lazy" decoding="async" className="h-12 w-9 shrink-0 rounded object-cover" />}
-                    <span className="min-w-0 flex-1"><span className="block text-lg leading-tight font-bold text-[#0C1D2D]">{deal.gameTitle || `Game #${deal.gameId}`}</span><span className="text-xs text-[#47586A]">{deal.storeName}</span></span>
+                    <span className="min-w-0 flex-1"><span className="atlas-widget-item-title">{deal.gameTitle || `Game #${deal.gameId}`}</span><span className="atlas-widget-item-meta">{deal.storeName}</span></span>
                     <span className="text-right text-xs font-bold text-[#0C1D2D]">{deal.currentPrice.amountFormatted}<span className="block text-emerald-700">-{deal.cut}%</span></span>
                   </a>
                 </li>)}
@@ -563,8 +563,8 @@ export const HomePage: React.FC = () => {
             {universalOverride('progress')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                <span className="text-[#C5A059] text-sm">✦</span>
-                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">TOP 10 IN PROGRESS</h3>
+                
+                <h3 className="atlas-widget-heading">Top 10 In Progress</h3>
               </div>
               <Link to="/my-games?view=playing" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
                 View All
@@ -592,7 +592,7 @@ export const HomePage: React.FC = () => {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between text-xs mb-1">
-                          <h4 className="font-bold text-[#0C1D2D] truncate">{hydrated.name}</h4>
+                          <h4 className="atlas-widget-item-title truncate">{hydrated.name}</h4>
                           <span className="text-xs font-mono font-bold text-[#8C6D37] shrink-0 ml-2">
                             {rec.currentPlayStatus?.toUpperCase() || 'IN PROGRESS'}
                           </span>
@@ -624,8 +624,8 @@ export const HomePage: React.FC = () => {
             {universalOverride('releases')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                <span className="text-[#C5A059] text-sm">✦</span>
-                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">NEW RELEASES</h3>
+                
+                <h3 className="atlas-widget-heading">New Releases</h3>
               </div>
               <Link to="/new-releases" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
                 View All
@@ -651,8 +651,8 @@ export const HomePage: React.FC = () => {
                           )}
                         </div>
                         <div className="min-w-0">
-                          <h4 className="font-bold text-xs text-[#0C1D2D] truncate">{hydrated.name}</h4>
-                          <p className="text-xs text-[#47586A] truncate">
+                          <h4 className="atlas-widget-item-title truncate">{hydrated.name}</h4>
+                          <p className="atlas-widget-item-meta truncate">
                             {hydrated.year || 'TBA'} • {hydrated.platforms?.join(', ') || 'Multi-Platform'}
                           </p>
                         </div>
@@ -682,8 +682,8 @@ export const HomePage: React.FC = () => {
             {universalOverride('upcoming')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                <span className="text-[#C5A059] text-sm">✦</span>
-                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">MAJOR UPCOMING GAMES</h3>
+                
+                <h3 className="atlas-widget-heading">Major Upcoming Games</h3>
               </div>
               <Link to="/upcoming" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">View All</Link>
             </div>
@@ -694,7 +694,7 @@ export const HomePage: React.FC = () => {
                   return <button key={game.id} type="button" onClick={() => setSelectedGameForModal(hydrated)} className="flex w-full items-center justify-between rounded-xl p-2 text-left transition-colors hover:bg-[#EFE8D8]">
                     <span className="flex min-w-0 items-center gap-3">
                       <span className="flex h-11 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#D9C8A9] bg-[#EFE8D8] font-serif text-xs font-bold text-[#0B2B3C]">{hydrated.coverUrl ? <img src={hydrated.coverUrl} alt="" className="h-full w-full object-cover" /> : hydrated.name[0]}</span>
-                      <span className="min-w-0"><span className="block text-lg leading-tight font-bold text-[#0C1D2D]">{hydrated.name}</span><span className="block truncate text-xs text-[#47586A]">{hydrated.year || 'TBA'} · {hydrated.platforms?.join(', ') || 'Multi-Platform'}</span></span>
+                      <span className="min-w-0"><span className="atlas-widget-item-title">{hydrated.name}</span><span className="atlas-widget-item-meta truncate">{hydrated.year || 'TBA'} · {hydrated.platforms?.join(', ') || 'Multi-Platform'}</span></span>
                     </span>
                     <span className="ml-2 shrink-0 rounded-lg border border-[#D9C8A9] bg-[#EFE8D8] px-2 py-1 font-mono text-xs font-bold text-[#0B2B3C]">View</span>
                   </button>;
@@ -709,8 +709,8 @@ export const HomePage: React.FC = () => {
             {universalOverride('events')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10 relative z-10">
               <div className="flex items-center gap-2">
-                <span className="text-[#C5A059] text-sm">✦</span>
-                <h3 className="font-serif text-lg font-bold text-[#0C1D2D]">UPCOMING EVENTS</h3>
+                
+                <h3 className="atlas-widget-heading">Upcoming Events</h3>
               </div>
               <Link to="/events" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
                 View All
@@ -720,7 +720,7 @@ export const HomePage: React.FC = () => {
             {upcomingEvents.length > 0 ? <div className="relative z-10 space-y-2">
               {upcomingEvents.map(event => <Link key={event.id} to={getEventDetailPath(event.id)} className="flex items-center gap-3 rounded-xl border border-[#D9C8A9] bg-[#FDFBF7]/90 p-2.5 transition-colors hover:bg-[#EFE8D8]">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[#D9C8A9] bg-[#EFE8D8]">{event.logoUrl ? <img src={event.logoUrl} alt="" className="h-full w-full object-contain" /> : <Calendar className="h-5 w-5 text-[#0B2B3C]" />}</span>
-                <span className="min-w-0"><span className="block text-lg leading-tight font-bold text-[#0C1D2D]">{event.name}</span><span className="block text-xs font-semibold text-[#8C6D37]">{new Date(event.startTime).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span></span>
+                <span className="min-w-0"><span className="atlas-widget-item-title">{event.name}</span><span className="block text-xs font-semibold text-[#8C6D37]">{new Date(event.startTime).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}</span></span>
               </Link>)}
             </div> : <div className="p-6 text-center rounded-2xl bg-[#EFE8D8]/80 border border-[#D9C8A9] space-y-2 relative z-10">
               <Calendar className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
@@ -741,7 +741,7 @@ export const HomePage: React.FC = () => {
           const configuration = getWidgetConfiguration(widgetId);
           return <div key={widgetId} style={{ order: widgetOrder(widgetId) }} className={`atlas-home-widget atlas-dashboard-panel relative p-4 md:p-5 ${widgetGridClass(widgetId)}`}>
             <WidgetControls id={widgetId} label={bucket.label} width={widgetPreferences.widths[widgetId] || 'half'} onToggleWidth={toggleWidgetWidth} onEdit={setSettingsWidgetId} onRemove={removeWidget} />
-            <div className="mb-3 border-b border-[#D9C8A9] pb-3 pr-28"><h3 className="font-serif text-lg font-bold text-[#0C1D2D]">{configuration.title}</h3></div>
+            <div className="mb-3 border-b border-[#D9C8A9] pb-3 pr-28"><h3 className="atlas-widget-heading">{configuration.title}</h3></div>
             <HomeGameWidgetRenderer games={gamesForSource(configuration.source)} display={configuration.display} yuckedIds={yuckedIds} allowCatalogSampling={!configuration.source} onSelect={setSelectedGameForModal} />
           </div>;
         })}

@@ -44,6 +44,15 @@ for (const viewport of [{ width: 1920, height: 1000 }, { width: 1440, height: 10
         await expect(page.getByTestId('deal-card').nth(1)).toContainText('Code: ATLAS10');
       }
       await expect(page.locator('header h1').first()).toBeVisible();
+      if (route === '') {
+        const headings = await page.locator('.atlas-widget-heading:visible').evaluateAll(elements => elements.map(element => {
+          const style = getComputedStyle(element);
+          return [style.fontFamily, style.fontSize, style.fontWeight, style.lineHeight, style.letterSpacing, style.color].join('|');
+        }));
+        expect(headings.length).toBeGreaterThanOrEqual(4);
+        expect(new Set(headings).size).toBe(1);
+        expect(await page.locator('.atlas-widget-item-title').first().evaluate(element => getComputedStyle(element).fontSize)).toBe('18px');
+      }
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
       const overflow = await page.locator('main').evaluateAll(elements => elements.some(element => element.scrollWidth > element.clientWidth + 1));
       expect(overflow, `${route} should not overflow the main canvas`).toBe(false);

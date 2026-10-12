@@ -27,7 +27,7 @@ export const UserListWidget: React.FC<UserListWidgetProps> = ({ list, title, gam
         <div className="flex min-w-0 items-center gap-2">
           {list.kind === 'tier' ? <Trophy className="h-4 w-4 shrink-0 text-[#C5A059]" /> : <ListOrdered className="h-4 w-4 shrink-0 text-[#C5A059]" />}
           <div className="min-w-0">
-            <h3 className="truncate font-serif text-lg font-bold text-[#0C1D2D]">{title || list.name}</h3>
+            <h3 className="atlas-widget-heading truncate">{title || list.name}</h3>
             <p className="text-xs font-bold uppercase tracking-wider text-[#8C6D37]">{list.kind === 'tier' ? 'Tier List' : 'Custom List'} · {list.entries.length} games</p>
           </div>
         </div>
@@ -48,8 +48,8 @@ export const UserListWidget: React.FC<UserListWidgetProps> = ({ list, title, gam
             <li key={entry.game.id} className="flex items-center gap-2 rounded-xl border border-[#D9C8A9] bg-white/75 p-2">
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#0B2B3C] font-mono text-xs font-black text-white">{index + 1}</span>
               <div className="min-w-0">
-                <p className="truncate text-xs font-bold text-[#0C1D2D]">{entry.game.name}</p>
-                <p className="text-xs text-[#718294]">{entry.game.year || 'TBA'}</p>
+                <p className="atlas-widget-item-title truncate">{entry.game.name}</p>
+                <p className="atlas-widget-item-meta">{entry.game.year || 'TBA'}</p>
               </div>
             </li>
           ))}
