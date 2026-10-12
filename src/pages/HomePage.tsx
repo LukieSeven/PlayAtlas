@@ -485,7 +485,7 @@ export const HomePage: React.FC = () => {
             {universalOverride('playing')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                
+
                 <h3 className="atlas-widget-heading">Currently Playing</h3>
               </div>
               <Link to="/my-games?view=playing" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
@@ -525,7 +525,7 @@ export const HomePage: React.FC = () => {
             {universalOverride('deals')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                
+
                 <h3 className="atlas-widget-heading">Discounts & Deals</h3>
               </div>
               <Link to="/discounts" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
@@ -563,7 +563,7 @@ export const HomePage: React.FC = () => {
             {universalOverride('progress')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                
+
                 <h3 className="atlas-widget-heading">Top 10 In Progress</h3>
               </div>
               <Link to="/my-games?view=playing" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
@@ -624,7 +624,7 @@ export const HomePage: React.FC = () => {
             {universalOverride('releases')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                
+
                 <h3 className="atlas-widget-heading">New Releases</h3>
               </div>
               <Link to="/new-releases" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
@@ -682,7 +682,7 @@ export const HomePage: React.FC = () => {
             {universalOverride('upcoming')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10">
               <div className="flex items-center gap-2">
-                
+
                 <h3 className="atlas-widget-heading">Major Upcoming Games</h3>
               </div>
               <Link to="/upcoming" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">View All</Link>
@@ -709,7 +709,7 @@ export const HomePage: React.FC = () => {
             {universalOverride('events')}
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#D9C8A9] pb-4 pt-10 relative z-10">
               <div className="flex items-center gap-2">
-                
+
                 <h3 className="atlas-widget-heading">Upcoming Events</h3>
               </div>
               <Link to="/events" className="text-xs font-sans font-bold text-[#0B2B3C] hover:underline">
