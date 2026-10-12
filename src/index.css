@@ -646,3 +646,59 @@
 ::-webkit-scrollbar-thumb:hover {
   background: var(--atlas-teal-dark);
 }
+
+/* Initial loading screen uses the same supplied artwork and theme tokens. */
+.atlas-startup-splash {
+  position: relative;
+  isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100dvh;
+  width: 100%;
+  overflow: hidden;
+  padding: 32px 24px;
+}
+.atlas-startup-content { width: min(100%, 560px); }
+.atlas-boot-retry {
+  margin-top: 24px;
+  padding: 10px 20px;
+  border: 1px solid var(--atlas-ink-primary);
+  border-radius: 12px;
+  background: var(--atlas-panel-bg);
+  color: var(--atlas-ink-primary);
+  font-weight: 700;
+  cursor: pointer;
+}
+.atlas-startup-compass {
+  position: relative;
+  width: clamp(128px, 20vw, 184px);
+  aspect-ratio: 1;
+  margin-bottom: 24px;
+  padding: 6px;
+  border: 1px solid var(--panel-border);
+  border-radius: 50%;
+  box-shadow: 0 12px 40px rgb(11 43 60 / 12%);
+}
+.atlas-startup-orbit {
+  position: absolute;
+  inset: -8px;
+  border: 2px dashed var(--primary-action);
+  border-radius: 50%;
+  opacity: 0.45;
+  animation: atlas-orbit 24s linear infinite;
+}
+.atlas-startup-wordmark {
+  width: min(392px, 78vw);
+  height: auto;
+  aspect-ratio: 218 / 58;
+  background-size: 134% auto;
+  background-position: 61% 42%;
+  margin-bottom: 8px;
+}
+@keyframes atlas-orbit { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .atlas-startup-orbit { animation: none; } }
+@media (max-height: 700px) {
+  .atlas-startup-splash { padding-block: 24px; }
+  .atlas-startup-compass { width: 112px; margin-bottom: 16px; }
+}

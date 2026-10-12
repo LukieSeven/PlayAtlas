@@ -4,6 +4,7 @@ import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
 import { SidebarProvider } from './context/SidebarContext';
 import { AppLayout } from './components/layout/AppLayout';
+import { StartupSplash, StartupErrorBoundary } from './components/layout/StartupSplash';
 const HomePage = lazy(() => import('./pages/HomePage').then(module => ({ default: module.HomePage })));
 const NewReleasesPage = lazy(() => import('./pages/NewReleasesPage').then(module => ({ default: module.NewReleasesPage })));
 const UpcomingGamesPage = lazy(() => import('./pages/UpcomingGamesPage').then(module => ({ default: module.UpcomingGamesPage })));
@@ -27,7 +28,8 @@ export const App: React.FC = () => {
     <ThemeProvider>
       <SidebarProvider>
         <HashRouter>
-          <Suspense fallback={<div className="flex min-h-[40vh] items-center justify-center font-serif text-lg font-bold text-[#0B2B3C]">Opening atlas page…</div>}>
+          <StartupErrorBoundary>
+          <Suspense fallback={<StartupSplash />}>
           <Routes>
             {/* Standalone Isolated Theme Showcase Route (Dev-Only Preview) */}
             <Route path="dev-theme-showcase" element={<DevThemeShowcasePage />} />
@@ -59,6 +61,7 @@ export const App: React.FC = () => {
             </Route>
           </Routes>
           </Suspense>
+          </StartupErrorBoundary>
         </HashRouter>
       </SidebarProvider>
     </ThemeProvider>

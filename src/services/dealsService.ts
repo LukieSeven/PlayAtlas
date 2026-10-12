@@ -7,7 +7,13 @@ import { GameDeal, DealsDataset, DealsFilterOptions } from '../types/deals';
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { comparePopularDeals, topPopularDeals } from '../utils/dealRanking';
 
-export async function getTopDeals(): Promise<GameDeal[]> {
+let topDealsPromise: Promise<GameDeal[]> | null = null;
+export function getTopDeals(): Promise<GameDeal[]> {
+  if (!topDealsPromise) topDealsPromise = fetchTopDeals().catch(error => { topDealsPromise = null; throw error; });
+  return topDealsPromise;
+}
+
+async function fetchTopDeals(): Promise<GameDeal[]> {
   try {
     const response = await fetch(getBasePathAwareUrl('data/deals-preview.json'));
     if (!response.ok) throw new Error(`Deals preview HTTP ${response.status}`);
@@ -22,6 +28,7 @@ export async function getTopDeals(): Promise<GameDeal[]> {
 
 let cachedDataset: DealsDataset | null = null;
 let fetchPromise: Promise<DealsDataset> | null = null;
+export const isDealsDatasetLoaded = () => cachedDataset !== null;
 
 /**
  * Loads and caches normalized deals dataset.
@@ -44,6 +51,7 @@ export async function loadDealsDataset(): Promise<DealsDataset> {
         throw new Error(`Deals HTTP error status: ${response.status}`);
       }
       const data: DealsDataset = await response.json();
+      if (data.schemaVersion !== 1 || !Array.isArray(data.deals)) throw new Error('Invalid deals dataset');
       cachedDataset = data;
       return data;
     } catch (err) {
@@ -67,6 +75,7 @@ export async function loadDealsDataset(): Promise<DealsDataset> {
  * Clear cached dataset (primarily for testing or manual refreshes).
  */
 export function clearDealsCache(): void {
+  topDealsPromise = null;
   cachedDataset = null;
   fetchPromise = null;
 }
@@ -75,6 +84,7 @@ export function clearDealsCache(): void {
  * Seed deals dataset into memory (primarily for unit tests).
  */
 export function setDealsDatasetCache(dataset: DealsDataset): void {
+  topDealsPromise = null;
   cachedDataset = dataset;
   fetchPromise = null;
 }

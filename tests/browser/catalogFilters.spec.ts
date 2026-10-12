@@ -50,8 +50,8 @@ test('failed index downloads can be retried without reloading the page', async (
     return requests <= 2 ? route.fulfill({ status: 503 }) : route.fulfill({ contentType: 'application/gzip', body: zlib.gzipSync(JSON.stringify({ schemaVersion: 1, records })) });
   });
   await page.goto('/#/search');
-  await expect(page.getByRole('alert')).toContainText('Catalog search could not load');
-  await page.getByRole('button', { name: 'Retry', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'We couldn’t finish loading' })).toBeVisible();
+  await page.getByRole('button', { name: 'Try again', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Popular RPG', exact: true })).toBeVisible();
   expect(requests).toBe(3);
 });
@@ -62,6 +62,7 @@ test('list building and full-catalog release search filter beyond the initial se
   await page.route('**/data/browser_catalog_manifest.json', route => route.fulfill({ status: 503 }));
   for (const route of ['lists', 'new-releases']) {
     await page.goto(`/#/${route}`);
+    if (route === 'lists') await page.getByRole('button', { name: 'Open atlas', exact: true }).click();
     await page.getByPlaceholder(route === 'lists' ? 'Search the full catalog to populate this list...' : 'Search full 370,000+ catalog across all platforms and release windows...').fill('Scope');
     await page.getByRole('button', { name: 'More game filters' }).click();
     await page.getByLabel('Genre', { exact: true }).fill('Unique genre');

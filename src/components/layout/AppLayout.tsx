@@ -4,32 +4,35 @@ import { Header } from './Header';
 import { Sidebar } from './Sidebar';
 import { MobileNav } from './MobileNav';
 import { Footer } from './Footer';
+import { StartupGate } from './StartupSplash';
 
 export const AppLayout: React.FC = () => {
   return (
-    <div className="h-screen w-screen overflow-hidden flex themed-app-shell font-sans selection:bg-[var(--primary-action)] selection:text-white relative">
-      {/* Cartographic Background Overlay (Layer 4) */}
-      <div className="cartographic-bg-overlay" />
+    <StartupGate>
+      <div className="h-screen w-screen overflow-hidden flex themed-app-shell font-sans selection:bg-[var(--primary-action)] selection:text-white relative">
+        {/* Cartographic Background Overlay (Layer 4) */}
+        <div className="cartographic-bg-overlay" />
 
-      {/* Left Pinned Sidebar */}
-      <Sidebar />
+        {/* Left Pinned Sidebar */}
+        <Sidebar />
 
-      {/* Mobile Drawer Overlay */}
-      <MobileNav />
+        {/* Mobile Drawer Overlay */}
+        <MobileNav />
 
-      {/* Main Viewport Container */}
-      <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-1">
-        {/* Sticky Top Header Navigation */}
-        <Header />
+        {/* Main Viewport Container */}
+        <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden relative z-1">
+          {/* Sticky Top Header Navigation */}
+          <Header />
 
-        {/* Scrollable Main Dashboard Canvas Area */}
-        <main className="flex-1 overflow-y-auto p-3 md:p-5 xl:p-6 flex flex-col justify-between">
-          <div className="max-w-[1680px] mx-auto w-full space-y-6">
-            <Outlet />
-          </div>
-          <Footer />
-        </main>
+          {/* Scrollable Main Dashboard Canvas Area */}
+          <main className="flex-1 overflow-y-auto p-3 md:p-5 xl:p-6 flex flex-col justify-between">
+            <div className="max-w-[1680px] mx-auto w-full space-y-6">
+              <Outlet />
+            </div>
+            <Footer />
+          </main>
+        </div>
       </div>
-    </div>
+    </StartupGate>
   );
 };

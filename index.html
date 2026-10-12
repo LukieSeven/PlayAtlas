@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -12,7 +12,28 @@
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   </head>
   <body class="bg-slate-950 text-slate-100 font-sans antialiased selection:bg-indigo-500 selection:text-white min-h-screen overflow-x-hidden">
-    <div id="root"></div>
+    <div id="root">
+      <div class="themed-app-shell atlas-startup-splash">
+        <section class="atlas-startup-content relative z-10 flex flex-col items-center text-center">
+          <div class="atlas-startup-compass"><img src="%BASE_URL%branding/play-atlas-compass-watercolor.png" alt="" class="h-full w-full rounded-full object-cover" /><span class="atlas-startup-orbit" aria-hidden="true"></span></div>
+          <div class="atlas-wordmark-crop atlas-startup-wordmark" role="img" aria-label="Play Atlas"></div>
+          <p id="atlas-boot-message" role="status" class="mt-6 text-2xl font-serif font-bold">Opening your atlas…</p>
+          <button id="atlas-boot-retry" hidden class="atlas-boot-retry" onclick="window.location.reload()">Try again</button>
+          <noscript><p class="mt-3 text-sm">Enable JavaScript and reload to explore the catalog.</p></noscript>
+        </section>
+      </div>
+    </div>
+    <script>
+      window.addEventListener('error', function (event) {
+        if (!(event.target instanceof HTMLScriptElement)) return;
+        var message = document.getElementById('atlas-boot-message');
+        var retry = document.getElementById('atlas-boot-retry');
+        if (message && retry) {
+          message.textContent = 'We couldn’t open your atlas. Please try again.';
+          retry.hidden = false;
+        }
+      }, true);
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
