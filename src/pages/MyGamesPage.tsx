@@ -571,7 +571,7 @@ export const MyGamesPage: React.FC = () => {
         <div className="space-y-6">
           {/* Grid Mode vs List Mode */}
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
+            <div className="atlas-catalog-card-grid">
               {visibleCompactGames.map(compact => (
                 <GameCard
                   key={compact.id}

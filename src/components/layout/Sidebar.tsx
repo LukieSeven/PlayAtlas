@@ -54,12 +54,12 @@ export const Sidebar: React.FC = () => {
   };
 
   return (
-    <aside className="hidden lg:flex flex-col themed-sidebar w-64 md:w-70 lg:w-[260px] h-screen sticky top-0 left-0 shrink-0 z-30 justify-between relative bg-[#F4EFE6] border-r border-[#D9C8A9] shadow-sm select-none">
+    <aside className="hidden lg:flex flex-col atlas-compact-sidebar themed-sidebar w-64 md:w-70 lg:w-[260px] h-screen sticky top-0 left-0 shrink-0 z-30 justify-between relative bg-[#F4EFE6] border-r border-[#D9C8A9] shadow-sm select-none">
       {/* Decorative Beveled Rail */}
       <div className="beveled-sidebar-rail" />
 
       {/* Top Branding Emblem Header */}
-      <div className="px-5 pt-5 pb-4 border-b border-[#D9C8A9] relative z-10 space-y-2">
+      <div className="atlas-sidebar-brand px-5 pt-5 pb-4 border-b border-[#D9C8A9] relative z-10 space-y-2">
         <div className="flex flex-col items-center text-center gap-2">
           <div className="atlas-brand-emblem h-24 w-24 overflow-hidden rounded-full border-2 border-[#C5A059] shrink-0 relative">
             <img
@@ -70,7 +70,7 @@ export const Sidebar: React.FC = () => {
           </div>
 
           <div className="flex flex-col items-center">
-            <div className="atlas-wordmark-crop" role="img" aria-label="Play Atlas" />
+            <div className="atlas-wordmark-crop atlas-wordmark-crop--compact" role="img" aria-label="Play Atlas" />
             <span className="-mt-1 text-xs uppercase font-extrabold text-[#8C6D37] tracking-[0.22em] block">
               DISCOVER · TRACK · PLAY
             </span>
@@ -79,7 +79,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Sidebar Navigation Items */}
-      <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto relative z-10 scrollbar-thin">
+      <div className="atlas-sidebar-navigation min-h-0 flex-1 px-3 py-4 space-y-1 overflow-y-auto relative z-10 scrollbar-thin">
         {/* Main Pinned Home Tab */}
         <NavLink
           to="/"
@@ -179,7 +179,7 @@ export const Sidebar: React.FC = () => {
       </div>
 
       {/* Bottom Footer & Settings Area */}
-      <div className="p-3.5 border-t border-[#D9C8A9] space-y-2.5 relative z-10 bg-[#F4EFE6]">
+      <div className="atlas-sidebar-footer shrink-0 p-3.5 border-t border-[#D9C8A9] space-y-2.5 relative z-10 bg-[#F4EFE6]">
         {/* Custom Tab Creation Button */}
         <button
           onClick={() => setIsAddModalOpen(true)}
@@ -190,7 +190,7 @@ export const Sidebar: React.FC = () => {
         </button>
 
         {/* Route Line Dotted Trail Ornament */}
-        <div className="py-0.5 opacity-40 flex justify-center text-[#8C6D37] text-xs tracking-widest select-none font-mono">
+        <div className="atlas-sidebar-ornament py-0.5 opacity-40 flex justify-center text-[#8C6D37] text-xs tracking-widest select-none font-mono">
           - - ✕ - -
         </div>
 
@@ -224,7 +224,7 @@ export const Sidebar: React.FC = () => {
         </NavLink>
 
         {/* Real Personal Library Summary Counts (Bottom Footer Pill) */}
-        <div className="p-2 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] text-xs font-mono font-semibold space-y-1">
+        <div className="atlas-sidebar-stats p-2 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] text-xs font-mono font-semibold space-y-1">
           <div className="flex items-center justify-between text-[#0C1D2D]">
             <span className="flex items-center gap-1.5 text-[#47586A]">
               <Heart className="w-3 h-3 text-rose-600" /> Likes

@@ -310,7 +310,7 @@ export const DiscountsPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 items-start">
+        <div className="atlas-catalog-card-grid items-start">
           {visibleDeals.map(deal => {
             const isFree = deal.currentPrice.amount === 0 || deal.cut === 100;
 
@@ -318,7 +318,7 @@ export const DiscountsPage: React.FC = () => {
               <div
                 key={`${deal.gameId}-${deal.storeId}-${deal.itadId}`}
                 data-testid="deal-card"
-                className="group overflow-hidden rounded-2xl bg-[#FDFBF7] border border-[#D9C8A9] shadow-xs flex flex-col hover:border-[#C5A059] transition-all"
+                className="atlas-compact-deal-card group overflow-hidden rounded-2xl bg-[#FDFBF7] border border-[#D9C8A9] shadow-xs flex flex-col hover:border-[#C5A059] transition-all"
               >
                 <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#EFE8D8] border-b border-[#D9C8A9]">
                   {deal.coverUrl ? (
@@ -327,8 +327,8 @@ export const DiscountsPage: React.FC = () => {
                     <div className="flex h-full items-center justify-center p-6 text-center text-[var(--text-secondary)]"><ShoppingBag className="h-16 w-16 opacity-50" aria-label="Cover unavailable" /></div>
                   )}
                 </div>
-                <div className="flex flex-col gap-3 p-5 pb-[18px]">
-                <div className="space-y-4">
+                <div className="flex flex-col gap-2 p-3">
+                <div className="space-y-2">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="flex w-full items-center gap-4 min-w-0">
                       <h4 className="font-bold text-xl text-[#0C1D2D] leading-tight break-words">
@@ -344,8 +344,8 @@ export const DiscountsPage: React.FC = () => {
                     )}
                   </div>
 
-                  <div className="flex flex-wrap items-baseline justify-between gap-3 pt-1">
-                    <div className="flex items-baseline gap-2">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 pt-0">
+                    <div className="atlas-deal-price-group flex items-baseline gap-2">
                       <span className="font-extrabold text-2xl text-[#0C1D2D]">
                         {isFree ? 'FREE' : deal.currentPrice.amountFormatted}
                       </span>
@@ -364,7 +364,7 @@ export const DiscountsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-[18px] border-t border-[#D9C8A9]/60 flex flex-wrap items-center justify-between gap-4">
+                <div className="pt-2 border-t border-[#D9C8A9]/60 flex flex-wrap items-center justify-between gap-2">
                   <div className="text-sm font-semibold text-[var(--text-secondary)] break-words min-w-0">
                     {deal.storeName}
                     {deal.voucher && <span className="block text-xs font-mono text-[#718294]">Code: {deal.voucher}</span>}
@@ -375,7 +375,7 @@ export const DiscountsPage: React.FC = () => {
                       href={deal.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0B2B3C] text-white hover:bg-[#0C1D2D] font-bold text-sm transition-all shadow-xs shrink-0"
+                      className="inline-flex items-center gap-1 px-2 py-1.5 rounded-lg bg-[#0B2B3C] text-white hover:bg-[#0C1D2D] font-bold text-sm transition-all shadow-xs shrink-0"
                     >
                       <span>Get Deal</span>
                       <ExternalLink className="w-4 h-4 text-[#C5A059]" />

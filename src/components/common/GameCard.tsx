@@ -156,7 +156,7 @@ export const GameCard: React.FC<GameCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`themed-card themed-card-hover group relative flex flex-col justify-between overflow-hidden cursor-pointer p-4 space-y-4 ${className}`}
+      className={`themed-card themed-card-hover atlas-compact-game-card group relative flex flex-col justify-between overflow-hidden cursor-pointer p-2.5 space-y-2 ${className}`}
     >
       {/* Top Cover Image Area */}
       <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-slate-900 border border-[var(--panel-border)] shadow-sm">

@@ -56,14 +56,19 @@ All theme values are declared as CSS custom properties on `:root` in `src/index.
 
 ## 2. Typography Roles
 
-The global scale uses a 16 px root and an 18 px body. Small labels are 16 px,
-controls and secondary text 18 px, body utilities 20 px, section headings 22–26 px,
-game titles 26–32 px, and prominent prices/page titles 32–48 px. Tiny 8–15 px
-production utilities have been replaced by the shared scale. Long titles wrap
-instead of being forced into one truncated line. Catalog cards use fewer columns
-and 24 px gaps; dashboard widgets retain matching 440 px heights with scrolling.
-Discount cards use full-width 3:4 portrait cover art above the title and all deal
-details. Cards size to their contents, with a compact store/action footer.
+The global scale uses a 16 px root and an 18 px body. Forms and page headings
+retain the larger readable scale. Compact box-art cards use 18–20 px titles,
+22 px prices, and 14 px supporting text. Cards are at most 220 px wide on desktop,
+with 16 px grid gaps; phones use two columns with 12 px gaps. The representative
+discount card occupies about 60% less area than the previous large design.
+Discount cards retain full-width 3:4 cover art and all existing deal details.
+Cards size to their contents, with a compact store/action footer. Dashboard
+widgets retain matching 440 px heights with scrolling.
+
+The desktop sidebar is 240 px wide, with inline compact branding, 16 px menu
+labels, and a three-column library summary. Default tabs fit without scrolling
+at a 600 px viewport height. The navigation retains scrolling for extra custom
+tabs. The compact mobile drawer also fits the default menu at 390 × 667 px.
 
 - **Display Font**: `Cormorant Garamond` (Self-hosted via `@fontsource/cormorant-garamond`).
   - Used for: Page titles, sidebar branding, section headers, widget titles (`h1`, `h2`, `h3`, `.atlas-heading-display`).

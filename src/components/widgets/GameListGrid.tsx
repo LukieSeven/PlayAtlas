@@ -214,7 +214,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
       {/* Grid Results Content */}
       {(isLoading && !(searchAcrossCatalog && facets.active && facets.metadata.size > 0)) || facets.filtering || (facets.active && facets.loading) ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 animate-pulse">
+        <div className="atlas-catalog-card-grid animate-pulse">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="aspect-[3/4] themed-panel rounded-2xl bg-slate-200/50" />
           ))}
@@ -229,7 +229,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         </div>
       ) : (
         <div className="space-y-6">
-          <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6' : 'space-y-4'}>
+          <div className={viewMode === 'grid' ? 'atlas-catalog-card-grid' : 'space-y-4'}>
             {visibleGames.map(game => (
               <GameCard key={game.id} game={game} onSelect={onSelectGame} variant={viewMode === 'list' ? 'list' : 'card'} />
             ))}

@@ -702,3 +702,55 @@
   .atlas-startup-splash { padding-block: 24px; }
   .atlas-startup-compass { width: 112px; margin-bottom: 16px; }
 }
+
+/* Compact box-art cards: approximately 60% less area at desktop widths. */
+.atlas-catalog-card-grid,
+.atlas-widget-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 220px));
+  align-items: start;
+  gap: 16px;
+}
+.atlas-compact-deal-card, .atlas-compact-game-card { width: 100%; max-width: 220px; }
+.atlas-compact-deal-card h4, .atlas-compact-game-card h3 { font-size: 20px; line-height: 1.25; text-wrap: pretty; }
+.atlas-compact-deal-card .text-2xl { font-size: 22px; line-height: 1.2; }
+.atlas-deal-price-group { gap: 4px; }
+.atlas-compact-deal-card .text-xs, .atlas-compact-game-card .text-xs { font-size: 14px; line-height: 1.35; }
+.atlas-compact-deal-card .text-sm { font-size: 14px; line-height: 1.4; }
+.atlas-compact-deal-card a { min-height: 34px; }
+.atlas-compact-deal-card a svg { width: 14px; height: 14px; }
+.atlas-compact-game-card .absolute.top-2.left-2 { top: 48px; }
+@media (max-width: 639px) {
+  .atlas-catalog-card-grid, .atlas-widget-card-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .atlas-compact-deal-card h4, .atlas-compact-game-card h3 { font-size: 18px; }
+  .atlas-compact-deal-card > div:last-child { padding: 10px; }
+  .atlas-compact-deal-card .text-2xl { font-size: 22px; }
+}
+@media (max-width: 349px) {
+  .atlas-catalog-card-grid, .atlas-widget-card-grid { grid-template-columns: minmax(0, 220px); justify-content: center; }
+}
+
+/* The default desktop navigation fits in a 600px-high window. Custom tabs can scroll. */
+.atlas-compact-sidebar { width: 240px; }
+.atlas-sidebar-brand { flex-shrink: 0; padding: 12px; }
+.atlas-sidebar-brand > div { flex-direction: row; gap: 10px; }
+.atlas-sidebar-brand .atlas-brand-emblem { width: 48px; height: 48px; }
+.atlas-sidebar-brand span { font-size: 10px; letter-spacing: 0.12em; }
+.atlas-sidebar-navigation { padding: 4px 12px; }
+.atlas-compact-sidebar a { padding: 6px 10px; min-height: 32px; font-size: 16px; line-height: 20px; }
+.atlas-compact-sidebar .atlas-nav-label { font-size: 16px; line-height: 20px; }
+.atlas-sidebar-navigation > a { margin-bottom: 4px; }
+.atlas-sidebar-footer { display: flex; flex-direction: column; gap: 6px; padding: 8px 12px; }
+.atlas-sidebar-footer > * { margin: 0; }
+.atlas-sidebar-footer button { padding: 6px 8px; font-size: 14px; line-height: 20px; }
+.atlas-sidebar-ornament { display: none; }
+.atlas-sidebar-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 4px; padding: 6px; }
+.atlas-sidebar-stats > div { flex-direction: column; gap: 2px; margin: 0; font-size: 12px; line-height: 16px; }
+.atlas-sidebar-stats svg { display: none; }
+.atlas-sidebar-stats > div > span:last-child { font-size: 16px; }
+.atlas-compact-mobile-nav { padding: 16px; }
+.atlas-compact-mobile-nav > div:first-child, .atlas-compact-mobile-nav nav { display: flex; flex-direction: column; gap: 8px; }
+.atlas-compact-mobile-nav > div:first-child > *, .atlas-compact-mobile-nav nav > * { margin-block: 0; }
+.atlas-compact-mobile-nav a { padding: 5px 10px; font-size: 16px; line-height: 20px; }
+.atlas-compact-mobile-nav > div:last-child { padding-top: 8px; }
+.atlas-compact-mobile-nav h4, .atlas-compact-mobile-nav > div:last-child { font-size: 12px; line-height: 16px; }

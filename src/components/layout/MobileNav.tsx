@@ -31,7 +31,7 @@ export const MobileNav: React.FC = () => {
       />
 
       {/* Drawer Content */}
-      <div className="fixed inset-y-0 left-0 w-4/5 max-w-xs bg-[#F4EFE6] border-r border-[#D9C8A9] p-6 flex flex-col justify-between z-50 shadow-2xl overflow-y-auto">
+      <div className="atlas-compact-mobile-nav fixed inset-y-0 left-0 w-4/5 max-w-xs bg-[#F4EFE6] border-r border-[#D9C8A9] p-6 flex flex-col justify-between z-50 shadow-2xl overflow-y-auto">
         <div className="space-y-6">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-[#D9C8A9]/60 pb-4">

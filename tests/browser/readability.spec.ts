@@ -26,8 +26,13 @@ for (const viewport of [{ width: 1440, height: 1000 }, { width: 1024, height: 76
       if (route === 'discounts') {
         const card = page.getByTestId('deal-card').first();
         await expect(card).toBeVisible();
-        expect(await card.locator('h4').evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(26);
-        expect(await card.locator('a').evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(16);
+        expect(await card.locator('h4').evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(18);
+        expect(await card.locator('a').evaluate(element => parseFloat(getComputedStyle(element).fontSize))).toBeGreaterThanOrEqual(14);
+        if (viewport.width === 1440) {
+          const bounds = await card.boundingBox();
+          expect(bounds!.width).toBeLessThanOrEqual(220);
+          expect(bounds!.width * bounds!.height).toBeLessThanOrEqual(361 * 692 * 0.45);
+        }
         const art = await card.locator('img').evaluate(element => ({ width: element.clientWidth, height: element.clientHeight }));
         expect(art.height / art.width).toBeCloseTo(4 / 3, 1);
         await expect(page.getByTestId('deal-card').nth(1)).toContainText('Historical Low');
