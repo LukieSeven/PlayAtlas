@@ -95,7 +95,7 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
           {/* Completion Type Selector */}
           <div>
-            <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1">
+            <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1">
               Completion Type
             </label>
             <select
@@ -113,7 +113,7 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
           {/* Date & Platform Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
+              <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
                 <Calendar className="w-3 h-3 text-[var(--primary-action)]" /> Date Completed
               </label>
               <input
@@ -125,7 +125,7 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1">
+              <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1">
                 Completed On Platform
               </label>
               <select
@@ -149,7 +149,7 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
           {/* Optional Playtime Hours & Personal Rating */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
+              <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
                 <Clock className="w-3 h-3 text-cyan-600" /> Playtime Hours
               </label>
               <input
@@ -164,7 +164,7 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
+              <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
                 <Star className="w-3 h-3 text-amber-500" /> Personal Rating (0-10)
               </label>
               <input
@@ -182,7 +182,7 @@ export const CompletionModal: React.FC<CompletionModalProps> = ({
 
           {/* Review Notes */}
           <div>
-            <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
+            <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
               <MessageSquare className="w-3 h-3 text-purple-600" /> Completion Notes / Verdict
             </label>
             <textarea

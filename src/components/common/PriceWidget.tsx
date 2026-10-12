@@ -87,23 +87,23 @@ export const PriceWidget: React.FC<PriceWidgetProps> = ({ gameId, deals, classNa
           )}
 
           {bestDeal.cut > 0 && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-emerald-700 text-white shadow-xs">
+            <span className="px-1.5 py-0.5 rounded text-xs font-extrabold bg-emerald-700 text-white shadow-xs">
               -{bestDeal.cut}%
             </span>
           )}
 
           {bestDeal.isHistoricalLow && (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#C5A059]/20 text-[#8C6D37] border border-[#C5A059] flex items-center gap-0.5">
+            <span className="px-1.5 py-0.5 rounded text-xs font-extrabold bg-[#C5A059]/20 text-[#8C6D37] border border-[#C5A059] flex items-center gap-0.5">
               <Star className="w-2.5 h-2.5 fill-current" />
               <span>Historical Low</span>
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-1.5 text-[11px] text-[#8C6D37] font-semibold">
+        <div className="flex items-center gap-1.5 text-xs text-[#8C6D37] font-semibold">
           <ShoppingBag className="w-3 h-3 text-[#0B2B3C]" />
           <span>Best deal on {bestDeal.storeName}</span>
-          {bestDeal.voucher && <span className="text-[10px] font-mono bg-[#EFE8D8] px-1 rounded border border-[#D9C8A9]">Code: {bestDeal.voucher}</span>}
+          {bestDeal.voucher && <span className="text-xs font-mono bg-[#EFE8D8] px-1 rounded border border-[#D9C8A9]">Code: {bestDeal.voucher}</span>}
         </div>
       </div>
 

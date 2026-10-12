@@ -94,19 +94,19 @@ export const GameCard: React.FC<GameCardProps> = ({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="truncate text-sm font-bold text-[var(--text-primary)] group-hover:text-[var(--primary-action)]">
+            <h3 className="text-xl font-bold leading-tight break-words text-[var(--text-primary)] group-hover:text-[var(--primary-action)]">
               {liveVm.title}
             </h3>
             {liveVm.shouldShowGameTypeBadge && liveVm.gameTypeBadgeLabel && (
               <Badge variant={getGameTypeBadgeVariant(liveVm.gameType)}>{liveVm.gameTypeBadgeLabel}</Badge>
             )}
           </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--text-muted)]">
+          <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[var(--text-muted)]">
             <span className="font-mono font-semibold">{liveVm.releaseYearDisplay}</span>
             {liveVm.primaryPlatforms.length > 0 && <span>{liveVm.primaryPlatforms.join(' • ')}</span>}
             {liveVm.genresDisplay.length > 0 && <span>{liveVm.genresDisplay.slice(0, 2).join(' • ')}</span>}
           </div>
-          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[9px] font-extrabold uppercase tracking-wide">
+          <div className="mt-2 flex flex-wrap items-center gap-1.5 text-xs font-extrabold uppercase tracking-wide">
             {liveVm.isOwned && <span className="rounded bg-emerald-600 px-2 py-0.5 text-white">Owned</span>}
             {liveVm.currentPlayStatus === 'playing' && <span className="rounded bg-indigo-600 px-2 py-0.5 text-white">Playing</span>}
             {liveVm.currentPlayStatus === 'completed' && <span className="rounded bg-amber-500 px-2 py-0.5 text-slate-950">Completed</span>}
@@ -156,7 +156,7 @@ export const GameCard: React.FC<GameCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`themed-card themed-card-hover group relative flex flex-col justify-between overflow-hidden cursor-pointer p-3 space-y-2.5 ${className}`}
+      className={`themed-card themed-card-hover group relative flex flex-col justify-between overflow-hidden cursor-pointer p-4 space-y-4 ${className}`}
     >
       {/* Top Cover Image Area */}
       <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-slate-900 border border-[var(--panel-border)] shadow-sm">
@@ -170,7 +170,7 @@ export const GameCard: React.FC<GameCardProps> = ({
         ) : (
           <div className="w-full h-full flex flex-col items-center justify-center p-2 text-center bg-slate-900 text-slate-400 font-mono text-xs">
             <Gamepad2 className="w-8 h-8 text-[var(--accent-color)] opacity-60 mb-1" />
-            <span className="text-[10px] line-clamp-2">{liveVm.title}</span>
+            <span className="text-xs line-clamp-2">{liveVm.title}</span>
           </div>
         )}
 
@@ -224,22 +224,22 @@ export const GameCard: React.FC<GameCardProps> = ({
         {/* Bottom Personal Status Badges Overlay */}
         <div className="absolute bottom-2 left-2 right-2 flex flex-wrap gap-1 z-10">
           {liveVm.isOwned && (
-            <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-extrabold text-[9px] uppercase tracking-wider backdrop-blur-md shadow-md">
+            <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white font-extrabold text-xs uppercase tracking-wider backdrop-blur-md shadow-md">
               OWNED
             </span>
           )}
           {liveVm.currentPlayStatus === 'playing' && (
-            <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-extrabold text-[9px] uppercase tracking-wider backdrop-blur-md shadow-md">
+            <span className="px-2 py-0.5 rounded-md bg-indigo-600 text-white font-extrabold text-xs uppercase tracking-wider backdrop-blur-md shadow-md">
               PLAYING
             </span>
           )}
           {liveVm.currentPlayStatus === 'completed' && (
-            <span className="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-extrabold text-[9px] uppercase tracking-wider backdrop-blur-md shadow-md">
+            <span className="px-2 py-0.5 rounded-md bg-amber-500 text-slate-950 font-extrabold text-xs uppercase tracking-wider backdrop-blur-md shadow-md">
               COMPLETED
             </span>
           )}
           {liveVm.inBacklog && (
-            <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white font-extrabold text-[9px] uppercase tracking-wider backdrop-blur-md shadow-md">
+            <span className="px-2 py-0.5 rounded-md bg-purple-600 text-white font-extrabold text-xs uppercase tracking-wider backdrop-blur-md shadow-md">
               BACKLOG
             </span>
           )}
@@ -249,11 +249,11 @@ export const GameCard: React.FC<GameCardProps> = ({
       {/* Card Details */}
       <div className="space-y-1 flex-1 flex flex-col justify-between pt-1">
         <div>
-          <h3 className="font-bold text-xs text-[var(--surface-light-text,#0f2b48)] group-hover:text-[var(--primary-action)] transition-colors line-clamp-1 leading-snug">
+          <h3 className="font-bold text-xl text-[var(--surface-light-text,#0f2b48)] group-hover:text-[var(--primary-action)] transition-colors line-clamp-2 leading-tight min-h-[2.6em]">
             {liveVm.title}
           </h3>
 
-          <div className="flex items-center justify-between text-[11px] font-mono text-[var(--surface-light-muted,#475569)] mt-0.5">
+          <div className="flex items-center justify-between text-xs font-mono text-[var(--surface-light-muted,#475569)] mt-0.5">
             <span className="font-medium">{liveVm.releaseYearDisplay}</span>
             {liveVm.primaryPlatforms.length > 0 && (
               <span className="truncate max-w-[110px] text-[var(--surface-light-text,#0f2b48)] font-semibold">
@@ -264,7 +264,7 @@ export const GameCard: React.FC<GameCardProps> = ({
         </div>
 
         {/* Scores & Primary Genre Row */}
-        <div className="pt-1.5 border-t border-[var(--panel-border)] flex items-center justify-between text-[11px]">
+        <div className="pt-1.5 border-t border-[var(--panel-border)] flex items-center justify-between text-xs">
           <div className="flex items-center gap-1 font-mono">
             {liveVm.personalScore && !liveVm.personalScore.isUnrated ? (
               <span className="font-bold text-[var(--accent-color)] bg-[rgba(184,146,40,0.15)] px-1.5 py-0.5 rounded border border-[var(--accent-color)] flex items-center gap-0.5">
@@ -277,14 +277,14 @@ export const GameCard: React.FC<GameCardProps> = ({
                 {liveVm.externalScore.displayString}
               </span>
             ) : (
-              <span className="text-[10px] font-semibold text-[var(--surface-light-muted,#475569)] opacity-90">
+              <span className="text-xs font-semibold text-[var(--surface-light-muted,#475569)] opacity-90">
                 Not Rated
               </span>
             )}
           </div>
 
           {liveVm.genresDisplay.length > 0 && (
-            <span className="text-[10px] font-medium text-[var(--surface-light-muted,#475569)] truncate max-w-[80px]">
+            <span className="text-xs font-medium text-[var(--surface-light-muted,#475569)] truncate max-w-[80px]">
               {liveVm.genresDisplay[0]}
             </span>
           )}

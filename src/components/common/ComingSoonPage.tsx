@@ -14,7 +14,7 @@ export const ComingSoonPage: React.FC<ComingSoonPageProps> = ({ title, descripti
       <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full border border-[#C5A059] bg-[#0B2B3C] text-[#F2D27C] shadow-lg">
         {icon || <Compass className="h-8 w-8" />}
       </div>
-      <p className="mt-6 text-[10px] font-black uppercase tracking-[0.28em] text-[#8C6D37]">Next destination</p>
+      <p className="mt-6 text-xs font-black uppercase tracking-[0.28em] text-[#8C6D37]">Next destination</p>
       <h2 className="mt-2 font-serif text-4xl font-bold text-[#0C1D2D]">{title}</h2>
       <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#47586A]">{description}</p>
       <div className="mx-auto mt-7 flex max-w-xs items-center gap-3 text-[#C5A059]" aria-hidden="true">

@@ -41,8 +41,8 @@ interface GameReleaseItemProps {
 
 const GameReleaseItem: React.FC<GameReleaseItemProps> = ({ record, date, viewType, onExpand }) => (
   <button type="button" onClick={() => onExpand(record, date)} className="block w-full rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5 text-left transition hover:border-[#B89228] hover:bg-white hover:shadow-sm" aria-label={`Expand ${record.name}`}>
-    <span className="line-clamp-2 text-[10px] font-bold text-[#0C1D2D]">{record.name}</span>
-    <span className="mt-0.5 block truncate text-[9px] text-[#718294]">
+    <span className="line-clamp-2 text-xs font-bold text-[#0C1D2D]">{record.name}</span>
+    <span className="mt-0.5 block truncate text-xs text-[#718294]">
       {viewType === 'platform_release' ? 'Platform release · ' : ''}
       {record.platforms.slice(0, 2).map(platform => platform.abbreviation || platform.name).join(', ') || record.gameTypeLabel}
     </span>
@@ -224,16 +224,16 @@ export const CalendarPage: React.FC = () => {
                         {mode === 'games'
                           ? dayReleases.slice(0, 5).map(record => <GameReleaseItem key={`${record.sourceId}:${date}`} record={record} date={date} viewType={viewType} onExpand={expandGame} />)
                           : mode === 'events'
-                            ? dayEvents.slice(0, 5).map(event => <Link key={event.id} to={getEventDetailPath(event.id)} className="block rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5"><span className="block line-clamp-2 text-[10px] font-bold text-[#0C1D2D]">{event.name}</span><span className="text-[9px] text-[#8C6D37]">{event.allDay ? 'All day' : new Date(event.startTime).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span></Link>)
+                            ? dayEvents.slice(0, 5).map(event => <Link key={event.id} to={getEventDetailPath(event.id)} className="block rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5"><span className="block line-clamp-2 text-xs font-bold text-[#0C1D2D]">{event.name}</span><span className="text-xs text-[#8C6D37]">{event.allDay ? 'All day' : new Date(event.startTime).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}</span></Link>)
                           : dayPersonal.map(item => (
                             <div key={item.id} className="flex items-start justify-between gap-1 rounded-lg border border-[#D9C8A9] bg-[#FDFBF7] p-1.5">
-                              <span><span className="block line-clamp-2 text-[10px] font-bold text-[#0C1D2D]">{item.title}</span><span className="text-[9px] uppercase text-[#8C6D37]">{item.kind}</span></span>
+                              <span><span className="block line-clamp-2 text-xs font-bold text-[#0C1D2D]">{item.title}</span><span className="text-xs uppercase text-[#8C6D37]">{item.kind}</span></span>
                               <button type="button" onClick={() => persistPersonal(removePersonalCalendarItem(personalItems, item.id))} className="text-rose-700" aria-label={`Remove ${item.title}`}><Trash2 className="h-3 w-3" /></button>
                             </div>
                           ))}
                       </div>
                       {mode === 'games' && dayReleases.length > 5 && (
-                        <button type="button" onClick={() => setExpandedDate(date)} className="mt-1 text-[9px] font-bold text-[#0B2B3C] hover:underline">+{dayReleases.length - 5} more</button>
+                        <button type="button" onClick={() => setExpandedDate(date)} className="mt-1 text-xs font-bold text-[#0B2B3C] hover:underline">+{dayReleases.length - 5} more</button>
                       )}
                     </>}
                   </div>

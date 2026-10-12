@@ -71,7 +71,7 @@ export const Sidebar: React.FC = () => {
 
           <div className="flex flex-col items-center">
             <div className="atlas-wordmark-crop" role="img" aria-label="Play Atlas" />
-            <span className="-mt-1 text-[9px] uppercase font-extrabold text-[#8C6D37] tracking-[0.22em] block">
+            <span className="-mt-1 text-xs uppercase font-extrabold text-[#8C6D37] tracking-[0.22em] block">
               DISCOVER · TRACK · PLAY
             </span>
           </div>
@@ -221,7 +221,7 @@ export const Sidebar: React.FC = () => {
         </NavLink>
 
         {/* Real Personal Library Summary Counts (Bottom Footer Pill) */}
-        <div className="p-2 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] text-[11px] font-mono font-semibold space-y-1">
+        <div className="p-2 rounded-xl bg-[#EFE8D8] border border-[#D9C8A9] text-xs font-mono font-semibold space-y-1">
           <div className="flex items-center justify-between text-[#0C1D2D]">
             <span className="flex items-center gap-1.5 text-[#47586A]">
               <Heart className="w-3 h-3 text-rose-600" /> Likes

@@ -11,10 +11,10 @@ export const Footer: React.FC = () => {
           </div>
           <span className="font-bold text-[#0C1D2D] font-serif text-sm tracking-wide">Play Atlas</span>
           <span className="text-[#8C6D37]">•</span>
-          <span className="font-medium text-[11px] text-[#718294]">Personal Gaming Hub</span>
+          <span className="font-medium text-xs text-[#718294]">Personal Gaming Hub</span>
         </div>
 
-        <div className="flex items-center gap-5 text-[11px]">
+        <div className="flex items-center gap-5 text-xs">
           <a
             href="https://github.com/LukieSeven/PlayAtlas"
             target="_blank"

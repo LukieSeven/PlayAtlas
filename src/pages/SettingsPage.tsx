@@ -28,7 +28,7 @@ export const SettingsPage: React.FC = () => {
             Select your preferred visual identity preset. The default is <strong>Watercolor Atlas</strong>.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 2xl:grid-cols-2 gap-4 pt-2">
             {Object.values(availablePresets).map(preset => {
               const isActive = currentPresetKey === preset.presetKey;
 
@@ -50,19 +50,19 @@ export const SettingsPage: React.FC = () => {
                         {preset.name}
                         {isActive && <Check className="w-4 h-4 text-[var(--accent-color)] shrink-0" />}
                       </h4>
-                      <p className="text-[11px] text-[var(--text-muted)] mt-1 line-clamp-2">{preset.description}</p>
+                      <p className="text-xs text-[var(--text-muted)] mt-1 line-clamp-2">{preset.description}</p>
                     </div>
                   </div>
 
                   {/* Swatch Color & Texture Preview Strip */}
-                  <div className="flex items-center justify-between mt-3 pt-2 border-t border-[var(--panel-border)]">
+                  <div className="flex flex-wrap items-center justify-between gap-3 mt-3 pt-3 border-t border-[var(--panel-border)]">
                     <div className="flex items-center gap-1.5">
                       <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: preset.primaryAction }} title="Primary Action" />
                       <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: preset.accent }} title="Accent Gold" />
                       <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: preset.panelBackground }} title="Panel Surface" />
                       <span className="w-3.5 h-3.5 rounded-full border border-black/20" style={{ backgroundColor: preset.appBackground }} title="Canvas Base" />
                     </div>
-                    <span className="text-[10px] font-mono text-[var(--text-muted)] uppercase">
+                    <span className="text-xs font-mono text-[var(--text-muted)] uppercase break-words">
                       {preset.decorativeMotif}
                     </span>
                   </div>

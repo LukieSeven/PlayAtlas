@@ -56,6 +56,15 @@ All theme values are declared as CSS custom properties on `:root` in `src/index.
 
 ## 2. Typography Roles
 
+The global scale uses a 16 px root and an 18 px body. Small labels are 16 px,
+controls and secondary text 18 px, body utilities 20 px, section headings 22–26 px,
+game titles 26–32 px, and prominent prices/page titles 32–48 px. Tiny 8–15 px
+production utilities have been replaced by the shared scale. Long titles wrap
+instead of being forced into one truncated line. Catalog cards use fewer columns
+and 24 px gaps; dashboard widgets retain matching 440 px heights with scrolling.
+Discount cards use full-width 3:4 portrait cover art above the title and all deal
+details, with equal-height cards and aligned store/action footers.
+
 - **Display Font**: `Cormorant Garamond` (Self-hosted via `@fontsource/cormorant-garamond`).
   - Used for: Page titles, sidebar branding, section headers, widget titles (`h1`, `h2`, `h3`, `.atlas-heading-display`).
 - **Body & Interface Font**: `Source Sans 3` (Self-hosted via `@fontsource/source-sans-3`).

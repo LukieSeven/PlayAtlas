@@ -48,7 +48,7 @@ export const HomeWidgetSettingsModal: React.FC<Props> = ({ configuration, source
               {draft.source && !sourceOptions.some(option => option.value === draft.source) && <option value={draft.source}>Current widget feed</option>}
               {sourceOptions.map(option => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
-            <span className="mt-1 block text-[10px] font-normal text-[#718294]">Leaving this blank lets Randomizer sample the full catalog.</span>
+            <span className="mt-1 block text-xs font-normal text-[#718294]">Leaving this blank lets Randomizer sample the full catalog.</span>
           </label>
 
           <fieldset>

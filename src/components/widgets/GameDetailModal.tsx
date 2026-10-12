@@ -103,7 +103,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
                 <span className="font-semibold text-[#475569]">Not Rated</span>
               )}
               {detailStatus === 'loading' && (
-                <span className="text-[10px] text-amber-700 font-bold animate-pulse flex items-center gap-1">
+                <span className="text-xs text-amber-700 font-bold animate-pulse flex items-center gap-1">
                   <RefreshCw className="w-3 h-3 animate-spin" />
                   Loading full details...
                 </span>
@@ -195,12 +195,12 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
                 {/* Ownership Summary */}
                 {personalRecord && personalRecord.ownerships.length > 0 ? (
                   <div className="space-y-1 text-xs">
-                    <span className="text-[10px] font-mono text-[#475569] uppercase font-bold">Ownership</span>
+                    <span className="text-xs font-mono text-[#475569] uppercase font-bold">Ownership</span>
                     <div className="flex flex-wrap gap-1.5">
                       {personalRecord.ownerships.map((o, idx) => (
                         <span
                           key={idx}
-                          className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white font-bold text-[11px] flex items-center gap-1 shadow-sm"
+                          className="px-2.5 py-1 rounded-xl bg-emerald-600 text-white font-bold text-xs flex items-center gap-1 shadow-sm"
                         >
                           <Package className="w-3 h-3" />
                           {getPlatformDisplayName(o.platformId)} ({o.ownershipType})
@@ -239,7 +239,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
                   </span>
                   <button
                     onClick={() => fetchFullDetails(selectedGame)}
-                    className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-[11px] shrink-0"
+                    className="px-2.5 py-1 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs shrink-0"
                   >
                     Retry
                   </button>

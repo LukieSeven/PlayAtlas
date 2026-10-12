@@ -51,7 +51,7 @@ export const DevComponentReviewPage: React.FC = () => {
       className="min-h-screen bg-[#F4EFE6] text-[#0C1D2D] font-sans relative selection:bg-[#0B2B3C] selection:text-white"
     >
       {/* Dev Navigation Bar Header */}
-      <header className="sticky top-0 z-40 bg-[#0B2B3C] text-white px-4 py-2.5 shadow-md flex items-center justify-between border-b border-[#C5A059]">
+      <header className="sticky top-0 z-40 bg-[#0B2B3C] text-white px-4 py-2.5 shadow-md flex flex-wrap items-center justify-between gap-4 border-b border-[#C5A059]">
         <div className="flex items-center gap-3">
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#C5A059] text-[#0B2B3C] uppercase tracking-wider">
             DEV REVIEW
@@ -61,7 +61,7 @@ export const DevComponentReviewPage: React.FC = () => {
           </h1>
         </div>
 
-        <div className="flex items-center gap-4 text-xs font-bold">
+        <div className="flex flex-wrap items-center gap-4 text-xs font-bold">
           <NavLink
             to="/"
             className="flex items-center gap-1 text-[#C5A059] hover:underline"

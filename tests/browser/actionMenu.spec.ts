@@ -159,6 +159,7 @@ test.beforeAll(async ({ browser }) => {
 
   await page.goto('/#/new-releases');
   await page.waitForLoadState('domcontentloaded');
+  await page.evaluate(() => document.fonts.ready);
 
   await page
     .locator('[data-testid="action-menu-trigger"]')
@@ -264,6 +265,8 @@ test.describe('UniversalActionMenu portal visibility & positioning', () => {
 
   // ── 6. Normal below placement ────────────────────────────────────────────
   test('normal below placement aligns menu top to trigger bottom + 8px and right-aligns to trigger right within 3px', async () => {
+    // Larger readable menus need enough room below the first card to test this placement.
+    await page.setViewportSize({ width: 1280, height: 1200 });
     await openMenuAtIndex(0);
 
     const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
@@ -288,16 +291,22 @@ test.describe('UniversalActionMenu portal visibility & positioning', () => {
     const expectedTop = rects.triggerBottom + 8;
     const vertDiff = Math.abs(rects.menuTop - expectedTop);
     expect(vertDiff).toBeLessThanOrEqual(3);
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({ width: 1280, height: 800 });
   });
 
   // ── 7. Above placement flip near viewport bottom ────────────────────────
   test('above placement flips menu above trigger near viewport bottom within 3px', async () => {
-    // Add top margin to container and scroll main so trigger sits at y=600 in the 800px viewport
+    // Position the trigger near the bottom independent of heading and card typography.
     await page.evaluate(() => {
       const container = document.querySelector('main > div');
-      if (container) (container as HTMLElement).style.marginTop = '400px';
+      if (container) (container as HTMLElement).style.marginTop = '500px';
       const main = document.querySelector('main');
-      if (main) main.scrollTop = 250;
+      const trigger = document.querySelector('[data-testid="action-menu-trigger"]');
+      if (main && trigger) {
+        main.scrollTop = 0;
+        main.scrollTop = trigger.getBoundingClientRect().top - (window.innerHeight - 100);
+      }
     });
     await page.waitForTimeout(200);
 
@@ -398,6 +407,7 @@ test.describe('UniversalActionMenu portal visibility & positioning', () => {
 
   // ── 11. HTML zoom 0.9 alignment safety ──────────────────────────────────
   test('positioning remains aligned under html zoom 0.9', async () => {
+    await page.evaluate(() => { document.documentElement.style.zoom = '0.9'; });
     await openMenuAtIndex(0);
 
     const dropdown = page.locator('[data-testid="action-menu-dropdown"]');
@@ -419,6 +429,8 @@ test.describe('UniversalActionMenu portal visibility & positioning', () => {
     expect(metrics.zoom).toBe(0.9);
     const diff = Math.abs(metrics.mRight - metrics.tRight);
     expect(diff).toBeLessThanOrEqual(3);
+    await page.keyboard.press('Escape');
+    await page.evaluate(() => { document.documentElement.style.zoom = ''; });
   });
 
   // ── 12. Window resize repositioning ──────────────────────────────────────

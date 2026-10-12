@@ -111,7 +111,7 @@ export const EditPersonalDetailsModal: React.FC<EditPersonalDetailsModalProps> =
           {/* Rating & Backlog Priority Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
+              <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
                 <Star className="w-3 h-3 text-amber-500" /> Rating (0-10)
               </label>
               <input
@@ -127,7 +127,7 @@ export const EditPersonalDetailsModal: React.FC<EditPersonalDetailsModalProps> =
             </div>
 
             <div>
-              <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
+              <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
                 <ListOrdered className="w-3 h-3 text-indigo-600" /> Backlog Priority
               </label>
               <input
@@ -145,7 +145,7 @@ export const EditPersonalDetailsModal: React.FC<EditPersonalDetailsModalProps> =
 
           {/* Custom Tags */}
           <div>
-            <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
+            <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
               <Tag className="w-3 h-3 text-purple-600" /> Custom Tags (Comma Separated)
             </label>
             <input
@@ -159,7 +159,7 @@ export const EditPersonalDetailsModal: React.FC<EditPersonalDetailsModalProps> =
 
           {/* User Notes */}
           <div>
-            <label className="block text-[10px] font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
+            <label className="block text-xs font-mono text-[#475569] uppercase font-bold mb-1 flex items-center gap-1">
               <MessageSquare className="w-3 h-3 text-emerald-600" /> Personal Notes & Thoughts
             </label>
             <textarea

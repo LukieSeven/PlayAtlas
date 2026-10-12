@@ -300,7 +300,7 @@ export const DiscountsPage: React.FC = () => {
           )}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 items-stretch">
           {visibleDeals.map(deal => {
             const isFree = deal.currentPrice.amount === 0 || deal.cut === 100;
 
@@ -308,32 +308,35 @@ export const DiscountsPage: React.FC = () => {
               <div
                 key={`${deal.gameId}-${deal.storeId}-${deal.itadId}`}
                 data-testid="deal-card"
-                className="p-4 rounded-2xl bg-[#FDFBF7] border border-[#D9C8A9] shadow-xs space-y-3 flex flex-col justify-between hover:border-[#C5A059] transition-all"
+                className="group overflow-hidden rounded-2xl bg-[#FDFBF7] border border-[#D9C8A9] shadow-xs flex flex-col hover:border-[#C5A059] transition-all"
               >
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {deal.coverUrl && (
-                        <div className="w-7 h-9 rounded bg-[#EFE8D8] border border-[#D9C8A9] overflow-hidden shrink-0">
-                          <img src={deal.coverUrl} alt={deal.gameTitle || 'Cover'} loading="lazy" decoding="async" className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <h4 className="font-bold text-xs text-[#0C1D2D] truncate">
+                <div className="relative aspect-[3/4] w-full overflow-hidden bg-[#EFE8D8] border-b border-[#D9C8A9]">
+                  {deal.coverUrl ? (
+                    <img src={deal.coverUrl.replace('t_cover_small', 't_cover_big')} alt={deal.gameTitle || 'Game cover'} loading="lazy" decoding="async" className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]" />
+                  ) : (
+                    <div className="flex h-full items-center justify-center p-6 text-center text-[var(--text-secondary)]"><ShoppingBag className="h-16 w-16 opacity-50" aria-label="Cover unavailable" /></div>
+                  )}
+                </div>
+                <div className="flex flex-1 flex-col justify-between gap-5 p-5">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex w-full items-center gap-4 min-w-0">
+                      <h4 className="font-bold text-xl text-[#0C1D2D] leading-tight break-words">
                         {deal.gameTitle || `Game ID: #${deal.gameId}`}
                       </h4>
                     </div>
 
                     {deal.isHistoricalLow && (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-extrabold bg-[#C5A059]/20 text-[#8C6D37] border border-[#C5A059] flex items-center gap-0.5 shrink-0">
+                      <span className="px-2 py-1 rounded text-xs font-extrabold bg-[#C5A059]/20 text-[var(--text-primary)] border border-[#C5A059] flex items-center gap-1 shrink-0">
                         <Star className="w-2.5 h-2.5 fill-current" />
                         <span>Historical Low</span>
                       </span>
                     )}
                   </div>
 
-                  <div className="flex items-baseline justify-between gap-2 pt-1">
+                  <div className="flex flex-wrap items-baseline justify-between gap-3 pt-1">
                     <div className="flex items-baseline gap-2">
-                      <span className="font-extrabold text-xl text-[#0C1D2D]">
+                      <span className="font-extrabold text-2xl text-[#0C1D2D]">
                         {isFree ? 'FREE' : deal.currentPrice.amountFormatted}
                       </span>
                       {deal.regularPrice.amount > deal.currentPrice.amount && (
@@ -351,10 +354,10 @@ export const DiscountsPage: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="pt-3 border-t border-[#D9C8A9]/60 flex items-center justify-between gap-2">
-                  <div className="text-xs font-semibold text-[#8C6D37] truncate">
+                <div className="pt-5 border-t border-[#D9C8A9]/60 flex flex-wrap items-center justify-between gap-4">
+                  <div className="text-sm font-semibold text-[var(--text-secondary)] break-words min-w-0">
                     {deal.storeName}
-                    {deal.voucher && <span className="block text-[10px] font-mono text-[#718294]">Code: {deal.voucher}</span>}
+                    {deal.voucher && <span className="block text-xs font-mono text-[#718294]">Code: {deal.voucher}</span>}
                   </div>
 
                   {deal.url && (
@@ -362,12 +365,13 @@ export const DiscountsPage: React.FC = () => {
                       href={deal.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#0B2B3C] text-white hover:bg-[#0C1D2D] font-bold text-xs transition-all shadow-xs shrink-0"
+                      className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#0B2B3C] text-white hover:bg-[#0C1D2D] font-bold text-sm transition-all shadow-xs shrink-0"
                     >
                       <span>Get Deal</span>
-                      <ExternalLink className="w-3 h-3 text-[#C5A059]" />
+                      <ExternalLink className="w-4 h-4 text-[#C5A059]" />
                     </a>
                   )}
+                </div>
                 </div>
               </div>
             );

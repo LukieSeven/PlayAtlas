@@ -193,7 +193,7 @@ export const NewReleasesPage: React.FC = () => {
           <div className="flex items-center gap-1 shrink-0">
             {/* View Mode Selector (First Releases vs Platform Releases) */}
             <div className="flex items-center gap-1 rounded-xl border border-[#C8B584] bg-white/45 p-0.5" role="group" aria-label="Release basis">
-              <span className="px-2 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#6F5B39]">Release basis</span>
+              <span className="px-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#6F5B39]">Release basis</span>
               <button
                 onClick={() => setViewType('first_release')}
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
@@ -222,7 +222,7 @@ export const NewReleasesPage: React.FC = () => {
 
             {/* Timeframe Toggles (Day | Week | Month) */}
             <div className="flex items-center gap-1 rounded-xl border border-[#C8B584] bg-white/45 p-0.5" role="group" aria-label="Release window">
-              <span className="px-2 text-[9px] font-extrabold uppercase tracking-[0.12em] text-[#6F5B39]">Time window</span>
+              <span className="px-2 text-xs font-extrabold uppercase tracking-[0.12em] text-[#6F5B39]">Time window</span>
               <button
                 onClick={() => setTimeframe('day')}
                 className={`px-3 py-2 rounded-xl text-xs font-bold transition-all ${

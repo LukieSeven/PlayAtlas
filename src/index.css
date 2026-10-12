@@ -1,5 +1,24 @@
 @import "tailwindcss";
 
+@theme {
+  --text-xs: 1rem;
+  --text-xs--line-height: 1.5;
+  --text-sm: 1.125rem;
+  --text-sm--line-height: 1.5;
+  --text-base: 1.25rem;
+  --text-base--line-height: 1.5;
+  --text-lg: 1.375rem;
+  --text-lg--line-height: 1.4;
+  --text-xl: 1.625rem;
+  --text-xl--line-height: 1.3;
+  --text-2xl: 2rem;
+  --text-2xl--line-height: 1.25;
+  --text-3xl: 2.5rem;
+  --text-3xl--line-height: 1.2;
+  --text-4xl: 3rem;
+  --text-4xl--line-height: 1.15;
+}
+
 :root {
   /* Canvas & Base Parchment Surfaces */
   --atlas-canvas-bg: #F4EFE6;
@@ -85,7 +104,7 @@
 
 @layer base {
   html {
-    font-size: 90%;
+    font-size: 100%;
     width: 100%;
     min-height: 100%;
   }
@@ -94,6 +113,8 @@
     background-color: var(--atlas-canvas-bg);
     color: var(--atlas-ink-primary);
     font-family: var(--font-body);
+    font-size: 1.125rem;
+    line-height: 1.5;
     min-height: 100vh;
     width: 100%;
     margin: 0;
@@ -127,9 +148,9 @@
 }
 
 .atlas-nav-label {
-  font-size: 1.05rem;
+  font-size: 1.25rem;
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.3;
 }
 
 /* Reduce Motion Accessibility */
@@ -256,16 +277,16 @@
 }
 
 .atlas-home-widget {
-  height: 340px;
-  min-height: 340px;
+  height: 440px;
+  min-height: 440px;
   overflow: auto;
 }
 
 .atlas-widget-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 220px));
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
   justify-content: start;
-  gap: 0.75rem;
+  gap: 1rem;
 }
 
 @media (max-width: 520px) {
@@ -286,8 +307,8 @@
 
 .atlas-widget-control {
   display: inline-flex;
-  width: 28px;
-  height: 28px;
+  width: 36px;
+  height: 36px;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--atlas-border-gold);
@@ -316,7 +337,7 @@
   background: var(--atlas-panel-bg);
   color: var(--atlas-teal-deep);
   padding: 0.4rem 0.6rem;
-  font-size: 0.7rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
 }

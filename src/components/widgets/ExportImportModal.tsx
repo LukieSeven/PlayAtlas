@@ -253,7 +253,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
             <div className="p-4 rounded-2xl bg-[#EFE8D8] border border-[#D9C8A9] flex items-center justify-between font-sans">
               <div>
                 <span className="block font-bold text-[#0C1D2D]">Personal Games Count</span>
-                <span className="text-[11px] text-[#47586A]">{personalGameStore.getAllRecords().length} tracked records</span>
+                <span className="text-xs text-[#47586A]">{personalGameStore.getAllRecords().length} tracked records</span>
               </div>
               <FileText className="w-8 h-8 text-[#0B2B3C] opacity-80" />
             </div>

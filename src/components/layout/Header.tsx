@@ -110,7 +110,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
             </h1>
             <span className="text-[#C5A059] text-base leading-none">✦</span>
             {isDevelopmentCatalogPluginConfigured() && (
-              <span className="rounded-full border border-amber-500/50 bg-amber-100 px-2 py-0.5 font-sans text-[9px] font-extrabold uppercase tracking-wider text-amber-900">
+              <span className="rounded-full border border-amber-500/50 bg-amber-100 px-2 py-0.5 font-sans text-xs font-extrabold uppercase tracking-wider text-amber-900">
                 Development catalog plugin
               </span>
             )}
@@ -158,7 +158,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
                 </div>
               ) : (
                 <div className="divide-y divide-[#D9C8A9]/60">
-                  <div className="px-4 py-2 bg-[#EFE8D8] text-[10px] font-mono text-[#0C1D2D] font-bold uppercase flex justify-between">
+                  <div className="px-4 py-2 bg-[#EFE8D8] text-xs font-mono text-[#0C1D2D] font-bold uppercase flex justify-between">
                     <span>Results ({visibleResults.length.toLocaleString()})</span>
                     <span>Press game to view details</span>
                   </div>
@@ -174,7 +174,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
                         className="p-3 hover:bg-[#EFE8D8]/70 cursor-pointer flex items-center justify-between gap-3 transition-colors"
                       >
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-9 h-11 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] shrink-0 overflow-hidden flex items-center justify-center text-[10px] font-mono text-[#8C6D37]">
+                          <div className="w-9 h-11 rounded-lg bg-[#EFE8D8] border border-[#D9C8A9] shrink-0 overflow-hidden flex items-center justify-center text-xs font-mono text-[#8C6D37]">
                             <Gamepad2 className="w-4 h-4 text-[#8C6D37]" />
                           </div>
                           <div className="min-w-0">
@@ -183,12 +183,12 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
                                 {game.name}
                               </h4>
                               {showTypeBadge && (
-                                <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold bg-[#0B2B3C]/10 text-[#0B2B3C] border border-[#0B2B3C]/20 uppercase">
+                                <span className="px-1.5 py-0.5 rounded text-xs font-extrabold bg-[#0B2B3C]/10 text-[#0B2B3C] border border-[#0B2B3C]/20 uppercase">
                                   {getGameTypeLabel(gameCategory)}
                                 </span>
                               )}
                             </div>
-                            <p className="text-[11px] font-mono text-[#718294]">
+                            <p className="text-xs font-mono text-[#718294]">
                               {game.year || 'TBA'}
                             </p>
                           </div>
@@ -231,7 +231,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
                     setIsThemePopoverOpen(false);
                     navigate('/settings');
                   }}
-                  className="text-[10px] font-sans font-semibold text-[#8C6D37] hover:underline"
+                  className="text-xs font-sans font-semibold text-[#8C6D37] hover:underline"
                 >
                   More Options →
                 </button>

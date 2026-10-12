@@ -200,7 +200,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
       {/* Grid Results Content */}
       {isLoading ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 animate-pulse">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 animate-pulse">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="aspect-[3/4] themed-panel rounded-2xl bg-slate-200/50" />
           ))}
@@ -215,7 +215,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
         </div>
       ) : (
         <div className="space-y-6">
-          <div className={viewMode === 'grid' ? 'grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4' : 'space-y-3'}>
+          <div className={viewMode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6' : 'space-y-4'}>
             {visibleGames.map(game => (
               <GameCard key={game.id} game={game} onSelect={onSelectGame} variant={viewMode === 'list' ? 'list' : 'card'} />
             ))}
@@ -230,7 +230,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
               >
                 <span>Load 20 More</span>
                 <ChevronDown className="w-4 h-4" />
-                <span className="text-[10px] opacity-80 font-mono">({sortedGames.length - visibleCount} remaining)</span>
+                <span className="text-xs opacity-80 font-mono">({sortedGames.length - visibleCount} remaining)</span>
               </button>
             </div>
           )}

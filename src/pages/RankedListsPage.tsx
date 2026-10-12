@@ -237,7 +237,7 @@ export const RankedListsPage: React.FC = () => {
         >
           <Icon className="h-3.5 w-3.5" />
           {label}
-          {value === 'existing' && <span className="rounded-full bg-white/20 px-1.5 font-mono text-[10px]">{lists.length}</span>}
+          {value === 'existing' && <span className="rounded-full bg-white/20 px-1.5 font-mono text-xs">{lists.length}</span>}
         </button>
       ))}
     </div>
@@ -303,7 +303,7 @@ export const RankedListsPage: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold text-[#718294]">Click a tier row to choose where the next selected game goes. Click its heading to rename it.</p>
+          <p className="text-xs font-semibold text-[#718294]">Click a tier row to choose where the next selected game goes. Click its heading to rename it.</p>
           {tierRows.map(tier => (
             <div
               key={tier.id}
@@ -322,7 +322,7 @@ export const RankedListsPage: React.FC = () => {
                 className={`w-28 rounded-lg border px-2 py-1.5 text-center text-xs font-black ${activeTier === tier.id ? 'border-[#0B2B3C] bg-[#0B2B3C] text-white' : 'border-[#D9C8A9] bg-[#EFE8D8] text-[#0B2B3C]'}`}
                 aria-label={`Rename ${tier.label || 'tier'} row`}
               />
-              <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">{groupedEntries[tier.id].map(entry => <button key={entry.game.id} type="button" onClick={event => { event.stopPropagation(); persistActiveList(removeGameFromUserList(activeList, entry.game.id)); }} className="rounded-lg bg-[#EFE8D8] px-2 py-1 text-[11px] font-bold" title="Remove from tier list">{entry.game.name} ×</button>)}</div>
+              <div className="flex min-w-0 flex-1 flex-wrap gap-1.5">{groupedEntries[tier.id].map(entry => <button key={entry.game.id} type="button" onClick={event => { event.stopPropagation(); persistActiveList(removeGameFromUserList(activeList, entry.game.id)); }} className="rounded-lg bg-[#EFE8D8] px-2 py-1 text-xs font-bold" title="Remove from tier list">{entry.game.name} ×</button>)}</div>
               <button type="button" onClick={event => { event.stopPropagation(); removeTier(tier.id); }} className="rounded-lg p-1.5 text-rose-700 hover:bg-rose-100" aria-label={`Delete ${tier.label || 'tier'} row`}><Trash2 className="h-3.5 w-3.5" /></button>
             </div>
           ))}

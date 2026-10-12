@@ -30,7 +30,7 @@ export const UnavailableIntegrationNotice: React.FC<UnavailableIntegrationNotice
 
       {futureRequirement && (
         <div className="pt-3 border-t border-[var(--panel-border)]">
-          <span className="text-[11px] font-mono text-[var(--text-muted)] uppercase tracking-wider">
+          <span className="text-xs font-mono text-[var(--text-muted)] uppercase tracking-wider">
             Requirement: {futureRequirement}
           </span>
         </div>

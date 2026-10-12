@@ -99,7 +99,7 @@ export const CountdownCard: React.FC<CountdownCardProps> = ({ releaseData = defa
                   <div className="text-2xl md:text-3xl font-extrabold font-mono text-indigo-400">
                     {String(item.value).padStart(2, '0')}
                   </div>
-                  <div className="text-[10px] uppercase font-bold text-slate-400 mt-0.5">
+                  <div className="text-xs uppercase font-bold text-slate-400 mt-0.5">
                     {item.label}
                   </div>
                 </div>

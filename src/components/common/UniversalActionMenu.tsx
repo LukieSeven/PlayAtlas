@@ -109,7 +109,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
           ref={popoverRef}
           onClick={e => e.stopPropagation()}
           data-testid="action-menu-dropdown"
-          className={`w-56 action-menu-popover rounded-2xl border border-[var(--panel-border)] shadow-2xl p-2 z-[9999] space-y-1 overflow-y-auto${position ? ' animate-in fade-in zoom-in-95 duration-150' : ''}`}
+          className={`w-56 action-menu-popover rounded-2xl border border-[var(--panel-border)] shadow-2xl p-2 z-[9999] space-y-1 overflow-y-auto${position ? ' animate-in fade-in duration-150' : ''}`}
           style={{
             position: 'fixed',
             top: position ? `${position.top}px` : '-9999px',
@@ -120,7 +120,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
             pointerEvents: position ? 'auto' : 'none',
           }}
         >
-          <div className="px-2 py-1 border-b border-[var(--panel-border)] text-[10px] font-mono text-[var(--text-muted)] uppercase flex justify-between items-center">
+          <div className="px-2 py-1 border-b border-[var(--panel-border)] text-xs font-mono text-[var(--text-muted)] uppercase flex justify-between items-center">
             <span className="truncate">{gameTitle}</span>
             <span className="text-[var(--accent-color)] font-bold">Actions</span>
           </div>
@@ -166,7 +166,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
           {/* Play Status Quick Selection */}
           <div className="pt-1 border-t border-[var(--panel-border)]">
-            <span className="px-2 text-[9px] font-mono text-[var(--text-muted)] uppercase">Play Status</span>
+            <span className="px-2 text-xs font-mono text-[var(--text-muted)] uppercase">Play Status</span>
             <div className="grid grid-cols-3 gap-1 mt-1">
               {(['playing', 'completed', 'dropped'] as PlayStatus[]).map(st => (
                 <button
@@ -175,7 +175,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
                     e.stopPropagation();
                     await personalGameStore.setPlayStatus(strId, playStatus === st ? undefined : st, catalogSnapshot);
                   }}
-                  className={`py-1 text-[10px] font-bold rounded-lg capitalize transition-colors ${
+                  className={`py-1 text-xs font-bold rounded-lg capitalize transition-colors ${
                     playStatus === st
                       ? 'bg-[var(--primary-action)] text-white shadow-sm'
                       : 'bg-[rgba(0,0,0,0.05)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -189,7 +189,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
           {/* Interest Status */}
           <div className="pt-1 border-t border-[var(--panel-border)]">
-            <span className="px-2 text-[9px] font-mono text-[var(--text-muted)] uppercase">Preference</span>
+            <span className="px-2 text-xs font-mono text-[var(--text-muted)] uppercase">Preference</span>
             <div className="flex items-center gap-1 mt-1">
                 <button
                   onClick={async e => {
@@ -198,7 +198,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
                     await personalGameStore.setInterestStatus(strId, isLiked ? undefined : 'wanted', catalogSnapshot);
                     onLikeChange?.(!isLiked);
                   }}
-                  className={`flex-1 py-1 text-[10px] font-bold rounded-lg capitalize flex items-center justify-center gap-1 transition-colors ${
+                  className={`flex-1 py-1 text-xs font-bold rounded-lg capitalize flex items-center justify-center gap-1 transition-colors ${
                     interestStatus === 'wanted' || interestStatus === 'wishlist'
                       ? 'bg-[var(--accent-color)] text-slate-950 font-extrabold shadow-sm'
                       : 'bg-[rgba(0,0,0,0.05)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
@@ -212,7 +212,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
           {/* Rating Slider */}
           <div className="pt-1 border-t border-[var(--panel-border)] px-2" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center text-[9px] font-mono text-[var(--text-muted)]">
+            <div className="flex justify-between items-center text-xs font-mono text-[var(--text-muted)]">
               <span>Personal Rating</span>
               <span className="font-bold text-[var(--accent-color)]">{userRating !== undefined ? `${userRating} ★` : 'Not Rated'}</span>
             </div>
@@ -239,7 +239,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
                   await personalGameStore.removePersonalRecord(strId);
                   handleClose();
                 }}
-                className="w-full text-left px-2 py-1 rounded-lg text-[10px] font-bold text-rose-500 hover:bg-rose-500/10 flex items-center gap-1.5 transition-colors"
+                className="w-full text-left px-2 py-1 rounded-lg text-xs font-bold text-rose-500 hover:bg-rose-500/10 flex items-center gap-1.5 transition-colors"
               >
                 <Trash2 className="w-3 h-3" />
                 <span>Clear Personal Record</span>
@@ -270,7 +270,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
             <div className="space-y-3 text-xs">
               <div>
-                <label className="block text-[10px] font-mono text-[#8C6D37] uppercase font-bold mb-1">Platform System</label>
+                <label className="block text-xs font-mono text-[#8C6D37] uppercase font-bold mb-1">Platform System</label>
                 <select
                   value={platformId}
                   onChange={e => setPlatformId(parseInt(e.target.value, 10))}
@@ -289,7 +289,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
               </div>
 
               <div>
-                <label className="block text-[10px] font-mono text-[#8C6D37] uppercase font-bold mb-1">Ownership Format</label>
+                <label className="block text-xs font-mono text-[#8C6D37] uppercase font-bold mb-1">Ownership Format</label>
                 <select
                   value={ownershipType}
                   onChange={e => setOwnershipType(e.target.value as OwnershipType)}
@@ -305,7 +305,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
 
               {ownershipType === 'physical' && (
                 <div>
-                  <label className="block text-[10px] font-mono text-[#8C6D37] uppercase font-bold mb-1">Physical Condition</label>
+                  <label className="block text-xs font-mono text-[#8C6D37] uppercase font-bold mb-1">Physical Condition</label>
                   <select
                     value={condition}
                     onChange={e => setCondition(e.target.value as PhysicalCondition)}
@@ -320,7 +320,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
               )}
 
               <div>
-                <label className="block text-[10px] font-mono text-[#8C6D37] uppercase font-bold mb-1">Storefront / Provider (Optional)</label>
+                <label className="block text-xs font-mono text-[#8C6D37] uppercase font-bold mb-1">Storefront / Provider (Optional)</label>
                 <input
                   type="text"
                   value={storefront}

@@ -237,13 +237,13 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
             <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-300">
               Advanced Multi-Criteria Filters
             </span>
-            <span className="text-[10px] text-slate-500 font-mono">15 Total Filter Criteria</span>
+            <span className="text-xs text-slate-500 font-mono">15 Total Filter Criteria</span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
             {/* Developer Studio */}
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400">Developer Studio</label>
+              <label className="text-xs font-semibold text-slate-400">Developer Studio</label>
               <div className="relative">
                 <select
                   value={filters.developer}
@@ -263,7 +263,7 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
 
             {/* Release Status */}
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400">Release Status</label>
+              <label className="text-xs font-semibold text-slate-400">Release Status</label>
               <div className="relative">
                 <select
                   value={filters.status}
@@ -280,7 +280,7 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
 
             {/* Release Year */}
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400">Release Year</label>
+              <label className="text-xs font-semibold text-slate-400">Release Year</label>
               <div className="relative">
                 <select
                   value={filters.year}
@@ -300,7 +300,7 @@ export const AdvancedSearchFilter: React.FC<AdvancedSearchFilterProps> = ({
 
             {/* Game Mode / Co-Op */}
             <div className="space-y-1">
-              <label className="text-[11px] font-semibold text-slate-400">Game Mode / Co-Op</label>
+              <label className="text-xs font-semibold text-slate-400">Game Mode / Co-Op</label>
               <div className="relative">
                 <select
                   value={filters.gameMode}

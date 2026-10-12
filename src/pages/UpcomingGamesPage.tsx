@@ -52,7 +52,7 @@ export const UpcomingGamesPage: React.FC = () => {
         <button type="button" className="flex items-center gap-2 rounded-xl border border-[#C5A059] bg-[#0B2B3C] px-3.5 py-2 text-xs font-bold text-white shadow-xs">
           <Flame className="h-4 w-4 text-[#C5A059]" />
           <span>All Upcoming</span>
-          <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-[10px] font-mono">{upcomingGames.length}</span>
+          <span className="rounded-full bg-white/20 px-1.5 py-0.5 text-xs font-mono">{upcomingGames.length}</span>
         </button>
         <div className="ml-auto flex items-center gap-1 rounded-xl border border-[#D9C8A9] bg-white/70 p-1" aria-label="Upcoming release horizon">
           {([90, 180, 365] as const).map(days => (

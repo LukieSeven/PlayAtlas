@@ -385,7 +385,7 @@ export const MyGamesPage: React.FC = () => {
                 <Icon className={`w-4 h-4 ${tab.key === 'dropped' ? (isActive ? 'text-[#8FD39A]' : 'text-[#2B6E4E]') : isActive ? 'text-[#C5A059]' : 'text-[#8C6D37]'}`} />
                 <span>{tab.label}</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded-full text-[10px] font-mono font-extrabold ${
+                  className={`px-1.5 py-0.5 rounded-full text-xs font-mono font-extrabold ${
                     isActive ? 'bg-white/20 text-white' : 'bg-[#EFE8D8] text-[#0C1D2D]'
                   }`}
                 >
@@ -500,7 +500,7 @@ export const MyGamesPage: React.FC = () => {
             {activeFiltersCount > 0 && (
               <button
                 onClick={clearAllFilters}
-                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 text-rose-900 border border-rose-600/30 text-[11px] font-bold hover:bg-rose-500/20 cursor-pointer"
+                className="px-2.5 py-1.5 rounded-xl bg-rose-500/15 text-rose-900 border border-rose-600/30 text-xs font-bold hover:bg-rose-500/20 cursor-pointer"
               >
                 Clear Filters ({activeFiltersCount})
               </button>
@@ -559,7 +559,7 @@ export const MyGamesPage: React.FC = () => {
         <div className="space-y-6">
           {/* Grid Mode vs List Mode */}
           {viewMode === 'grid' ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6">
               {visibleCompactGames.map(compact => (
                 <GameCard
                   key={compact.id}
@@ -601,7 +601,7 @@ export const MyGamesPage: React.FC = () => {
                         </div>
 
                         {/* Badges row */}
-                        <div className="flex flex-wrap items-center gap-1.5 text-[10px] font-bold">
+                        <div className="flex flex-wrap items-center gap-1.5 text-xs font-bold">
                           {rec.ownerships && rec.ownerships.length > 0 && (
                             <span className="px-2 py-0.5 rounded-md bg-emerald-600 text-white flex items-center gap-1">
                               <Package className="w-3 h-3" />
@@ -676,7 +676,7 @@ export const MyGamesPage: React.FC = () => {
               >
                 <span>Load 20 More</span>
                 <ChevronDown className="w-4 h-4" />
-                <span className="text-[10px] opacity-80 font-mono">({sortedRecords.length - visibleCount} remaining)</span>
+                <span className="text-xs opacity-80 font-mono">({sortedRecords.length - visibleCount} remaining)</span>
               </button>
             </div>
           )}

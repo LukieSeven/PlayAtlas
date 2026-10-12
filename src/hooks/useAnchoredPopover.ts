@@ -87,7 +87,10 @@ export function useAnchoredPopover(
     if (popoverEl && popoverEl.offsetWidth > 0 && popoverEl.offsetHeight > 0) {
       const popoverRect = popoverEl.getBoundingClientRect();
       popoverVisualWidth = popoverRect.width;
-      popoverVisualHeight = popoverRect.height;
+      // The hidden initial menu is height-limited. Measure its full content so
+      // expanding larger text after positioning does not move its bottom edge.
+      const borderHeight = popoverEl.offsetHeight - popoverEl.clientHeight;
+      popoverVisualHeight = Math.max(popoverRect.height, (popoverEl.scrollHeight + borderHeight) * scaleY);
     } else {
       popoverVisualWidth = defaultWidth * scaleX;
       popoverVisualHeight = 340 * scaleY;

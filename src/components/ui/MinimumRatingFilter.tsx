@@ -13,7 +13,7 @@ export const MinimumRatingFilter: React.FC<MinimumRatingFilterProps> = ({
   label = 'Minimum rating',
 }) => (
   <div className="flex h-[31px] items-center gap-1.5 rounded-xl border border-[#D9C8A9] bg-white px-2.5" aria-label={label}>
-    <span className="mr-0.5 text-[10px] font-bold text-[#47586A]">Rating</span>
+    <span className="mr-0.5 text-xs font-bold text-[#47586A]">Rating</span>
     <div className="flex items-center gap-0.5" role="group" aria-label={`${label}: ${value || 'any'}`}>
       {Array.from({ length: 10 }, (_, index) => index + 1).map(star => {
         const highlighted = star <= value;
@@ -32,6 +32,6 @@ export const MinimumRatingFilter: React.FC<MinimumRatingFilterProps> = ({
         );
       })}
     </div>
-    <span className="ml-0.5 min-w-4 text-right text-[10px] font-mono font-bold text-[#0C1D2D]">{value || 'Any'}</span>
+    <span className="ml-0.5 min-w-4 text-right text-xs font-mono font-bold text-[#0C1D2D]">{value || 'Any'}</span>
   </div>
 );
