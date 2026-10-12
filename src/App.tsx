@@ -1,3 +1,4 @@
+const SearchPage = lazy(() => import('./pages/SearchPage').then(module => ({ default: module.SearchPage })));
 import React, { Suspense, lazy } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider } from './context/ThemeContext';
@@ -37,6 +38,7 @@ export const App: React.FC = () => {
             {/* Standard Production Application Shell Routes */}
             <Route path="/" element={<AppLayout />}>
               <Route index element={<HomePage />} />
+              <Route path="search" element={<SearchPage />} />
               <Route path="new-releases" element={<NewReleasesPage />} />
               <Route path="upcoming" element={<UpcomingGamesPage />} />
               <Route path="calendar" element={<CalendarPage />} />

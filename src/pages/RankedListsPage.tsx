@@ -47,17 +47,16 @@ export const RankedListsPage: React.FC = () => {
     const query = searchQuery.trim();
     activeSearchQueryRef.current = query;
     const timer = window.setTimeout(async () => {
-      if (query.length < 2) {
-        const result = await executeProgressiveTokenSearch('', 60);
-        if (activeSearchQueryRef.current === query) {
-          setSearchResults(result.results);
-          setIsUsingPreviewCatalog(result.source === 'development_plugin');
-        }
-        setIsSearching(false);
-        return;
-      }
-      setIsSearching(true);
       try {
+        if (query.length < 2) {
+          const result = await executeProgressiveTokenSearch('', 60);
+          if (activeSearchQueryRef.current === query) {
+            setSearchResults(result.results);
+            setIsUsingPreviewCatalog(result.source === 'development_plugin');
+          }
+          return;
+        }
+        setIsSearching(true);
         const result = await executeProgressiveTokenSearch(query, 60);
         if (activeSearchQueryRef.current === query) {
           setSearchResults(result.results);
@@ -346,6 +345,8 @@ export const RankedListsPage: React.FC = () => {
         searchContent={searchContent}
         noticeContent={<div className="space-y-3">{previewNotice}{editor}</div>}
         games={searchResults}
+        catalogQuery={searchQuery}
+        searchAcrossCatalog
         isLoading={isSearching}
         onSelectGame={addGame}
         onVisibleGamesChange={setVisibleGames}

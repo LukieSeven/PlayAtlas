@@ -1,3 +1,7 @@
+import { useGameFilters } from '../hooks/useGameFilters';
+import { GameFacetFilters } from '../components/common/GameFacetFilters';
+import { matchesGameFilters } from '../utils/catalogFacets';
+import { matchesCatalogPlatformFamily } from '../utils/gameListControls';
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
@@ -115,6 +119,9 @@ export const MyGamesPage: React.FC = () => {
     });
   }, [rawRecords]);
 
+  const facetGames = useMemo(() => meaningfulRecords.map(convertPersonalRecordToCompact), [meaningfulRecords]);
+  const facets = useGameFilters(facetGames, selectedPlatformFamily !== 'all');
+
   // Tab Count Definitions
   const counts = useMemo(() => {
     const visibleRecords = meaningfulRecords.filter(r => r.currentPlayStatus !== 'dropped');
@@ -132,6 +139,7 @@ export const MyGamesPage: React.FC = () => {
   // Apply Tab View + Search + Filters
   const filteredRecords = useMemo(() => {
     return meaningfulRecords.filter(rec => {
+      if (!matchesGameFilters(facets.metadata.get(rec.numericId) ?? convertPersonalRecordToCompact(rec), facets.filters, rec)) return false;
       if (activeTab !== 'dropped' && rec.currentPlayStatus === 'dropped') return false;
       // 1. Primary Tab View Filter
       switch (activeTab) {
@@ -180,7 +188,7 @@ export const MyGamesPage: React.FC = () => {
       // 3. Platform Family Filter
       if (selectedPlatformFamily !== 'all') {
         const hasMatchingFamily = (rec.ownerships || []).some(o => getPlatformFamily(o.platformId) === selectedPlatformFamily) ||
-          getPlatformFamily(rec.numericId) === selectedPlatformFamily;
+          (facets.metadata.has(rec.numericId) && matchesCatalogPlatformFamily(facets.metadata.get(rec.numericId)!, selectedPlatformFamily, false));
         if (!hasMatchingFamily) return false;
       }
 
@@ -207,6 +215,8 @@ export const MyGamesPage: React.FC = () => {
     });
   }, [
     meaningfulRecords,
+    facets.filters,
+    facets.metadata,
     activeTab,
     searchQuery,
     selectedPlatformFamily,
@@ -227,9 +237,9 @@ export const MyGamesPage: React.FC = () => {
       case 'title_desc':
         return list.sort((a, b) => (b.catalogSnapshot?.name || '').localeCompare(a.catalogSnapshot?.name || ''));
       case 'year_newest':
-        return list.sort((a, b) => (b.catalogSnapshot?.releaseYear || 0) - (a.catalogSnapshot?.releaseYear || 0));
+        return list.sort((a, b) => (b.catalogSnapshot?.releaseYear || -Infinity) - (a.catalogSnapshot?.releaseYear || -Infinity) || (a.catalogSnapshot?.name ?? '').localeCompare(b.catalogSnapshot?.name ?? ''));
       case 'year_oldest':
-        return list.sort((a, b) => (a.catalogSnapshot?.releaseYear || 0) - (b.catalogSnapshot?.releaseYear || 0));
+        return list.sort((a, b) => (a.catalogSnapshot?.releaseYear || Infinity) - (b.catalogSnapshot?.releaseYear || Infinity) || (a.catalogSnapshot?.name ?? '').localeCompare(b.catalogSnapshot?.name ?? ''));
       case 'rating_highest':
         return list.sort((a, b) => (b.userRating || 0) - (a.userRating || 0));
       case 'backlog_priority':
@@ -247,7 +257,7 @@ export const MyGamesPage: React.FC = () => {
   }, [filteredRecords, sortBy]);
 
   // Stable Collection Key to reset pagination only on collection identity changes
-  const collectionKey = `mygames:${activeTab}:${searchQuery}:${selectedPlatformFamily}:${selectedOwnershipType}:${selectedPlayStatus}:${selectedInterestStatus}:${minimumRating}:${sortBy}`;
+  const collectionKey = `${JSON.stringify(facets.filters)}:mygames:${activeTab}:${searchQuery}:${selectedPlatformFamily}:${selectedOwnershipType}:${selectedPlayStatus}:${selectedInterestStatus}:${minimumRating}:${sortBy}`;
 
   useEffect(() => {
     setVisibleCount(40);
@@ -316,6 +326,7 @@ export const MyGamesPage: React.FC = () => {
   ]);
 
   const clearAllFilters = () => {
+    facets.reset();
     setSearchQuery('');
     setSelectedPlatformFamily('all');
     setSelectedOwnershipType('all');
@@ -528,6 +539,7 @@ export const MyGamesPage: React.FC = () => {
           </div>
         </div>
       </div>
+      <GameFacetFilters filters={facets.filters} onChange={facets.setFilters} games={facets.enriched} expanded={facets.expanded} onExpand={facets.setExpanded} loading={facets.loading} error={facets.error} onRetry={facets.retry} />
       </section>
 
       {/* Main Content Area */}

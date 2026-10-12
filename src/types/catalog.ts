@@ -28,6 +28,10 @@ export interface CompactGameLookupRecord {
   genres?: string[];
   platforms?: string[];
   developer?: string;
+  developers?: string[];
+  publishers?: string[];
+  franchises?: string[];
+  catalogImportance?: number;
   alternativeNames?: string[];
   rank?: CompactRankSignals;
 }

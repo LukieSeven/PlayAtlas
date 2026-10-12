@@ -105,6 +105,9 @@ export const Sidebar: React.FC = () => {
 
         {/* Discovery & Navigation Feeds */}
         <nav className="space-y-0.5 font-sans">
+          <NavLink to="/search" className={({ isActive }) => `flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold ${isActive ? 'bg-[#0B2B3C] text-white border border-[#C5A059]' : 'text-[#0C1D2D] hover:bg-[#EFE8D8]'}`}>
+            <Gamepad2 className="w-4 h-4 text-[#C5A059]" /> Search Catalog
+          </NavLink>
           {/* My Games Main Navigation */}
           <NavLink
             to="/my-games"

@@ -1,3 +1,4 @@
+import { buildCatalogFacets } from './build-catalog-facets';
 import fs from 'node:fs';
 import path from 'node:path';
 import zlib from 'node:zlib';
@@ -20,6 +21,7 @@ export function enrichDealsRanking(directory: string): void {
     const records: CompactGameLookupRecord[] = read(lookup.file);
     for (const record of records) scores.set(record.id, calculateDealPopularity(record));
   }
+  buildCatalogFacets(directory);
   const dataset: DealsDataset = read('deals.json');
   for (const deal of dataset.deals) deal.popularityScore = scores.get(deal.gameId) ?? 0;
   const output = path.join(directory, 'deals.json');

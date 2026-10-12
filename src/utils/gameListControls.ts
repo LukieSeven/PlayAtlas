@@ -2,17 +2,18 @@ import { CompactGameLookupRecord } from '../types/catalog';
 import { getPlatformFamilyForCatalogValue } from '../services/platformTaxonomyService';
 import { normalizeGameTypeCategory } from './gameTypeUtils';
 
-export type CatalogSortMode = 'relevance' | 'name' | 'yearAsc' | 'yearDesc';
+export type CatalogSortMode = 'relevance' | 'name' | 'yearAsc' | 'yearDesc' | 'popularity' | 'rating';
 
 export function matchesCatalogPlatformFamily(
   game: CompactGameLookupRecord,
   selectedFamily: string,
+  allowUnknown = true,
 ): boolean {
   if (selectedFamily === 'all') return true;
   // Compact search records receive platform metadata during visible-record
   // hydration. Keep unknown records eligible so the filter cannot prevent the
   // hydration required to determine whether they match.
-  if (!game.platforms || game.platforms.length === 0) return true;
+  if (!game.platforms || game.platforms.length === 0) return allowUnknown;
   return (game.platforms || []).some(
     platform => getPlatformFamilyForCatalogValue(platform) === selectedFamily,
   );
@@ -45,12 +46,16 @@ export function sortCatalogGames(
 ): CompactGameLookupRecord[] {
   const list = [...games];
   switch (sortBy) {
+    case 'popularity':
+      return list.sort((a, b) => (b.catalogImportance ?? 0) - (a.catalogImportance ?? 0) || a.name.localeCompare(b.name));
+    case 'rating':
+      return list.sort((a, b) => (b.rating ?? -1) - (a.rating ?? -1) || a.name.localeCompare(b.name));
     case 'name':
       return list.sort((a, b) => a.name.localeCompare(b.name));
     case 'yearAsc':
-      return list.sort((a, b) => (a.year || 0) - (b.year || 0));
+      return list.sort((a, b) => (a.year || Infinity) - (b.year || Infinity) || a.name.localeCompare(b.name));
     case 'yearDesc':
-      return list.sort((a, b) => (b.year || 0) - (a.year || 0));
+      return list.sort((a, b) => (b.year || -Infinity) - (a.year || -Infinity) || a.name.localeCompare(b.name));
     case 'relevance':
     default:
       return list;

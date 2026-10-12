@@ -165,7 +165,7 @@ try {
   fs.writeFileSync(path.join(directory, 'search/games.json.gz'), zlib.gzipSync(JSON.stringify([
     { id: 101, gameType: 'main_game', defaultVisible: true, rank: { totalRatingCount: 5000, userRatingCount: 5000, totalRating: 9, hypeCount: 100 } },
   ])));
-  write('browser_catalog_manifest.json', { searchManifest: 'search/token_manifest.json' });
+  write('browser_catalog_manifest.json', { searchManifest: 'search/token_manifest.json', fullCatalog: { chunks: [{ file: 'chunks/game_index_1.json.gz' }] } });
   const rankedDataset = JSON.parse(previous);
   rankedDataset.deals.push({ ...rankedDataset.deals[0], gameId: 202 });
   rankedDataset.totalDeals = 2;

@@ -26,6 +26,8 @@ const getPageTitle = (pathname: string): { title: string; subtitle: string } => 
       return { title: 'Upcoming Games', subtitle: 'Upcoming titles spotlight' };
     case '/calendar':
       return { title: 'Calendar', subtitle: 'Game releases, events, and personal dates' };
+    case '/search':
+      return { title: 'Search Catalog', subtitle: 'Browse titles and combine game filters' };
     case '/discounts':
       return { title: 'Discounts & Deals', subtitle: 'Featured platform game sales' };
     case '/events':
@@ -130,6 +132,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
             <input
               type="text"
               value={searchQuery}
+              onKeyDown={event => { if (event.key === 'Enter') { navigate(`/search?q=${encodeURIComponent(searchQuery)}`); setSearchQuery(''); } }}
               onChange={e => setSearchQuery(e.target.value)}
               placeholder="Search games, lists, tags..."
               className="w-full pl-10 pr-9 py-2 rounded-xl text-xs font-semibold bg-[#FDFBF7] text-[#0C1D2D] border border-[#C5A059] placeholder:text-[#718294] focus:outline-none focus:ring-2 focus:ring-[#C5A059] transition-all shadow-xs"
@@ -147,6 +150,7 @@ export const Header: React.FC<HeaderProps> = ({ onSelectGame }) => {
           {/* Live Search Results Dropdown */}
           {searchQuery.trim().length >= 2 && (
             <div className="absolute top-full left-0 right-0 mt-2 rounded-2xl border border-[#C5A059] shadow-2xl overflow-hidden z-50 max-h-96 overflow-y-auto bg-[#FDFBF7] text-[#0C1D2D]">
+              <button type="button" className="w-full px-4 py-3 text-left font-bold border-b border-[#D9C8A9]" onClick={() => { navigate(`/search?q=${encodeURIComponent(searchQuery)}`); setSearchQuery(''); }}>All results and game filters</button>
               {isSearching ? (
                 <div className="p-6 text-center text-xs text-[#0C1D2D] flex items-center justify-center gap-2 font-mono">
                   <Loader2 className="w-4 h-4 animate-spin text-[#0B2B3C]" />

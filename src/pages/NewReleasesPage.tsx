@@ -332,6 +332,8 @@ export const NewReleasesPage: React.FC = () => {
         noticeContent={releaseNoticeContent}
         collectionKey={collectionKey}
         games={activeGamesList}
+        catalogQuery={searchQuery}
+        searchAcrossCatalog={isSearchActive}
         isLoading={isSearchActive ? isSearching : loadingRelease}
         onSelectGame={(rec: CompactGameLookupRecord) => setSelectedGame(rec)}
         onVisibleGamesChange={handleVisibleGamesChange}

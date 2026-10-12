@@ -1,3 +1,4 @@
+import { buildCatalogFacets } from './build-catalog-facets';
 import fs from 'fs';
 import path from 'path';
 import crypto from 'crypto';
@@ -623,6 +624,8 @@ async function runBrowserCatalogBuilder() {
 
   const outputBrowserManifestPath = path.join(outputDir, 'browser_catalog_manifest.json');
   fs.writeFileSync(outputBrowserManifestPath, JSON.stringify(outputBrowserManifest, null, 2), 'utf-8');
+
+  buildCatalogFacets(outputDir);
 
   // --- BUILD 4: MASTER ZIP ARCHIVE FROM COMPLETE OUTPUT DIR ROOT ---
   console.log('📦 Generating Root-Normalized Master ZIP Archive (generated/release-assets/play-atlas-full-catalog.zip)...');

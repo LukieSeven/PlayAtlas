@@ -1,3 +1,5 @@
+import { useGameFilters } from '../../hooks/useGameFilters';
+import { GameFacetFilters } from '../common/GameFacetFilters';
 import React, { useState, useMemo, useEffect } from 'react';
 import { SortAsc, LayoutGrid, List as ListIcon, ShieldAlert, ChevronDown } from 'lucide-react';
 import { CompactGameLookupRecord } from '../../types/catalog';
@@ -10,6 +12,9 @@ import { matchesCatalogFormat, matchesCatalogPlatformFamily, sortCatalogGames, C
 
 interface GameListGridProps {
   collectionKey?: string;
+  catalogQuery?: string;
+  filterQuery?: boolean;
+  searchAcrossCatalog?: boolean;
   games?: CompactGameLookupRecord[];
   totalMatches?: number;
   onSelectGame?: (record: CompactGameLookupRecord) => void;
@@ -28,6 +33,9 @@ interface GameListGridProps {
 
 export const GameListGrid: React.FC<GameListGridProps> = ({
   collectionKey = 'default',
+  catalogQuery = '',
+  filterQuery = false,
+  searchAcrossCatalog = false,
   games = [],
   onSelectGame,
   onVisibleGamesChange,
@@ -47,6 +55,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [minimumRating, setMinimumRating] = useState<number>(0);
   const [sortBy, setSortBy] = useState<CatalogSortMode>('relevance');
+  const facets = useGameFilters(games, selectedPlatformFamily !== 'all' || minimumRating > 0 || sortBy === 'popularity' || sortBy === 'rating', filterQuery || searchAcrossCatalog ? catalogQuery : '', searchAcrossCatalog, sortBy);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   
   // Real Incremental Rendering State (Initial batch: 40)
@@ -55,14 +64,14 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   // Reset visibleCount to 40 ONLY when collectionKey, filters, or sorting change (NOT on record hydration!)
   useEffect(() => {
     setVisibleCount(40);
-  }, [collectionKey, selectedPlatformFamily, selectedCategory, minimumRating, sortBy]);
+  }, [collectionKey, selectedPlatformFamily, selectedCategory, minimumRating, sortBy, facets.filters]);
 
   // Filter games dynamically using PlatformTaxonomyService
   const filteredGames = useMemo(() => {
-    return games.filter(game => {
+    return facets.filtered.filter(game => {
       if (yuckedIds.has(game.id)) return false;
       // Platform Family Filter
-      if (!matchesCatalogPlatformFamily(game, selectedPlatformFamily)) return false;
+      if (!matchesCatalogPlatformFamily(game, selectedPlatformFamily, !facets.metadata.has(game.id))) return false;
 
       // Category Filter
       if (!matchesCatalogFormat(game, selectedCategory)) return false;
@@ -71,12 +80,12 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
       return true;
     });
-  }, [games, yuckedIds, selectedPlatformFamily, selectedCategory, minimumRating]);
+  }, [facets.filtered, facets.metadata, yuckedIds, selectedPlatformFamily, selectedCategory, minimumRating]);
 
   // Sort games
   const sortedGames = useMemo(() => {
-    return sortCatalogGames(filteredGames, sortBy);
-  }, [filteredGames, sortBy]);
+    return facets.sortedByWorker ? filteredGames : sortCatalogGames(filteredGames, sortBy);
+  }, [filteredGames, sortBy, facets.sortedByWorker]);
 
   // Real Incremental Slice (only mounts visible cards)
   const visibleGames = useMemo(() => {
@@ -173,6 +182,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
           </select>
 
           <MinimumRatingFilter value={minimumRating} onChange={setMinimumRating} />
+          {(selectedPlatformFamily !== 'all' || selectedCategory !== 'all' || minimumRating > 0 || facets.active) && <button type="button" className="px-3 py-2 text-xs underline" onClick={() => { setSelectedPlatformFamily('all'); setSelectedCategory('all'); setMinimumRating(0); facets.reset(); }}>Reset all filters</button>}
 
         </div>
 
@@ -182,10 +192,13 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
             <SortAsc className="w-3.5 h-3.5 text-[var(--text-muted)]" />
             <select
               value={sortBy}
+              aria-label="Sort games"
               onChange={e => setSortBy(e.target.value as any)}
               className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white text-[#0f2b48] border border-[#c8b584] focus:ring-2 focus:ring-[var(--focus-ring)]"
             >
               <option value="relevance">Search Relevance</option>
+              <option value="popularity">Popularity</option>
+              <option value="rating">Highest rating</option>
               <option value="name">Alphabetical (A-Z)</option>
               <option value="yearDesc">Release Year (Newest)</option>
               <option value="yearAsc">Release Year (Oldest)</option>
@@ -193,13 +206,14 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
           </div>
         </div>
         </div>
+        <GameFacetFilters filters={facets.filters} onChange={facets.setFilters} games={facets.enriched} expanded={facets.expanded} onExpand={facets.setExpanded} loading={facets.loading} error={facets.error} onRetry={facets.retry} />
         </div>
       </div>
 
       {noticeContent}
 
       {/* Grid Results Content */}
-      {isLoading ? (
+      {(isLoading && !(searchAcrossCatalog && facets.active && facets.metadata.size > 0)) || facets.filtering || (facets.active && facets.loading) ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-6 animate-pulse">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="aspect-[3/4] themed-panel rounded-2xl bg-slate-200/50" />

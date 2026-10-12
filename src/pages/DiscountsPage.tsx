@@ -1,3 +1,5 @@
+import { useGameFilters } from '../hooks/useGameFilters';
+import { GameFacetFilters } from '../components/common/GameFacetFilters';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Tag, Search, Star, ExternalLink, Gift, Sparkles, RefreshCw, ShoppingBag } from 'lucide-react';
 import { GameDeal, DealsFilterOptions } from '../types/deals';
@@ -75,12 +77,18 @@ export const DiscountsPage: React.FC = () => {
     return Array.from(stores, ([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
   }, [allDeals]);
 
-  const pageCount = Math.max(1, Math.ceil(deals.length / DEALS_PER_PAGE));
+  const facetGames = useMemo(() => Array.from(new Map(allDeals.map(deal => [deal.gameId, { id: deal.gameId, name: deal.gameTitle ?? `Game ${deal.gameId}` }])).values()), [allDeals]);
+  const facets = useGameFilters(facetGames);
+  const matchingIds = useMemo(() => new Set(facets.active ? facets.filtered.map(game => game.id) : []), [facets.active, facets.filtered]);
+  const filteredDeals = useMemo(() => facets.active ? deals.filter(deal => matchingIds.has(deal.gameId)) : deals, [deals, facets.active, matchingIds]);
+  useEffect(() => setPage(1), [facets.filters]);
+  const pageCount = Math.max(1, Math.ceil(filteredDeals.length / DEALS_PER_PAGE));
   const currentPage = Math.min(page, pageCount);
   const pageStart = (currentPage - 1) * DEALS_PER_PAGE;
-  const visibleDeals = deals.slice(pageStart, pageStart + DEALS_PER_PAGE);
+  const visibleDeals = filteredDeals.slice(pageStart, pageStart + DEALS_PER_PAGE);
 
   const clearFilters = () => {
+    facets.reset();
     setSearchQuery('');
     setMinDiscount(0);
     setMaxPrice(undefined);
@@ -276,13 +284,15 @@ export const DiscountsPage: React.FC = () => {
         </div>
       </div>
 
+      <GameFacetFilters filters={facets.filters} onChange={facets.setFilters} games={facets.enriched} expanded={facets.expanded} onExpand={facets.setExpanded} loading={facets.loading} error={facets.error} onRetry={facets.retry} />
+
       {/* Results Grid */}
-      {isLoading ? (
+      {isLoading || facets.filtering || (facets.active && facets.loading) ? (
         <div className="p-12 text-center rounded-3xl bg-[#FDFBF7] border border-[#D9C8A9] space-y-3 font-mono text-xs text-[#718294]">
           <RefreshCw className="w-6 h-6 animate-spin text-[#0B2B3C] mx-auto" />
           <span>Loading deals dataset...</span>
         </div>
-      ) : deals.length === 0 ? (
+      ) : filteredDeals.length === 0 ? (
         <div className="p-12 text-center rounded-3xl bg-[#FDFBF7] border border-[#D9C8A9] space-y-4">
           <ShoppingBag className="w-10 h-10 text-[#0B2B3C] mx-auto opacity-60" />
           <div className="space-y-1">
@@ -381,7 +391,7 @@ export const DiscountsPage: React.FC = () => {
       {!isLoading && deals.length > 0 && (
         <nav aria-label="Deals pagination" className="flex flex-wrap items-center justify-between gap-3 text-sm">
           <span role="status">
-            Showing {pageStart + 1}–{Math.min(pageStart + DEALS_PER_PAGE, deals.length)} of {deals.length.toLocaleString()} results
+            Showing {pageStart + 1}–{Math.min(pageStart + DEALS_PER_PAGE, filteredDeals.length)} of {filteredDeals.length.toLocaleString()} results
           </span>
           <div className="flex items-center gap-3">
             <Button variant="secondary" disabled={currentPage === 1} onClick={() => setPage(currentPage - 1)}>Previous</Button>
