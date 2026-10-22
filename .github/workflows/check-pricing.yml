@@ -31,8 +31,11 @@ jobs:
             if (!response.ok) throw new Error(`Pricing check HTTP ${response.status}`);
             return response.json();
           }
-          const [source, steam, published] = await Promise.all([
+          const [source, steamSource, steam, published] = await Promise.all([
             json('https://api.isthereanydeal.com/games/overview/v2?country=US', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'ITAD-API-Key': key }, body: JSON.stringify([id]),
+            }),
+            json('https://api.isthereanydeal.com/games/overview/v2?country=US&shops=61', {
               method: 'POST', headers: { 'Content-Type': 'application/json', 'ITAD-API-Key': key }, body: JSON.stringify([id]),
             }),
             json('https://store.steampowered.com/api/appdetails?appids=1174180&cc=us&filters=price_overview'),
@@ -40,7 +43,8 @@ jobs:
           ]);
           const current = source.prices.find(price => price.id === id)?.current;
           const saved = published.deals.find(deal => deal.itadId === id);
-          const report = `RDR2: ITAD=${current?.price?.amount ?? 'none'} shop=${current?.shop?.name ?? 'none'} sourceTime=${current?.timestamp ?? 'unknown'} expiry=${current?.expiry ?? 'unknown'}; Steam=${steam['1174180']?.data?.price_overview?.final_formatted ?? 'unavailable'}; published=${saved?.currentPrice?.amount ?? 'absent'}`;
+          const steamOffer = steamSource.prices.find(price => price.id === id)?.current;
+          const report = `RDR2: ITAD=${current?.price?.amount ?? 'none'} shop=${current?.shop?.name ?? 'none'} expiry=${current?.expiry ?? 'unknown'}; ITAD-Steam=${steamOffer?.price?.amount ?? 'none'} expiry=${steamOffer?.expiry ?? 'unknown'}; Steam=${steam['1174180']?.data?.price_overview?.final_formatted ?? 'unavailable'}; published=${saved?.currentPrice?.amount ?? 'absent'} shop=${saved?.storeName ?? 'absent'}`;
           console.log(report);
           fs.appendFileSync(process.env.GITHUB_OUTPUT, `report=${report.replace(/[\r\n]/g, ' ')}\n`);
           fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${report}\n\nChecked at ${new Date().toISOString()}\n`);
