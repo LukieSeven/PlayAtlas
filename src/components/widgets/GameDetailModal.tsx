@@ -83,8 +83,8 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
       >
         {/* Top Header Controls */}
         <div className="flex items-start justify-between gap-4 border-b border-[#c8b584] pb-4">
-          <div className="space-y-1">
-            <h2 className="text-2xl md:text-3xl font-extrabold themed-heading text-[#0c1e36]">
+          <div className="min-w-0 flex-1 space-y-1">
+            <h2 className="text-2xl md:text-3xl font-extrabold themed-heading break-words text-[#0c1e36]">
               {detail.name}
             </h2>
             <div className="flex flex-wrap items-center gap-3 text-xs font-mono text-[#475569]">
@@ -111,7 +111,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="atlas-card-actions shrink-0">
             <UniversalActionMenu
               gameId={detail.id}
               gameTitle={detail.name}
@@ -121,7 +121,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
             />
             <button
               onClick={onClose}
-              className="p-2 rounded-2xl bg-[#ece4d0] hover:bg-[#e4d8bc] text-[#0f2b48] transition-colors"
+              className="atlas-icon-button p-2 rounded-2xl bg-[#ece4d0] hover:bg-[#e4d8bc] text-[#0f2b48] transition-colors"
               title="Close Modal"
             >
               <X className="w-5 h-5" />

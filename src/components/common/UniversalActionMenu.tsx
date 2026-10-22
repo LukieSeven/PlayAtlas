@@ -92,11 +92,11 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
   const portalTarget = typeof document !== 'undefined' ? document.body : null;
 
   return (
-    <div className={`relative ${className}`} onClick={e => e.stopPropagation()}>
+    <div className={`atlas-action-menu relative ${className}`} onClick={e => e.stopPropagation()}>
       <button
         ref={triggerRef}
         onClick={handleToggle}
-        className="p-1.5 rounded-xl bg-[rgba(0,0,0,0.3)] hover:bg-[rgba(0,0,0,0.6)] text-white/80 hover:text-white border border-white/20 backdrop-blur-md transition-all"
+        className="atlas-icon-button p-1.5 rounded-xl bg-[rgba(0,0,0,0.3)] hover:bg-[rgba(0,0,0,0.6)] text-white/80 hover:text-white border border-white/20 backdrop-blur-md transition-all"
         title="Universal Action Menu"
         data-testid="action-menu-trigger"
       >

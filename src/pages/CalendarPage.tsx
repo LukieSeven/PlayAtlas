@@ -260,9 +260,10 @@ export const CalendarPage: React.FC = () => {
 
       {expandedGame && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#0C1D2D]/60 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={`${expandedGame.record.name} calendar card`} onClick={() => setExpandedGame(null)}>
-          <div className="relative w-full max-w-[360px]" onClick={event => event.stopPropagation()}>
-            <button type="button" onClick={() => setExpandedGame(null)} className="atlas-widget-control absolute -right-2 -top-2 z-30 bg-white" aria-label="Close expanded game"><X className="h-4 w-4" /></button>
+          <div className="relative w-full max-w-[360px] max-h-[90dvh] overflow-y-auto" onClick={event => event.stopPropagation()}>
+            <div className="flex justify-end pb-2"><button type="button" onClick={() => setExpandedGame(null)} className="atlas-widget-control bg-white" aria-label="Close expanded game"><X className="h-4 w-4" /></button></div>
             <GameCard
+              size="expanded"
               game={convertReleaseRecordToCompactRecord(expandedGame.record)}
               onSelect={record => { setExpandedGame(null); setSelectedGame(record); }}
               onLikeChange={liked => { if (liked) importGameSafely(expandedGame.record, expandedGame.date); }}

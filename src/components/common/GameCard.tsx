@@ -16,6 +16,7 @@ interface GameCardProps {
   onLikeChange?: (liked: boolean) => void;
   className?: string;
   variant?: 'card' | 'list';
+  size?: 'compact' | 'expanded';
 }
 
 export const GameCard: React.FC<GameCardProps> = ({
@@ -25,6 +26,7 @@ export const GameCard: React.FC<GameCardProps> = ({
   onLikeChange,
   className = '',
   variant = 'card',
+  size = 'compact',
 }) => {
   // Map raw catalog record if viewModel is not directly provided
   const vm: GameCardViewModel = providedViewModel || mapToGameCardViewModel(game);
@@ -80,7 +82,7 @@ export const GameCard: React.FC<GameCardProps> = ({
     return (
       <div
         onClick={handleCardClick}
-        className={`themed-card themed-card-hover group flex min-h-24 cursor-pointer items-center gap-3 overflow-hidden p-3 sm:gap-4 ${className}`}
+        className={`themed-card themed-card-hover atlas-game-list-card group flex min-h-24 cursor-pointer items-center gap-3 overflow-hidden p-3 sm:gap-4 ${className}`}
       >
         <div className="h-20 w-14 shrink-0 overflow-hidden rounded-lg border border-[var(--panel-border)] bg-slate-900 shadow-sm">
           {liveVm.coverUrl ? (
@@ -94,7 +96,7 @@ export const GameCard: React.FC<GameCardProps> = ({
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <h3 className="text-xl font-bold leading-tight break-words text-[var(--text-primary)] group-hover:text-[var(--primary-action)]">
+            <h3 className="atlas-game-title text-xl font-bold leading-tight break-words text-[var(--text-primary)] group-hover:text-[var(--primary-action)]">
               {liveVm.title}
             </h3>
             {liveVm.shouldShowGameTypeBadge && liveVm.gameTypeBadgeLabel && (
@@ -114,7 +116,7 @@ export const GameCard: React.FC<GameCardProps> = ({
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5" onClick={event => event.stopPropagation()}>
+        <div className="atlas-card-actions flex shrink-0 items-center gap-1.5" onClick={event => event.stopPropagation()}>
           <div className="hidden min-w-16 text-right sm:block">
             <span className="text-xs font-bold text-[var(--text-secondary)]">
               {liveVm.personalScore && !liveVm.personalScore.isUnrated
@@ -156,7 +158,7 @@ export const GameCard: React.FC<GameCardProps> = ({
   return (
     <div
       onClick={handleCardClick}
-      className={`themed-card themed-card-hover atlas-compact-game-card group relative flex flex-col justify-between overflow-hidden cursor-pointer p-2.5 space-y-2 ${className}`}
+      className={`themed-card themed-card-hover atlas-compact-game-card ${size === 'expanded' ? 'atlas-game-card-expanded' : ''} group relative flex flex-col justify-between overflow-hidden cursor-pointer p-2.5 space-y-2 ${className}`}
     >
       {/* Top Cover Image Area */}
       <div className="relative aspect-[3/4] w-full rounded-xl overflow-hidden bg-slate-900 border border-[var(--panel-border)] shadow-sm">
@@ -175,7 +177,7 @@ export const GameCard: React.FC<GameCardProps> = ({
         )}
 
         {/* Top-Right Quick Like, Yuck, and Universal Action Menu */}
-        <div className="absolute top-2 right-2 z-10 flex items-center gap-1" onClick={e => e.stopPropagation()}>
+        <div className="atlas-card-actions absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
           <button
             onClick={handleLikeToggle}
             className={`p-1.5 rounded-xl backdrop-blur-md transition-all border ${
@@ -249,7 +251,7 @@ export const GameCard: React.FC<GameCardProps> = ({
       {/* Card Details */}
       <div className="space-y-1 flex-1 flex flex-col justify-between pt-1">
         <div>
-          <h3 className="font-bold text-xl text-[var(--surface-light-text,#0f2b48)] group-hover:text-[var(--primary-action)] transition-colors line-clamp-2 leading-tight min-h-[2.6em]">
+          <h3 className="atlas-game-title font-bold text-xl text-[var(--surface-light-text,#0f2b48)] group-hover:text-[var(--primary-action)] transition-colors line-clamp-2 leading-tight min-h-[2.6em]">
             {liveVm.title}
           </h3>
 

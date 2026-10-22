@@ -31,9 +31,9 @@ test.describe('Development Component Review Route (/#/dev-component-review)', ()
     // 3. Page heading is present
     await expect(devRoot.locator('h1:has-text("Play Atlas Production Component Visual Inspection")')).toBeVisible();
 
-    // 4. 6 fixture GameCards are rendered
+    // Six state fixtures plus the expanded and list layout examples.
     const gameCards = devRoot.locator('.themed-card');
-    await expect(gameCards).toHaveCount(6);
+    await expect(gameCards).toHaveCount(8);
   });
 
   test('UniversalActionMenu opens from a fixture card and portals to document.body', async ({ page }) => {

@@ -645,7 +645,7 @@ export const MyGamesPage: React.FC = () => {
                         </span>
                       )}
 
-                      <div className="flex items-center gap-1">
+                      <div className="atlas-card-actions">
                         {/* Record Completion Quick Action */}
                         <button
                           onClick={() => setCompletionGameTarget({ id: rec.gameId, title: hydrated.name, coverUrl: hydrated.coverUrl ?? undefined, year: hydrated.year ?? undefined })}

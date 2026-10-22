@@ -134,6 +134,12 @@ export const DevComponentReviewPage: React.FC = () => {
           </p>
         </section>
 
+        <section data-testid="game-card-variants" className="space-y-4">
+          <h3 className="atlas-widget-heading">Card Layout Variants</h3>
+          <GameCard game={fixtures[0].compactGame} variant="list" />
+          <GameCard game={fixtures[0].compactGame} size="expanded" />
+        </section>
+
         {/* Section 1: Real Production GameCards (6 Representative States) */}
         <section className="space-y-4">
           <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">

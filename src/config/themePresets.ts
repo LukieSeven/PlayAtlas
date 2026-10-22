@@ -72,9 +72,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     warning: '#d4af37',                      // Compass Gold
     danger: '#c53030',                       // Wax Seal Red
     
-    headingFontFamily: "'Cormorant Garamond', 'Playfair Display', Georgia, serif",
-    displayHeadingFont: "'Cormorant Garamond', 'Playfair Display', Georgia, serif",
-    bodyFontFamily: "'Plus Jakarta Sans', 'Inter', system-ui, sans-serif",
+    headingFontFamily: "'Cormorant Garamond', Georgia, serif",
+    displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
+    bodyFontFamily: "'Source Sans 3', system-ui, sans-serif",
     
     shadow: '0 10px 25px -5px rgba(15, 43, 72, 0.12), 0 0 12px rgba(212, 175, 55, 0.18)',
     cornerRadius: '1rem',
@@ -147,9 +147,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     warning: '#f59e0b',
     danger: '#ef4444',
     
-    headingFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
-    displayHeadingFont: "'Plus Jakarta Sans', system-ui, sans-serif",
-    bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    headingFontFamily: "'Cormorant Garamond', Georgia, serif",
+    displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
+    bodyFontFamily: "'Source Sans 3', system-ui, sans-serif",
     
     shadow: '0 10px 30px -5px rgba(0, 0, 0, 0.5)',
     cornerRadius: '0.75rem',
@@ -224,7 +224,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     headingFontFamily: "'Cormorant Garamond', Georgia, serif",
     displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
-    bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    bodyFontFamily: "'Source Sans 3', system-ui, sans-serif",
     
     shadow: '0 4px 12px -2px rgba(0, 0, 0, 0.05)',
     cornerRadius: '0.75rem',
@@ -297,9 +297,9 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     warning: '#f59e0b',
     danger: '#f43f5e',
     
-    headingFontFamily: "'Cormorant Garamond', sans-serif",
-    displayHeadingFont: "'Cormorant Garamond', sans-serif",
-    bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    headingFontFamily: "'Cormorant Garamond', Georgia, serif",
+    displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
+    bodyFontFamily: "'Source Sans 3', system-ui, sans-serif",
     
     shadow: '0 0 25px rgba(236, 72, 153, 0.3)',
     cornerRadius: '0.5rem',
@@ -374,7 +374,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     headingFontFamily: "'Cormorant Garamond', Georgia, serif",
     displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
-    bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    bodyFontFamily: "'Source Sans 3', system-ui, sans-serif",
     
     shadow: '4px 4px 0px rgba(0, 0, 0, 0.8)',
     cornerRadius: '0.375rem',
@@ -449,7 +449,7 @@ export const themePresets: Record<ThemePresetKey, ThemeTokens> = {
     
     headingFontFamily: "'Cormorant Garamond', Georgia, serif",
     displayHeadingFont: "'Cormorant Garamond', Georgia, serif",
-    bodyFontFamily: "'Plus Jakarta Sans', system-ui, sans-serif",
+    bodyFontFamily: "'Source Sans 3', system-ui, sans-serif",
     
     shadow: '0 10px 25px -5px rgba(6, 26, 18, 0.7)',
     cornerRadius: '1rem',

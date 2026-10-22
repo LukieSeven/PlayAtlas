@@ -74,7 +74,7 @@
 
   /* Font Families */
   --font-display: 'Cormorant Garamond', Georgia, serif;
-  --font-body: 'Source Sans 3', 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-body: 'Source Sans 3', system-ui, sans-serif;
 
   /* Legacy Compatibility Mapping */
   --app-bg: var(--atlas-canvas-bg);
@@ -125,7 +125,7 @@
     min-height: 100vh;
   }
 
-  h1, h2, h3, h4, .atlas-heading-display {
+  h1, h2, h3, h4, h5, h6, .atlas-heading-display {
     font-family: var(--font-display);
     letter-spacing: 0.01em;
     color: var(--atlas-ink-primary);
@@ -139,6 +139,34 @@
 .font-sans {
   font-family: var(--font-body) !important;
 }
+
+/* Legacy numeric labels use the body face, with aligned digits. */
+.font-mono {
+  font-family: var(--font-body) !important;
+  font-variant-numeric: tabular-nums;
+}
+.themed-heading, .serif-heading { font-family: var(--font-display); }
+
+/* Every card action uses the same box and optical center, including portals. */
+.atlas-card-actions { display: flex; align-items: center; gap: 4px; }
+.atlas-action-menu { display: inline-flex; align-items: center; }
+.atlas-icon-button, .atlas-card-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  flex: 0 0 32px;
+  vertical-align: middle;
+}
+.atlas-card-actions button svg, .atlas-icon-button > svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+.atlas-game-list-card .atlas-game-title { font-size: 20px; line-height: 25px; }
+.atlas-compact-game-card.atlas-game-card-expanded { max-width: 360px; }
 
 .atlas-title-engraved,
 .atlas-nav-label {
@@ -800,7 +828,7 @@
 .atlas-deal-store { overflow: hidden; line-height: 18px; }
 .atlas-deal-store .text-xs { line-height: 18px; }
 .atlas-deal-footer a { min-height: 32px; justify-content: center; width: 100%; }
-.atlas-compact-game-card { display: grid; grid-template-rows: auto 112px; gap: 8px; }
+.atlas-compact-game-card { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 112px; justify-content: stretch; gap: 8px; }
 .atlas-compact-game-card > div:last-child { height: 112px; min-height: 0; }
 .atlas-compact-game-card h3 { height: 50px; min-height: 50px; }
 .atlas-compact-sidebar a.atlas-sidebar-home { min-height: 40px; padding-block: 9px; margin-bottom: 12px; }
