@@ -36,6 +36,7 @@ const testFiles = [
   'personalGameVisibility.test.ts',
   'actionMenuPortal.test.ts',
   'dealsService.test.ts',
+  'activeDeals.test.ts',
   'dealsIngestion.test.ts',
 ];
 

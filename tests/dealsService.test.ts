@@ -21,7 +21,7 @@ const sampleDeals: GameDeal[] = [
     cut: 50,
     url: 'https://store.steampowered.com/app/101',
     isHistoricalLow: true,
-    updatedAt: '2026-08-25T00:00:00.000Z',
+    updatedAt: new Date().toISOString(),
   },
   {
     gameId: 101,
@@ -33,7 +33,7 @@ const sampleDeals: GameDeal[] = [
     cut: 66,
     url: 'https://www.gog.com/game/101',
     isHistoricalLow: true,
-    updatedAt: '2026-08-25T00:00:00.000Z',
+    updatedAt: new Date().toISOString(),
   },
   {
     gameId: 102,
@@ -45,7 +45,7 @@ const sampleDeals: GameDeal[] = [
     cut: 100,
     url: 'https://store.epicgames.com/p/102',
     isHistoricalLow: false,
-    updatedAt: '2026-08-25T00:00:00.000Z',
+    updatedAt: new Date().toISOString(),
   },
   {
     gameId: 103,
@@ -57,13 +57,13 @@ const sampleDeals: GameDeal[] = [
     cut: 20,
     url: 'https://www.humblebundle.com/store/103',
     isHistoricalLow: false,
-    updatedAt: '2026-08-25T00:00:00.000Z',
+    updatedAt: new Date().toISOString(),
   },
 ];
 
 const sampleDataset: DealsDataset = {
   schemaVersion: 1,
-  generatedAt: '2026-08-25T00:00:00.000Z',
+  generatedAt: new Date().toISOString(),
   totalDeals: sampleDeals.length,
   deals: sampleDeals,
 };
@@ -141,7 +141,7 @@ async function runTests() {
   const popular = await getAllDeals({ sortBy: 'popular' });
   assert(popular[0].gameTitle === 'Major Game', 'Popular discounted titles outrank unknown freebies');
   assert(popular[1].gameTitle === 'Known Game', 'Discount size contributes within popularity ranking');
-  assert(popular[popular.length - 1].gameTitle === 'Full Price Game', 'Full prices follow actual discounts');
+  assert(!popular.some(deal => deal.gameTitle === 'Full Price Game'), 'Full-price entries are excluded from current sales');
   assert((await getAllDeals({ sortBy: 'discount' }))[0].gameTitle === 'Unknown Freebie', 'Discount-only sort remains available');
 
   // Test 9: Empty dataset safety

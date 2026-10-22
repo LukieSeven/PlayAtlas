@@ -35,6 +35,7 @@ const request: typeof fetch = async (input, options) => {
       shop: { id: 61, name: 'Steam' }, price: { amount: 0, currency: 'USD' },
       regular: { amount: 20, currency: 'USD' }, cut: 100, voucher: null,
       url: 'https://store.steampowered.com/app/220',
+      timestamp: '2026-01-01T00:00:00Z', expiry: new Date(Date.now() + 60_000).toISOString(),
     }, lowest: { price: { amount: 0, currency: 'USD' } } }], bundles: [] };
   }
   return new Response(JSON.stringify(response), { status: 200 });
@@ -50,8 +51,25 @@ try {
   assert.equal(dataset.deals[0].currentPrice.amountFormatted, '$0.00');
   assert.equal(dataset.deals[0].historyLowPrice?.amount, 0);
   assert.equal(dataset.deals[0].isHistoricalLow, true);
+  assert.equal(dataset.deals[0].sourceUpdatedAt, '2026-01-01T00:00:00Z');
+  assert.ok(Date.parse(dataset.deals[0].expiresAt!) > Date.now());
   assert.equal(requests.length, 6);
   const previous = fs.readFileSync(outputFile, 'utf8');
+  for (const state of ['expired', 'full-price', 'removed']) {
+    const replaced = await writeDealsFeed(directory, outputFile, 'test-key', async (input, options) => {
+      const response = await request(input, options);
+      if (!String(input).includes('/games/overview/')) return response;
+      const body = await response.json();
+      if (state === 'expired') body.prices[0].current.expiry = new Date(Date.now() - 1).toISOString();
+      if (state === 'full-price') { body.prices[0].current.cut = 0; body.prices[0].current.price = body.prices[0].current.regular; }
+      if (state === 'removed') body.prices[0].current = null;
+      return new Response(JSON.stringify(body));
+    });
+    assert.equal(replaced.totalDeals, 0, `${state} offer is removed on refresh`);
+    assert.equal(JSON.parse(fs.readFileSync(outputFile, 'utf8')).deals.length, 0);
+    assert.equal(JSON.parse(fs.readFileSync(path.join(directory, 'deals-preview.json'), 'utf8')).deals.length, 0);
+  }
+  fs.writeFileSync(outputFile, previous);
   for (const status of [401, 404]) {
     await assert.rejects(writeDealsFeed(directory, outputFile, 'test-key', async () => new Response('', { status })));
     assert.equal(fs.readFileSync(outputFile, 'utf8'), previous);

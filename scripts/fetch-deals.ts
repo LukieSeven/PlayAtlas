@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import type { DealPrice, DealsDataset, GameDeal } from '../src/types/deals';
 import { buildCompactRankSignals, calculateDealPopularity } from '../src/utils/catalogRanking';
 import { writeDealsPreview } from './deals-preview';
+import { activeDeals } from '../src/utils/activeDeals';
 
 interface CatalogEntry {
   id: number | string;
@@ -23,6 +24,7 @@ interface OverviewItem {
   current: null | {
     shop: { id: number; name: string }; price: ApiPrice; regular: ApiPrice;
     cut: number; url: string; voucher?: string | null;
+    timestamp?: string; expiry?: string | null;
   };
   lowest: null | { price: ApiPrice };
 }
@@ -188,13 +190,13 @@ export async function ingestDeals(
   if (!matchedGames.size) throw new Error('ITAD lookup matched no catalog games; preserving existing feed.');
   const deals: GameDeal[] = [];
   let omittedPrices = 0;
-  const updatedAt = new Date().toISOString();
   const ids = [...matchedGames.keys()];
   for (let offset = 0; offset < ids.length; offset += 100) {
     if (offset % 5000 === 0) console.log(`ITAD price progress: ${offset}/${ids.length} games`);
     const batch = ids.slice(offset, offset + 100);
     const overview = await api('/games/overview/v2?country=US', JSON.stringify(batch)) as { prices: OverviewItem[] };
     if (!Array.isArray(overview?.prices)) throw new Error('Invalid ITAD overview response');
+    const updatedAt = new Date().toISOString();
     for (const id of batch) {
       const item = overview.prices.find(price => price.id === id);
       if (!item) {
@@ -214,7 +216,8 @@ export async function ingestDeals(
           regularPrice, currentPrice, cut: current.cut, url: current.url,
           isHistoricalLow: Boolean(historyLowPrice && historyLowPrice.currency === currentPrice.currency
             && currentPrice.amount <= historyLowPrice.amount),
-          historyLowPrice, voucher: current.voucher ?? null, updatedAt });
+          historyLowPrice, voucher: current.voucher ?? null, updatedAt,
+          sourceUpdatedAt: current.timestamp, expiresAt: current.expiry ?? null });
       }
     }
   }
@@ -222,7 +225,9 @@ export async function ingestDeals(
     console.warn(`ITAD returned no price entry for ${omittedPrices} matched games; skipped those games.`);
     if (!deals.length) throw new Error('ITAD omitted price entries and returned no usable deals; preserving existing feed.');
   }
-  return { schemaVersion: 1, generatedAt: updatedAt, totalDeals: deals.length, deals };
+  const currentDeals = activeDeals(deals);
+  console.log(`Excluded ${deals.length - currentDeals.length} expired or non-discounted offers.`);
+  return { schemaVersion: 1, generatedAt: new Date().toISOString(), totalDeals: currentDeals.length, deals: currentDeals };
 }
 
 export async function writeDealsFeed(catalogDirectory: string, outputFile: string, apiKey: string, request: typeof fetch = fetch) {

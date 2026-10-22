@@ -5,10 +5,12 @@ import { Tag, Search, Star, ExternalLink, Gift, Sparkles, RefreshCw, ShoppingBag
 import { GameDeal, DealsFilterOptions } from '../types/deals';
 import { getAllDeals, loadDealsDataset } from '../services/dealsService';
 import { Button } from '../components/ui/Button';
+import { useDealsRefresh } from '../hooks/useDealsRefresh';
 
 const DEALS_PER_PAGE = 48;
 
 export const DiscountsPage: React.FC = () => {
+  const dealsRefresh = useDealsRefresh();
   const [activeTab, setActiveTab] = useState<'all' | 'freebies'>('all');
   const [deals, setDeals] = useState<GameDeal[]>([]);
   const [allDeals, setAllDeals] = useState<GameDeal[]>([]);
@@ -27,7 +29,7 @@ export const DiscountsPage: React.FC = () => {
   const [stats, setStats] = useState({ totalDeals: 0, freebiesCount: 0, historicalLowsCount: 0 });
 
   const fetchDeals = () => {
-    setIsLoading(true);
+    if (!deals.length) setIsLoading(true);
     const filterOpts: DealsFilterOptions = {
       query: searchQuery,
       minDiscount,
@@ -62,12 +64,15 @@ export const DiscountsPage: React.FC = () => {
         historicalLowsCount: historicalLows,
       });
     });
-  }, []);
+  }, [dealsRefresh]);
 
   useEffect(() => {
     setPage(1);
-    fetchDeals();
   }, [searchQuery, minDiscount, maxPrice, storeFilter, historicalLowOnly, sortBy, activeTab]);
+
+  useEffect(() => {
+    fetchDeals();
+  }, [searchQuery, minDiscount, maxPrice, storeFilter, historicalLowOnly, sortBy, activeTab, dealsRefresh]);
 
   const uniqueStores = useMemo(() => {
     const stores = new Map<string, string>();

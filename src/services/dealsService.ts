@@ -6,20 +6,33 @@
 import { GameDeal, DealsDataset, DealsFilterOptions } from '../types/deals';
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { comparePopularDeals, topPopularDeals } from '../utils/dealRanking';
+import { activeDeals } from '../utils/activeDeals';
+
+const CACHE_TTL_MS = 5 * 60 * 1000;
+let topFetchedAt = 0;
+let datasetFetchedAt = 0;
+const currentDataset = (dataset: DealsDataset): DealsDataset => {
+  const deals = activeDeals(dataset.deals);
+  return { ...dataset, totalDeals: deals.length, deals };
+};
 
 let topDealsPromise: Promise<GameDeal[]> | null = null;
-export function getTopDeals(): Promise<GameDeal[]> {
-  if (!topDealsPromise) topDealsPromise = fetchTopDeals().catch(error => { topDealsPromise = null; throw error; });
-  return topDealsPromise;
+export async function getTopDeals(): Promise<GameDeal[]> {
+  if (topDealsPromise && Date.now() - topFetchedAt >= CACHE_TTL_MS) topDealsPromise = null;
+  if (!topDealsPromise) {
+    topFetchedAt = Date.now();
+    topDealsPromise = fetchTopDeals().catch(error => { topDealsPromise = null; throw error; });
+  }
+  return topPopularDeals(await topDealsPromise);
 }
 
 async function fetchTopDeals(): Promise<GameDeal[]> {
   try {
-    const response = await fetch(getBasePathAwareUrl('data/deals-preview.json'));
+    const response = await fetch(getBasePathAwareUrl('data/deals-preview.json'), { cache: 'no-cache' });
     if (!response.ok) throw new Error(`Deals preview HTTP ${response.status}`);
     const dataset: DealsDataset = await response.json();
     if (!Array.isArray(dataset.deals)) throw new Error('Invalid deals preview');
-    return topPopularDeals(dataset.deals);
+    return dataset.deals;
   } catch {
     // Compatibility with older catalogs which predate the small Home feed.
     return topPopularDeals((await loadDealsDataset()).deals);
@@ -35,24 +48,25 @@ export const isDealsDatasetLoaded = () => cachedDataset !== null;
  * Safely handles missing files or network issues by returning an empty dataset.
  */
 export async function loadDealsDataset(): Promise<DealsDataset> {
-  if (cachedDataset) {
-    return cachedDataset;
+  if (cachedDataset && Date.now() - datasetFetchedAt < CACHE_TTL_MS) {
+    return currentDataset(cachedDataset);
   }
 
   if (fetchPromise) {
-    return fetchPromise;
+    return currentDataset(await fetchPromise);
   }
 
   fetchPromise = (async () => {
     try {
       const dealsUrl = getBasePathAwareUrl('data/deals.json');
-      const response = await fetch(dealsUrl);
+      const response = await fetch(dealsUrl, { cache: 'no-cache' });
       if (!response.ok) {
         throw new Error(`Deals HTTP error status: ${response.status}`);
       }
       const data: DealsDataset = await response.json();
       if (data.schemaVersion !== 1 || !Array.isArray(data.deals)) throw new Error('Invalid deals dataset');
       cachedDataset = data;
+      datasetFetchedAt = Date.now();
       return data;
     } catch (err) {
       console.warn('Deals dataset unavailable or empty:', err);
@@ -68,7 +82,7 @@ export async function loadDealsDataset(): Promise<DealsDataset> {
     }
   })();
 
-  return fetchPromise;
+  return currentDataset(await fetchPromise);
 }
 
 /**
@@ -77,6 +91,8 @@ export async function loadDealsDataset(): Promise<DealsDataset> {
 export function clearDealsCache(): void {
   topDealsPromise = null;
   cachedDataset = null;
+  topFetchedAt = 0;
+  datasetFetchedAt = 0;
   fetchPromise = null;
 }
 
@@ -86,6 +102,7 @@ export function clearDealsCache(): void {
 export function setDealsDatasetCache(dataset: DealsDataset): void {
   topDealsPromise = null;
   cachedDataset = dataset;
+  datasetFetchedAt = Date.now();
   fetchPromise = null;
 }
 

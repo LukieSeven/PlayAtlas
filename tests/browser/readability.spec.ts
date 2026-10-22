@@ -13,7 +13,7 @@ for (const viewport of [{ width: 1920, height: 1000 }, { width: 1440, height: 10
       coverUrl: `https://images.igdb.com/igdb/image/upload/t_cover_big/${covers[index]}.jpg`, popularityScore: 100 - index,
       currentPrice: { amount: 14.99, amountFormatted: '$14.99', currency: 'USD' },
       regularPrice: { amount: 59.99, amountFormatted: '$59.99', currency: 'USD' },
-      cut: 75, isHistoricalLow: index === 1, voucher: index >= 3 ? 'UBI40' : index === 1 ? 'ATLAS10' : null, url: 'https://isthereanydeal.com/', updatedAt: '2026-10-11',
+      cut: 75, isHistoricalLow: index === 1, voucher: index >= 3 ? 'UBI40' : index === 1 ? 'ATLAS10' : null, url: 'https://isthereanydeal.com/', updatedAt: new Date().toISOString(),
     }));
     await page.route('**/data/deals*.json', route => route.fulfill({ json: { schemaVersion: 1, generatedAt: '2026-10-11', totalDeals: deals.length, deals } }));
     const directory = path.resolve('generated/readability');

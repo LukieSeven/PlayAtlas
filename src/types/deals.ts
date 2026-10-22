@@ -24,6 +24,8 @@ export interface GameDeal {
   historyLowPrice?: DealPrice;
   voucher?: string | null;
   updatedAt: string; // ISO date string
+  sourceUpdatedAt?: string; // ITAD's offer timestamp, distinct from our check time
+  expiresAt?: string | null; // ITAD expiry; null means the source has no end date
 }
 
 export interface DealsDataset {

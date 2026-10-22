@@ -1,4 +1,5 @@
 import type { GameDeal } from '../types/deals';
+import { activeDeals } from './activeDeals';
 
 export function comparePopularDeals(a: GameDeal, b: GameDeal): number {
   const score = (deal: GameDeal) => {
@@ -9,7 +10,7 @@ export function comparePopularDeals(a: GameDeal, b: GameDeal): number {
   return score(b) - score(a) || b.cut - a.cut || a.gameId - b.gameId;
 }
 
-export function topPopularDeals(deals: GameDeal[]): GameDeal[] {
-  return deals.filter(deal => deal.cut > 0 || deal.currentPrice.amount < deal.regularPrice.amount)
-    .sort(comparePopularDeals).slice(0, 10);
+export function topPopularDeals(deals: GameDeal[], limit = 10): GameDeal[] {
+  return activeDeals(deals)
+    .sort(comparePopularDeals).slice(0, limit);
 }

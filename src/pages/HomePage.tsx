@@ -38,6 +38,7 @@ import { loadHomeWidgetConfigurations, resolveWidgetConfiguration, saveHomeWidge
 import { PERSONAL_GAME_BUCKETS, PersonalGameBucketId } from '../types/gameSource';
 import { compactGamesForBucket } from '../services/gameSourceService';
 import { getTopDeals } from '../services/dealsService';
+import { useDealsRefresh } from '../hooks/useDealsRefresh';
 import type { GameDeal } from '../types/deals';
 
 type SystemHomeWidgetId = 'featured' | 'playing' | 'deals' | 'progress' | 'releases' | 'upcoming' | 'events';
@@ -174,15 +175,16 @@ export const HomePage: React.FC = () => {
   const [topDeals, setTopDeals] = useState<GameDeal[]>([]);
   const [dealsLoading, setDealsLoading] = useState(false);
   const dealsVisible = widgetPreferences.visible.includes('deals');
+  const dealsRefresh = useDealsRefresh();
   useEffect(() => {
     if (!dealsVisible) return;
     let active = true;
-    setDealsLoading(true);
+    if (!topDeals.length) setDealsLoading(true);
     getTopDeals().then(deals => { if (active) setTopDeals(deals); })
       .catch(error => console.warn('Home deals unavailable:', error))
       .finally(() => { if (active) setDealsLoading(false); });
     return () => { active = false; };
-  }, [dealsVisible]);
+  }, [dealsVisible, dealsRefresh]);
 
   // Hydration state for displayed compact records
   const [hydratedCompactMap, setHydratedCompactMap] = useState<Map<number, CompactGameLookupRecord>>(new Map());
