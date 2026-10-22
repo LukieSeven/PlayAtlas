@@ -1,5 +1,7 @@
 import { useGameFilters } from '../../hooks/useGameFilters';
 import { GameFacetFilters } from '../common/GameFacetFilters';
+import { CatalogLoadingBar } from '../common/CatalogLoadingBar';
+import { useCatalogLoadProgress } from '../../hooks/useCatalogLoadProgress';
 import React, { useState, useMemo, useEffect } from 'react';
 import { SortAsc, LayoutGrid, List as ListIcon, ShieldAlert, ChevronDown } from 'lucide-react';
 import { CompactGameLookupRecord } from '../../types/catalog';
@@ -49,6 +51,7 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
   emptyTitle = 'No Matching Games Found',
   emptyDescription = 'Try resetting platform or category filters to view more titles in the Play Atlas catalog.',
 }) => {
+  const catalogProgress = useCatalogLoadProgress();
   const personalRecords = usePersonalGameLibrary();
   const yuckedIds = useMemo(() => getYuckedNumericIds(personalRecords), [personalRecords]);
   const [selectedPlatformFamily, setSelectedPlatformFamily] = useState<string>('all');
@@ -214,10 +217,13 @@ export const GameListGrid: React.FC<GameListGridProps> = ({
 
       {/* Grid Results Content */}
       {(isLoading && !(searchAcrossCatalog && facets.active && facets.metadata.size > 0)) || facets.filtering || (facets.active && facets.loading) ? (
-        <div className="atlas-catalog-card-grid animate-pulse">
+        <div className="space-y-4">
+          <CatalogLoadingBar progress={catalogProgress} />
+          <div aria-hidden="true" className="atlas-catalog-card-grid animate-pulse motion-reduce:animate-none">
           {Array.from({ length: 10 }).map((_, i) => (
             <div key={i} className="aspect-[3/4] themed-panel rounded-2xl bg-slate-200/50" />
           ))}
+          </div>
         </div>
       ) : sortedGames.length === 0 ? (
         <div className="themed-panel p-12 text-center rounded-3xl space-y-3 border border-[var(--panel-border)] bg-[#fefcf6]">

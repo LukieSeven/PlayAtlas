@@ -14,12 +14,12 @@ import {
   LayoutGrid,
   List as ListIcon,
   Plus,
-  Loader2,
   ShieldAlert,
   ArrowLeft,
 } from 'lucide-react';
 import { useTheme } from '../context/ThemeContext';
 import { GameCard } from '../components/common/GameCard';
+import { CatalogLoadingBar } from '../components/common/CatalogLoadingBar';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Badge } from '../components/ui/Badge';
@@ -387,10 +387,7 @@ export const DevComponentReviewPage: React.FC = () => {
 
             {/* Loading State & Error State */}
             <div className="space-y-4">
-              <div className="p-6 text-center rounded-3xl border border-[#D9C8A9] bg-[#FDFBF7] flex items-center justify-center gap-3 text-xs font-bold text-[#0C1D2D]">
-                <Loader2 className="w-5 h-5 animate-spin text-[#0B2B3C]" />
-                <span>Searching Play Atlas catalog...</span>
-              </div>
+              <CatalogLoadingBar progress={{ phase: 'download', loaded: 6_200_000, total: 10_000_000 }} />
 
               <div className="p-4 rounded-2xl border border-rose-600/30 bg-rose-500/10 text-rose-900 flex items-center gap-3 text-xs font-semibold">
                 <ShieldAlert className="w-5 h-5 text-rose-700 shrink-0" />

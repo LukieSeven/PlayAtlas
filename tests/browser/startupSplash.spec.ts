@@ -21,7 +21,7 @@ for (const sample of [{ width: 1440, theme: 'watercolor_atlas' }, { width: 390, 
       await page.goto('/#/search');
       await expect(page.getByText('Preparing catalog search', { exact: true })).toBeVisible();
       await expect(page.locator('main')).toHaveCount(0);
-      await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '1');
+      await expect(page.getByRole('progressbar', { name: 'Downloading catalog' })).not.toHaveAttribute('aria-valuenow');
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       expect(await page.locator('.atlas-startup-orbit').evaluate(element => getComputedStyle(element).animationName)).toBe('none');
       await expect(page.locator('.atlas-startup-compass img')).toHaveJSProperty('complete', true);

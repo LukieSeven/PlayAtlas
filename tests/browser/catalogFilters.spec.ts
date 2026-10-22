@@ -9,7 +9,7 @@ const records = [
 async function seed(page: import('@playwright/test').Page, games = records) {
   await page.route('**/data/catalog-facets.json.gz', route => route.fulfill({ contentType: 'application/gzip', body: zlib.gzipSync(JSON.stringify({ schemaVersion: 1, records: games })) }));
   const price = { amount: 10, amountFormatted: '$10.00', currency: 'USD' };
-  await page.route('**/data/deals.json', route => route.fulfill({ json: { schemaVersion: 1, totalDeals: records.length, generatedAt: '2026-10-11', deals: records.map(game => ({ gameId: game.id, gameTitle: game.name, itadId: `${game.id}`, storeId: '61', storeName: 'Steam', currentPrice: price, regularPrice: price, cut: 50, url: 'https://example.com', isHistoricalLow: false })) } }));
+  await page.route('**/data/deals.json', route => route.fulfill({ json: { schemaVersion: 1, totalDeals: records.length, generatedAt: new Date().toISOString(), deals: records.map(game => ({ gameId: game.id, gameTitle: game.name, itadId: `${game.id}`, storeId: '61', storeName: 'Steam', currentPrice: price, regularPrice: { ...price, amount: 20, amountFormatted: '$20.00' }, cut: 50, url: 'https://example.com', isHistoricalLow: false, updatedAt: new Date().toISOString() })) } }));
 }
 
 test('catalog and discount filters combine, reset, and honor missing metadata', async ({ page }) => {

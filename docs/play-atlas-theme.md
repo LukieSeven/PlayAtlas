@@ -81,6 +81,11 @@ tabs. The compact mobile drawer also fits the default menu at 390 × 667 px.
 - **Card controls**: 32 px square buttons with centered 16 px icons in grid,
   list, expanded calendar, library, and detail views. Expanded calendar cards
   fill their container up to 360 px; compact cards remain capped at 220 px.
+- **Catalog loading**: Teal progress bars with a moving gold sheen show real
+  download percentages when byte totals are available. Unknown totals,
+  decompression, and search stages use an indeterminate bar with a stage label.
+  Reduced-motion settings disable animation. The startup screen and catalog
+  results use the same component as the development review example.
 
 ---
 

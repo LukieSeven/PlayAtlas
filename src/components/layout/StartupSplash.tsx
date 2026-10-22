@@ -4,11 +4,15 @@ import { Check, LoaderCircle } from 'lucide-react';
 import { getBasePathAwareUrl } from '../../services/catalogDataSource';
 import { prepareStartup, startupTasks, type StartupStep } from '../../services/startupService';
 import { Button } from '../ui/Button';
+import { CatalogLoadingBar } from '../common/CatalogLoadingBar';
+import { useCatalogLoadProgress } from '../../hooks/useCatalogLoadProgress';
 
 export function StartupSplash({ steps = [], error = false, slow = false, onRetry, onContinue }: {
   steps?: StartupStep[]; error?: boolean; slow?: boolean; onRetry?: () => void; onContinue?: () => void;
 }) {
   const complete = steps.filter(step => step.state === 'ready').length;
+  const catalogProgress = useCatalogLoadProgress();
+  const loadingCatalog = !error && steps.some(step => step.label === 'Preparing catalog search' && step.state !== 'ready');
   return <div className="themed-app-shell atlas-startup-splash" data-testid="startup-splash">
     <div className="cartographic-bg-overlay" aria-hidden="true" />
     <section className="atlas-startup-content relative z-10 flex flex-col items-center text-center">
@@ -23,9 +27,10 @@ export function StartupSplash({ steps = [], error = false, slow = false, onRetry
         {error ? onContinue ? 'Check your connection and try again, or open the site to explore what’s available.' : 'Check your connection and try again.' : slow ? 'Still loading. You can open the site while this finishes.' : 'Gathering the games and discoveries for your first page.'}
       </p>
       {steps.length > 0 && <div className="mt-6 w-full max-w-sm space-y-3 text-left">
+        {loadingCatalog ? <CatalogLoadingBar label="Loading the game catalog…" progress={catalogProgress} /> :
         <div role="progressbar" aria-label="Preparing atlas" aria-valuemin={0} aria-valuemax={steps.length} aria-valuenow={complete} aria-valuetext={`${complete} of ${steps.length} loading steps completed`} className="h-1.5 overflow-hidden rounded-full bg-[var(--panel-border)]">
           <div className="h-full rounded-full bg-[var(--primary-action)] transition-[width] duration-300 motion-reduce:transition-none" style={{ width: `${complete / steps.length * 100}%` }} />
-        </div>
+        </div>}
         <ul className="space-y-2">{steps.map(step => <li key={step.label} className="flex items-center gap-3 text-xs text-[var(--text-primary)]">
           {step.state === 'ready' ? <Check aria-hidden="true" className="h-5 w-5 shrink-0 text-[var(--primary-action)]" /> : <LoaderCircle aria-hidden="true" className={`h-5 w-5 shrink-0 ${error ? '' : 'animate-spin motion-reduce:animate-none'}`} />}{step.label}
         </li>)}</ul>
