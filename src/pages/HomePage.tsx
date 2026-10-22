@@ -515,7 +515,7 @@ export const HomePage: React.FC = () => {
                 <Clock className="w-8 h-8 text-[#0B2B3C] mx-auto opacity-70" />
                 <h4 className="font-bold text-xs text-[#0C1D2D]">No games currently marked as Playing</h4>
                 <p className="text-xs text-[#47586A] max-w-xs mx-auto">
-                  Mark games as Playing via the Universal Action Menu to feature them here.
+                  Mark games as Playing via the Game actions to feature them here.
                 </p>
               </div>
             )}

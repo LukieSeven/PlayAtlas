@@ -35,7 +35,7 @@ export const CustomizableDashboard: React.FC<CustomizableDashboardProps> = () =>
         <div>
           <div className="flex items-center gap-2">
             <Badge variant="cyan">CUSTOMIZABLE DASHBOARD</Badge>
-            <span className="text-xs text-slate-400 font-mono">Local Storage Cache Ready</span>
+            <span className="text-xs text-slate-400 font-mono">Saved on this device</span>
           </div>
           <h3 className="text-xl font-bold text-white mt-1">Configure Your Home Widgets</h3>
           <p className="text-xs text-slate-400">

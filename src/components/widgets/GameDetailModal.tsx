@@ -122,7 +122,7 @@ export const GameDetailModal: React.FC<GameDetailModalProps> = ({ selectedGame, 
             <button
               onClick={onClose}
               className="atlas-icon-button p-2 rounded-2xl bg-[#ece4d0] hover:bg-[#e4d8bc] text-[#0f2b48] transition-colors"
-              title="Close Modal"
+              title="Close game details"
             >
               <X className="w-5 h-5" />
             </button>

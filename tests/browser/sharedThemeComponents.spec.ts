@@ -26,7 +26,7 @@ test.describe('Shared Theme Components Migration (Batch 3)', () => {
     await expect(title).toBeVisible({ timeout: 5_000 });
 
     // 2. Backup / Export button is rendered and clickable
-    const backupBtn = page.locator('button:has-text("Backup / Export JSON")');
+    const backupBtn = page.locator('button:has-text("Backup")');
     await expect(backupBtn).toBeVisible();
 
     // 3. Status tabs render with deep-teal active state for All Games
@@ -83,7 +83,7 @@ test.describe('Shared Theme Components Migration (Batch 3)', () => {
     await createTabBtn.click();
 
     // Verify modal heading
-    const modalHeading = page.locator('h3:has-text("Add Custom Taskbar Tab")');
+    const modalHeading = page.locator('h3:has-text("Create a list")');
     await expect(modalHeading).toBeVisible();
 
     // Close modal via cancel button

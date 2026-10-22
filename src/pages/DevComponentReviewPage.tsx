@@ -54,10 +54,10 @@ export const DevComponentReviewPage: React.FC = () => {
       <header className="sticky top-0 z-40 bg-[#0B2B3C] text-white px-4 py-2.5 shadow-md flex flex-wrap items-center justify-between gap-4 border-b border-[#C5A059]">
         <div className="flex items-center gap-3">
           <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#C5A059] text-[#0B2B3C] uppercase tracking-wider">
-            DEV REVIEW
+            DESIGN PREVIEW
           </span>
           <h1 className="font-serif text-lg font-bold tracking-wide">
-            Play Atlas Production Component Visual Inspection
+            Play Atlas Design Preview
           </h1>
         </div>
 
@@ -67,14 +67,14 @@ export const DevComponentReviewPage: React.FC = () => {
             className="flex items-center gap-1 text-[#C5A059] hover:underline"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Return to Live App</span>
+            <span>Back to Home</span>
           </NavLink>
           <span className="text-[#C5A059]/40">•</span>
           <NavLink
             to="/dev-theme-showcase"
             className="text-white/80 hover:text-white hover:underline"
           >
-            Batch 1 Theme Showcase
+            Theme examples
           </NavLink>
 
           {/* Theme Preset Toggle */}
@@ -124,13 +124,13 @@ export const DevComponentReviewPage: React.FC = () => {
         <section className="p-6 rounded-3xl bg-[#FDFBF7] border border-[#D9C8A9] shadow-xs space-y-2">
           <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-[#8C6D37]">
             <Compass className="w-4 h-4 text-[#C5A059]" />
-            <span>Interactive Production Component Review</span>
+            <span>Interactive design preview</span>
           </div>
           <h2 className="text-2xl font-bold font-serif text-[#0C1D2D]">
-            Production Component Verification Surface
+            Explore the Play Atlas design
           </h2>
           <p className="text-xs text-[#47586A] max-w-3xl leading-relaxed">
-            This development page mounts actual production components (<code className="bg-[#EFE8D8] px-1 py-0.5 rounded text-[#0B2B3C] font-mono">GameCard</code>, <code className="bg-[#EFE8D8] px-1 py-0.5 rounded text-[#0B2B3C] font-mono">UniversalActionMenu</code>, <code className="bg-[#EFE8D8] px-1 py-0.5 rounded text-[#0B2B3C] font-mono">AddTabModal</code>, <code className="bg-[#EFE8D8] px-1 py-0.5 rounded text-[#0B2B3C] font-mono">Button</code>, <code className="bg-[#EFE8D8] px-1 py-0.5 rounded text-[#0B2B3C] font-mono">Input</code>, <code className="bg-[#EFE8D8] px-1 py-0.5 rounded text-[#0B2B3C] font-mono">Footer</code>) using temporary in-memory React state fixtures. All user actions operate strictly in local component memory without contacting IGDB or altering personal storage.
+            Try the cards, buttons, menus, and backup tools below to review how they look and behave.
           </p>
         </section>
 
@@ -145,14 +145,14 @@ export const DevComponentReviewPage: React.FC = () => {
           <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
             <div>
               <h3 className="text-xl font-bold font-serif text-[#0C1D2D]">
-                1. Production Game Cards (6 Representative States)
+                1. Game cards and saved statuses
               </h3>
               <p className="text-xs text-[#47586A]">
                 Click card triggers, action menus, and bookmark badges to verify hover effects and portaled action dropdowns.
               </p>
             </div>
             <span className="text-xs font-mono text-[#8C6D37] font-bold">
-              6 In-Memory Fixtures
+              6 sample games
             </span>
           </div>
 
@@ -180,7 +180,7 @@ export const DevComponentReviewPage: React.FC = () => {
 
           {selectedGameModal && (
             <div className="p-3 rounded-xl bg-[#EFE8D8] border border-[#C5A059] text-xs font-semibold flex items-center justify-between">
-              <span>Card Click Event Triggered for: <strong>{selectedGameModal}</strong></span>
+              <span>Selected game: <strong>{selectedGameModal}</strong></span>
               <button
                 onClick={() => setSelectedGameModal(null)}
                 className="text-[11px] font-bold text-[#0B2B3C] hover:underline"
@@ -195,7 +195,7 @@ export const DevComponentReviewPage: React.FC = () => {
         <section className="space-y-4">
           <div className="border-b border-[#D9C8A9] pb-3">
             <h3 className="text-xl font-bold font-serif text-[#0C1D2D]">
-              2. Shared Production Buttons & Badges
+              2. Buttons and badges
             </h3>
             <p className="text-xs text-[#47586A]">
               Verifies primary deep-teal, secondary parchment, outline, ghost, and danger button variants.
@@ -240,7 +240,7 @@ export const DevComponentReviewPage: React.FC = () => {
         <section className="space-y-4">
           <div className="border-b border-[#D9C8A9] pb-3">
             <h3 className="text-xl font-bold font-serif text-[#0C1D2D]">
-              3. Production Inputs, Filters, & Status Tabs
+              3. Search, filters, and game status
             </h3>
             <p className="text-xs text-[#47586A]">
               Verifies search input focus, filter select dropdowns, and My Games tab selection.
@@ -338,10 +338,10 @@ export const DevComponentReviewPage: React.FC = () => {
         <section className="space-y-4">
           <div className="border-b border-[#D9C8A9] pb-3">
             <h3 className="text-xl font-bold font-serif text-[#0C1D2D]">
-              4. Production Modals Review
+              4. Lists and library backups
             </h3>
             <p className="text-xs text-[#47586A]">
-              Test opening and closing real modal dialogs using temporary in-memory React state.
+              Try creating a list or opening the library backup tools.
             </p>
           </div>
 
@@ -351,7 +351,7 @@ export const DevComponentReviewPage: React.FC = () => {
               icon={<Plus className="w-4 h-4 text-[#C5A059]" />}
               onClick={() => setIsAddTabOpen(true)}
             >
-              Open AddTabModal
+              Create a list
             </Button>
 
             <Button
@@ -359,7 +359,7 @@ export const DevComponentReviewPage: React.FC = () => {
               icon={<Package className="w-4 h-4 text-[#8C6D37]" />}
               onClick={() => setIsExportOpen(true)}
             >
-              Open ExportImportModal
+              Back up or restore your library
             </Button>
           </div>
         </section>
@@ -381,7 +381,7 @@ export const DevComponentReviewPage: React.FC = () => {
               <Gamepad2 className="w-10 h-10 mx-auto text-[#0B2B3C] opacity-80" />
               <h4 className="text-base font-bold font-serif text-[#0C1D2D]">Your Personal Library is Empty</h4>
               <p className="text-xs text-[#47586A] max-w-xs mx-auto">
-                Games you bookmark or update via the Universal Action Menu will automatically appear in your personal library.
+                Games you bookmark or update via the Game actions will automatically appear in your personal library.
               </p>
             </div>
 
@@ -391,7 +391,7 @@ export const DevComponentReviewPage: React.FC = () => {
 
               <div className="p-4 rounded-2xl border border-rose-600/30 bg-rose-500/10 text-rose-900 flex items-center gap-3 text-xs font-semibold">
                 <ShieldAlert className="w-5 h-5 text-rose-700 shrink-0" />
-                <span>Non-critical warning: Catalog chunk 35 hydration retry limit reached.</span>
+                <span>Some game details could not load. You can keep browsing and try again.</span>
               </div>
             </div>
           </div>
@@ -400,7 +400,7 @@ export const DevComponentReviewPage: React.FC = () => {
         {/* Section 6: Shared Footer */}
         <section className="space-y-2">
           <span className="text-xs font-bold text-[#8C6D37] uppercase tracking-wider block">
-            6. Shared Production Footer
+            6. Page footer
           </span>
           <Footer />
         </section>

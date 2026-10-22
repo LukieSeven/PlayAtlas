@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
           </a>
           <div className="flex items-center gap-1 text-emerald-800 font-semibold">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-700" />
-            <span>Local Cache Operational</span>
+            <span>Saved on this device</span>
           </div>
         </div>
       </div>

@@ -29,7 +29,7 @@ test.describe('Development Component Review Route (/#/dev-component-review)', ()
     await expect(prodAppShell).toHaveCount(0);
 
     // 3. Page heading is present
-    await expect(devRoot.locator('h1:has-text("Play Atlas Production Component Visual Inspection")')).toBeVisible();
+    await expect(devRoot.locator('h1:has-text("Play Atlas Design Preview")')).toBeVisible();
 
     // Six state fixtures plus the expanded and list layout examples.
     const gameCards = devRoot.locator('.themed-card');
@@ -69,12 +69,12 @@ test.describe('Development Component Review Route (/#/dev-component-review)', ()
     await page.goto('/#/dev-component-review');
     await page.waitForLoadState('domcontentloaded');
 
-    const openAddTabBtn = page.locator('button:has-text("Open AddTabModal")');
+    const openAddTabBtn = page.locator('button:has-text("Create a list")');
     await expect(openAddTabBtn).toBeVisible();
     await openAddTabBtn.click();
 
     // Modal dialog is displayed
-    const modalHeading = page.locator('h3:has-text("Add Custom Taskbar Tab")');
+    const modalHeading = page.locator('h3:has-text("Create a list")');
     await expect(modalHeading).toBeVisible();
 
     // Input accepts text

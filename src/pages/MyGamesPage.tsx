@@ -102,7 +102,7 @@ export const MyGamesPage: React.FC = () => {
     }
   };
 
-  // Derive meaningful tracked records (excludes empty records)
+  // Derive meaningful saved games (excludes empty records)
   const meaningfulRecords = useMemo(() => {
     return rawRecords.filter(rec => {
       return (
@@ -549,7 +549,7 @@ export const MyGamesPage: React.FC = () => {
           <div className="space-y-1 max-w-md mx-auto">
             <h3 className="text-base font-bold font-serif text-[#0C1D2D]">Your Personal Library is Empty</h3>
             <p className="text-xs text-[#47586A] font-sans">
-              Games you bookmark or update via the Universal Action Menu will automatically appear in your personal library.
+              Games you bookmark or update via the Game actions will automatically appear in your personal library.
             </p>
           </div>
         </div>

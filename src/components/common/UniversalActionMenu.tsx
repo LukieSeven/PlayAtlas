@@ -97,7 +97,8 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
         ref={triggerRef}
         onClick={handleToggle}
         className="atlas-icon-button p-1.5 rounded-xl bg-[rgba(0,0,0,0.3)] hover:bg-[rgba(0,0,0,0.6)] text-white/80 hover:text-white border border-white/20 backdrop-blur-md transition-all"
-        title="Universal Action Menu"
+        title="Game actions"
+        aria-label="Game actions"
         data-testid="action-menu-trigger"
       >
         <MoreVertical className="w-4 h-4" />
@@ -159,7 +160,7 @@ export const UniversalActionMenu: React.FC<UniversalActionMenuProps> = ({
           >
             <div className="flex items-center gap-2">
               <Bookmark className="w-3.5 h-3.5" />
-              <span>{inBacklog ? 'In Backlog Queue' : 'Add to Backlog'}</span>
+              <span>{inBacklog ? 'In Backlog' : 'Add to Backlog'}</span>
             </div>
             {inBacklog && <CheckCircle2 className="w-3.5 h-3.5 text-amber-500" />}
           </button>

@@ -63,7 +63,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
         const parsed = JSON.parse(text);
 
         if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.personalGames)) {
-          setImportError('Invalid JSON file format. Expected a Play Atlas export with a personalGames array.');
+          setImportError('This is not a Play Atlas backup. Choose a backup downloaded from Play Atlas.');
           return;
         }
 
@@ -73,9 +73,9 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
           personalGames: parsed.personalGames,
         });
 
-        setImportStatus(`Successfully parsed ${parsed.personalGames.length} personal game records.`);
+        setImportStatus(`Backup ready: ${parsed.personalGames.length} games.`);
       } catch (err: any) {
-        setImportError(`JSON Parse Error: ${err?.message || 'Failed to read file.'}`);
+        setImportError('This backup could not be read. Try another Play Atlas backup file.');
       }
     };
     reader.readAsText(file);
@@ -155,7 +155,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
         }
       }
 
-      setImportStatus(`Successfully merged ${mergedCount} personal game records into your library.`);
+      setImportStatus(`Added ${mergedCount} games to your library.`);
       setParsedExportData(null);
     } catch (err: any) {
       setImportError(`Merge error: ${err?.message || 'Failed to merge records.'}`);
@@ -196,7 +196,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
         importedCount++;
       }
 
-      setImportStatus(`Successfully replaced library with ${importedCount} imported records.`);
+      setImportStatus(`Your library has been restored with ${importedCount} games.`);
       setParsedExportData(null);
       setConfirmReplace(false);
     } catch (err: any) {
@@ -215,9 +215,9 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
         {/* Top Header */}
         <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-3">
           <h3 className="font-bold text-base font-serif text-[#0C1D2D]">
-            Personal Data Backup & Restore
+            Back up or restore your library
           </h3>
-          <button onClick={onClose} className="p-1.5 rounded-xl bg-[#EFE8D8] text-[#0C1D2D] hover:bg-[#D9C8A9] cursor-pointer">
+          <button onClick={onClose} aria-label="Close library backup" className="p-1.5 rounded-xl bg-[#EFE8D8] text-[#0C1D2D] hover:bg-[#D9C8A9] cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -231,7 +231,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
             }`}
           >
             <Download className="w-4 h-4 text-[#C5A059]" />
-            <span>Export Backup (JSON)</span>
+            <span>Back up library</span>
           </button>
           <button
             onClick={() => setActiveTab('import')}
@@ -240,7 +240,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
             }`}
           >
             <Upload className="w-4 h-4 text-[#C5A059]" />
-            <span>Import / Restore Data</span>
+            <span>Restore library</span>
           </button>
         </div>
 
@@ -248,12 +248,12 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
         {activeTab === 'export' && (
           <div className="space-y-4 text-xs font-sans">
             <p className="text-[#47586A] leading-relaxed font-medium">
-              Download your complete Play Atlas personal game library as a portable JSON backup file. Includes all platform ownerships, play statuses, ratings, review notes, custom tags, backlog entries, and completion histories.
+              Download a backup of your complete Play Atlas library. Includes all platform ownerships, play statuses, ratings, review notes, custom tags, backlog entries, and completion histories.
             </p>
             <div className="p-4 rounded-2xl bg-[#EFE8D8] border border-[#D9C8A9] flex items-center justify-between font-sans">
               <div>
-                <span className="block font-bold text-[#0C1D2D]">Personal Games Count</span>
-                <span className="text-xs text-[#47586A]">{personalGameStore.getAllRecords().length} tracked records</span>
+                <span className="block font-bold text-[#0C1D2D]">Games in your library</span>
+                <span className="text-xs text-[#47586A]">{personalGameStore.getAllRecords().length} saved games</span>
               </div>
               <FileText className="w-8 h-8 text-[#0B2B3C] opacity-80" />
             </div>
@@ -262,7 +262,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
               className="w-full py-3 rounded-2xl bg-[var(--primary-action)] hover:bg-indigo-700 text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2"
             >
               <Download className="w-4 h-4" />
-              <span>Download Personal Data (JSON)</span>
+              <span>Download backup</span>
             </button>
           </div>
         )}
@@ -271,7 +271,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
         {activeTab === 'import' && (
           <div className="space-y-4 text-xs">
             <p className="text-[#475569] leading-relaxed font-medium">
-              Select a Play Atlas JSON export file to restore or merge your personal library data.
+              Choose a Play Atlas backup to restore your library or add its games to your current library.
             </p>
 
             <div className="p-3 bg-white rounded-2xl border border-[#c8b584]">
@@ -305,7 +305,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
                     disabled={isProcessing}
                     className="flex-1 py-2.5 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md transition-all"
                   >
-                    {isProcessing ? 'Merging...' : 'Merge Records'}
+                    {isProcessing ? 'Adding games...' : 'Add to my library'}
                   </button>
                 </div>
 
@@ -318,7 +318,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
                       onChange={e => setConfirmReplace(e.target.checked)}
                       className="rounded accent-rose-600"
                     />
-                    <span>I understand Replace will overwrite existing personal records.</span>
+                    <span>I understand this will replace my current library with the backup.</span>
                   </label>
                   {confirmReplace && (
                     <button
@@ -326,7 +326,7 @@ export const ExportImportModal: React.FC<ExportImportModalProps> = ({ isOpen, on
                       disabled={isProcessing}
                       className="w-full py-2.5 rounded-2xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md transition-all"
                     >
-                      {isProcessing ? 'Replacing...' : 'Confirm & Replace All Personal Data'}
+                      {isProcessing ? 'Replacing...' : 'Replace my library with this backup'}
                     </button>
                   )}
                 </div>

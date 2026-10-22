@@ -19,7 +19,7 @@ interface HeaderProps {
 const getPageTitle = (pathname: string): { title: string; subtitle: string } => {
   switch (pathname) {
     case '/my-games':
-      return { title: 'My Games', subtitle: 'Authoritative personal game library' };
+      return { title: 'My Games', subtitle: 'Your personal game library' };
     case '/new-releases':
       return { title: 'New Releases', subtitle: 'Latest releases and launches' };
     case '/upcoming':

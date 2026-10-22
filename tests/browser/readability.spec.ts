@@ -20,7 +20,7 @@ for (const viewport of [{ width: 1920, height: 1000 }, { width: 1440, height: 10
     fs.mkdirSync(directory, { recursive: true });
     for (const route of ['discounts', '', 'my-games', 'settings', 'dev-component-review']) {
       await page.goto(`/#/${route}`);
-      const title = route === 'discounts' ? 'Discounts' : route === 'my-games' ? 'My Games' : route === 'settings' ? 'Settings' : route === 'dev-component-review' ? 'Play Atlas Production' : 'Home';
+      const title = route === 'discounts' ? 'Discounts' : route === 'my-games' ? 'My Games' : route === 'settings' ? 'Settings' : route === 'dev-component-review' ? 'Play Atlas Design' : 'Home';
       await expect(page.locator('header h1').first()).toContainText(title);
       await page.locator('main').evaluateAll(elements => elements.forEach(element => { element.scrollTop = 0; }));
       if (route === 'discounts') {

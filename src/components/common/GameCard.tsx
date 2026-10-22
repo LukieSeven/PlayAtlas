@@ -176,7 +176,7 @@ export const GameCard: React.FC<GameCardProps> = ({
           </div>
         )}
 
-        {/* Top-Right Quick Like, Yuck, and Universal Action Menu */}
+        {/* Top-Right Quick Like, Yuck, and Game actions */}
         <div className="atlas-card-actions absolute top-2 right-2 z-10" onClick={e => e.stopPropagation()}>
           <button
             onClick={handleLikeToggle}

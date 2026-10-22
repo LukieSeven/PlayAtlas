@@ -45,10 +45,11 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
         <div className="flex items-center justify-between border-b border-[#D9C8A9] pb-4">
           <div className="flex items-center gap-2">
             <FolderPlus className="w-5 h-5 text-[#C5A059]" />
-            <h3 className="text-xl font-bold font-serif text-[#0C1D2D]">Add Custom Taskbar Tab</h3>
+            <h3 className="text-xl font-bold font-serif text-[#0C1D2D]">Create a list</h3>
           </div>
           <button
             onClick={onClose}
+            aria-label="Close list creator"
             className="p-1 rounded-lg text-[#718294] hover:text-[#0C1D2D] hover:bg-[#EFE8D8] transition-colors"
           >
             <X className="w-5 h-5" />
@@ -58,7 +59,7 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
             <label className="text-xs font-bold text-[#8C6D37] uppercase tracking-wider block mb-1.5 font-sans">
-              Tab / List Title
+              List name
             </label>
             <Input
               placeholder="e.g. Games My Brother & I Played..."
@@ -70,7 +71,7 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
 
           <div>
             <label className="text-xs font-bold text-[#8C6D37] uppercase tracking-wider block mb-1.5 font-sans">
-              Tab Preset Type
+              List type
             </label>
             <div className="grid grid-cols-3 gap-2">
               {[
@@ -99,7 +100,7 @@ export const AddTabModal: React.FC<AddTabModalProps> = ({
               Cancel
             </Button>
             <Button type="submit" variant="primary" size="md" icon={<Plus className="w-4 h-4 text-[#C5A059]" />}>
-              Create Tab
+              Create list
             </Button>
           </div>
         </form>
