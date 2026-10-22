@@ -1,0 +1,49 @@
+name: Check Live Pricing (No Catalog Import)
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/check-pricing.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  check-prices:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Compare live source and published prices
+        id: probe
+        env:
+          ITAD_API_KEY: ${{ secrets.ITAD_API_KEY }}
+          ITAD_SECRET: ${{ secrets.ITAD_SECRET }}
+        shell: bash
+        run: |
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const key = (process.env.ITAD_API_KEY || process.env.ITAD_SECRET || '').trim();
+          if (!key) throw new Error('Missing ITAD pricing credential');
+          const id = '018d937f-3a3b-7210-bd2d-0d1dfb1d84c0';
+          async function json(url, options) {
+            const response = await fetch(url, { ...options, signal: AbortSignal.timeout(30000), cache: 'no-cache' });
+            if (!response.ok) throw new Error(`Pricing check HTTP ${response.status}`);
+            return response.json();
+          }
+          const [source, steam, published] = await Promise.all([
+            json('https://api.isthereanydeal.com/games/overview/v2?country=US', {
+              method: 'POST', headers: { 'Content-Type': 'application/json', 'ITAD-API-Key': key }, body: JSON.stringify([id]),
+            }),
+            json('https://store.steampowered.com/api/appdetails?appids=1174180&cc=us&filters=price_overview'),
+            json('https://lukieseven.github.io/PlayAtlas/data/deals-preview.json'),
+          ]);
+          const current = source.prices.find(price => price.id === id)?.current;
+          const saved = published.deals.find(deal => deal.itadId === id);
+          const report = `RDR2: ITAD=${current?.price?.amount ?? 'none'} shop=${current?.shop?.name ?? 'none'} sourceTime=${current?.timestamp ?? 'unknown'} expiry=${current?.expiry ?? 'unknown'}; Steam=${steam['1174180']?.data?.price_overview?.final_formatted ?? 'unavailable'}; published=${saved?.currentPrice?.amount ?? 'absent'}`;
+          console.log(report);
+          fs.appendFileSync(process.env.GITHUB_OUTPUT, `report=${report.replace(/[\r\n]/g, ' ')}\n`);
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `${report}\n\nChecked at ${new Date().toISOString()}\n`);
+          JS
+      - name: '${{ steps.probe.outputs.report }}'
+        run: echo 'Live source comparison complete. No catalog or deployment changed.'
