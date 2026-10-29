@@ -38,6 +38,8 @@ const testFiles = [
   'actionMenuPortal.test.ts',
   'dealsService.test.ts',
   'activeDeals.test.ts',
+  'dealHistory.test.ts',
+  'dealDiscovery.test.ts',
   'dealsIngestion.test.ts',
 ];
 

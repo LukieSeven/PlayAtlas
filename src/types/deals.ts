@@ -26,6 +26,9 @@ export interface GameDeal {
   updatedAt: string; // ISO date string
   sourceUpdatedAt?: string; // ITAD's offer timestamp, distinct from our check time
   expiresAt?: string | null; // ITAD expiry; null means the source has no end date
+  saleStartedAt?: string; // First observed in this continuous best-store sale
+  priceDroppedAt?: string; // Last observed reduction for this same store/currency
+  previousPrice?: DealPrice; // Price immediately before that reduction
 }
 
 export interface DealsDataset {
@@ -35,6 +38,8 @@ export interface DealsDataset {
   deals: GameDeal[];
 }
 
+export type DealSortMode = 'new_sales' | 'price_drops' | 'ending_soon' | 'popular' | 'discount' | 'price_low' | 'price_high' | 'title';
+
 export interface DealsFilterOptions {
   minDiscount?: number; // e.g. 20 for >= 20% off
   maxPrice?: number; // e.g. 30 for <= $30
@@ -42,5 +47,5 @@ export interface DealsFilterOptions {
   historicalLowOnly?: boolean;
   freebiesOnly?: boolean;
   query?: string; // search term for game title
-  sortBy?: 'popular' | 'discount' | 'price_low' | 'price_high' | 'title';
+  sortBy?: DealSortMode;
 }

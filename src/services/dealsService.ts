@@ -7,6 +7,7 @@ import { GameDeal, DealsDataset, DealsFilterOptions } from '../types/deals';
 import { getBasePathAwareUrl } from './catalogDataSource';
 import { comparePopularDeals, topPopularDeals } from '../utils/dealRanking';
 import { activeDeals } from '../utils/activeDeals';
+import { discoverDeals } from '../utils/dealDiscovery';
 
 const CACHE_TTL_MS = 5 * 60 * 1000;
 let topFetchedAt = 0;
@@ -183,6 +184,11 @@ export async function getAllDeals(filters?: DealsFilterOptions): Promise<GameDea
   // Apply sorting
   if (filters.sortBy) {
     switch (filters.sortBy) {
+      case 'new_sales':
+      case 'price_drops':
+      case 'ending_soon':
+        results = discoverDeals(results, filters.sortBy);
+        break;
       case 'popular': {
         results.sort(comparePopularDeals);
         break;

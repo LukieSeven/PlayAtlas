@@ -6,6 +6,7 @@ import type { DealPrice, DealsDataset, GameDeal } from '../src/types/deals';
 import { buildCompactRankSignals, calculateDealPopularity } from '../src/utils/catalogRanking';
 import { writeDealsPreview } from './deals-preview';
 import { activeDeals } from '../src/utils/activeDeals';
+import { trackDealHistory } from './deal-history';
 
 interface CatalogEntry {
   id: number | string;
@@ -232,7 +233,16 @@ export async function ingestDeals(
 
 export async function writeDealsFeed(catalogDirectory: string, outputFile: string, apiKey: string, request: typeof fetch = fetch) {
   // Only publish a completely successful run; failures never replace the previous dataset.
-  const dataset = await ingestDeals(catalogDirectory, apiKey, request);
+  const historyFile = process.env.PLAY_ATLAS_DEALS_PREVIOUS_FILE || outputFile;
+  let previous: DealsDataset | null = null;
+  if (fs.existsSync(historyFile)) {
+    previous = readJson(historyFile) as DealsDataset;
+    if (previous?.schemaVersion !== 1 || !Array.isArray(previous.deals)
+      || !Number.isFinite(Date.parse(previous.generatedAt)) || Date.parse(previous.generatedAt) > Date.now()) {
+      throw new Error('Invalid previous pricing history; preserving published feed.');
+    }
+  } else if (process.env.PLAY_ATLAS_DEALS_PREVIOUS_FILE) throw new Error('Previous pricing history file is missing.');
+  const dataset = trackDealHistory(await ingestDeals(catalogDirectory, apiKey, request), previous);
   fs.mkdirSync(path.dirname(outputFile), { recursive: true });
   const temporaryFile = `${outputFile}.tmp`;
   fs.writeFileSync(temporaryFile, JSON.stringify(dataset));

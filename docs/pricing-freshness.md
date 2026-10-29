@@ -28,6 +28,25 @@ fetches current prices, and publishes both pricing feeds and the website.
 **Deploy Website Only (Reuse Existing Data)** does not fetch new prices and
 cannot reconstruct expiration dates discarded by an older import.
 
+The Deals page defaults to **New Sales**, with **Recent Price Drops**,
+**Ending Soon**, and the existing Popular Deals/discount/price sorting options.
+New Sales places newly observed best-store offers first; ties use popularity
+and discount. Existing feeds without tracking history use ITAD's offer date,
+never the daily check time. Unknown start dates appear last.
+
+The pricing workflow restores the previous published feed before importing.
+Continuing offers retain their observed start date. A newly observed
+store/currency offer, a returning offer, or a sale following a known expiration
+starts a new tracked offer. Same-store, same-currency price reductions record
+the old price and the update when the reduction was detected. Recent Price
+Drops only shows reductions recorded within seven days whose savings still
+apply. Ending Soon excludes unknown end dates and sorts nearest endings first.
+All three options continue to exclude expired and full-price offers.
+
+Initial rollout establishes a baseline; no historical price reductions are
+invented. Recent Price Drops fills as later imports detect genuine changes.
+The Home widget retains its popularity-weighted top ten.
+
 Diagnostic on October 22, 2026: ITAD and Steam both reported Steam's Red Dead
 Redemption 2 price as $59.99. ITAD's $14.99 offer was at Epic, expiring November
 2. The published feed still contained $14.99 labeled Steam. The source had

@@ -2,7 +2,7 @@ import { useGameFilters } from '../hooks/useGameFilters';
 import { GameFacetFilters } from '../components/common/GameFacetFilters';
 import React, { useState, useEffect, useMemo } from 'react';
 import { Tag, Search, Star, ExternalLink, Gift, Sparkles, RefreshCw, ShoppingBag } from 'lucide-react';
-import { GameDeal, DealsFilterOptions } from '../types/deals';
+import { GameDeal, DealsFilterOptions, DealSortMode } from '../types/deals';
 import { getAllDeals, loadDealsDataset } from '../services/dealsService';
 import { Button } from '../components/ui/Button';
 import { useDealsRefresh } from '../hooks/useDealsRefresh';
@@ -23,7 +23,7 @@ export const DiscountsPage: React.FC = () => {
   const [maxPrice, setMaxPrice] = useState<number | undefined>(undefined);
   const [storeFilter, setStoreFilter] = useState<string>('all');
   const [historicalLowOnly, setHistoricalLowOnly] = useState(false);
-  const [sortBy, setSortBy] = useState<'popular' | 'discount' | 'price_low' | 'price_high'>('popular');
+  const [sortBy, setSortBy] = useState<DealSortMode>('new_sales');
 
   // Summary Metrics
   const [stats, setStats] = useState({ totalDeals: 0, freebiesCount: 0, historicalLowsCount: 0 });
@@ -99,7 +99,7 @@ export const DiscountsPage: React.FC = () => {
     setMaxPrice(undefined);
     setStoreFilter('all');
     setHistoricalLowOnly(false);
-    setSortBy('popular');
+    setSortBy('new_sales');
   };
 
   return (
@@ -254,10 +254,14 @@ export const DiscountsPage: React.FC = () => {
           {/* Sort By Select */}
           <div className="lg:col-span-2">
             <select
+              aria-label="Sort deals"
               value={sortBy}
-              onChange={e => setSortBy(e.target.value as any)}
+              onChange={e => setSortBy(e.target.value as DealSortMode)}
               className="w-full px-3 py-2 rounded-xl text-xs font-semibold bg-[#FDFBF7] text-[#0C1D2D] border border-[#D9C8A9] focus:outline-none focus:ring-2 focus:ring-[#C5A059]"
             >
+              <option value="new_sales">New Sales</option>
+              <option value="price_drops">Recent Price Drops</option>
+              <option value="ending_soon">Ending Soon</option>
               <option value="popular">Popular Deals</option>
               <option value="discount">Highest Discount</option>
               <option value="price_low">Price: Low to High</option>
@@ -289,6 +293,12 @@ export const DiscountsPage: React.FC = () => {
         </div>
       </div>
 
+      {['new_sales', 'price_drops', 'ending_soon'].includes(sortBy) && <p className="text-xs text-[var(--text-muted)]">
+        {sortBy === 'new_sales' ? 'Newest sales first. Popularity and discount break ties.'
+          : sortBy === 'price_drops' ? 'Prices reduced again in the last 7 days, newest first.'
+            : 'Sales with known end dates, ending first.'}
+      </p>}
+
       <GameFacetFilters filters={facets.filters} onChange={facets.setFilters} games={facets.enriched} expanded={facets.expanded} onExpand={facets.setExpanded} loading={facets.loading} error={facets.error} onRetry={facets.retry} />
 
       {/* Results Grid */}
@@ -305,7 +315,9 @@ export const DiscountsPage: React.FC = () => {
             <p className="text-xs text-[#718294] max-w-sm mx-auto">
               {stats.totalDeals === 0
                 ? 'Prices are unavailable right now. Please check back later.'
-                : 'No active storefront deals match your selected filters.'}
+                : sortBy === 'price_drops' ? 'No price reductions from the last 7 days match your filters. Reductions appear as pricing updates are compared.'
+                  : sortBy === 'ending_soon' ? 'No active sales with a known end date match your filters.'
+                    : 'No active storefront deals match your selected filters.'}
             </p>
           </div>
           {stats.totalDeals > 0 && (

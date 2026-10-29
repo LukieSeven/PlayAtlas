@@ -1,0 +1,42 @@
+import assert from 'node:assert/strict';
+import { trackDealHistory } from '../scripts/deal-history';
+import type { DealsDataset, GameDeal } from '../src/types/deals';
+
+const day = Date.now() - 3 * 86400000;
+const iso = (offset = 0) => new Date(day + offset * 86400000).toISOString();
+const price = (amount: number) => ({ amount, amountFormatted: `$${amount}`, currency: 'USD' });
+const deal: GameDeal = { gameId: 1, itadId: 'same-game', storeId: '61', storeName: 'Steam',
+  currentPrice: price(20), regularPrice: price(60), cut: 67, url: 'https://example.com',
+  isHistoricalLow: false, updatedAt: iso(), sourceUpdatedAt: iso(-10), expiresAt: null };
+const feed = (offers: GameDeal[], generatedAt: string): DealsDataset => ({ schemaVersion: 1, generatedAt, totalDeals: offers.length, deals: offers });
+const first = trackDealHistory(feed([deal], iso()), null);
+assert.equal(first.deals[0].saleStartedAt, iso(-10), 'bootstrap uses source date, not polling time');
+const unknown = trackDealHistory(feed([{ ...deal, sourceUpdatedAt: undefined }], iso()), null);
+assert.equal(unknown.deals[0].saleStartedAt, undefined, 'unknown baseline is not invented');
+const unchanged = trackDealHistory(feed([{ ...deal, updatedAt: iso(1) }], iso(1)), first);
+assert.equal(unchanged.deals[0].saleStartedAt, iso(-10), 'daily refresh does not create a new sale');
+assert.equal(unchanged.deals[0].priceDroppedAt, undefined);
+const lower = trackDealHistory(feed([{ ...deal, currentPrice: price(15), updatedAt: iso(1) }], iso(1)), first);
+assert.equal(lower.deals[0].saleStartedAt, iso(-10));
+assert.equal(lower.deals[0].previousPrice?.amount, 20);
+assert.equal(lower.deals[0].priceDroppedAt, iso(1));
+const stableDrop = trackDealHistory(feed([{ ...deal, currentPrice: price(15), updatedAt: iso(2) }], iso(2)), lower);
+assert.equal(stableDrop.deals[0].priceDroppedAt, iso(1), 'unchanged reduced price retains original drop date');
+const risen = trackDealHistory(feed([{ ...deal, currentPrice: price(25), updatedAt: iso(2) }], iso(2)), lower);
+assert.equal(risen.deals[0].priceDroppedAt, undefined, 'increase above the pre-drop price removes obsolete savings');
+const otherShop = trackDealHistory(feed([{ ...deal, storeId: '35', currentPrice: price(10), updatedAt: iso(1) }], iso(1)), first);
+assert.equal(otherShop.deals[0].saleStartedAt, iso(1));
+assert.equal(otherShop.deals[0].priceDroppedAt, undefined, 'different storefronts are not compared as price drops');
+const otherCurrency = trackDealHistory(feed([{ ...deal, currentPrice: { ...price(10), currency: 'EUR' }, updatedAt: iso(1) }], iso(1)), first);
+assert.equal(otherCurrency.deals[0].previousPrice, undefined);
+const ended = feed([{ ...first.deals[0], expiresAt: iso(0.5) }], iso());
+const returning = trackDealHistory(feed([{ ...deal, updatedAt: iso(1) }], iso(1)), ended);
+assert.equal(returning.deals[0].saleStartedAt, iso(1), 'a sale after a known ending is a new offer');
+const absent = trackDealHistory(feed([], iso(1)), first);
+assert.equal(trackDealHistory(feed([{ ...deal, updatedAt: iso(2) }], iso(2)), absent).deals[0].saleStartedAt, iso(2));
+const newGame = { ...deal, itadId: 'another-game', gameId: 2, updatedAt: iso(1) };
+assert.equal(trackDealHistory(feed([newGame], iso(1)), first).deals[0].saleStartedAt, iso(1));
+const sameBatch = trackDealHistory(feed([newGame, { ...newGame, gameId: 3, itadId: 'third-game', updatedAt: iso(1.01) }], iso(1.1)), first);
+assert.equal(sameBatch.deals[0].saleStartedAt, sameBatch.deals[1].saleStartedAt, 'same-update discoveries tie on date instead of arbitrary API batch order');
+assert.throws(() => trackDealHistory(feed([deal], iso()), feed([deal], iso(1))), /future date/);
+console.log('Deal history continuity and price-drop regression checks passed.');
